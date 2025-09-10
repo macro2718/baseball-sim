@@ -3,7 +3,10 @@ from stats_calculator import StatsCalculator
 import sys
 import os
 from datetime import datetime
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# プロジェクト設定を使用
+from project_config import setup_project_environment
+setup_project_environment()
 
 def simulate_games(num_games=10, output_file=None):
     """指定された回数の試合をシミュレーションし、結果をファイルに出力する"""

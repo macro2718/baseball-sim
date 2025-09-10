@@ -1,148 +1,105 @@
-2025-09-10 13:39:59,831 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:39:59,831 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:39:59,831 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:39:59,831 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:40:02,445 - baseball_sim - ERROR - Error in load_json_data: Data file not found: /home/kuramitsu/github/baseball-sim/main_code/player/data/players.json
-2025-09-10 13:40:02,446 - baseball_sim - ERROR - Unexpected error occurred: Data file not found: /home/kuramitsu/github/baseball-sim/main_code/player/data/players.json
-2025-09-10 13:40:43,341 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:40:43,342 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:40:43,342 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:40:43,342 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:40:47,101 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,137 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,154 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,172 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,188 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,208 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,221 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,237 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,256 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,275 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,290 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,306 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,327 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,348 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,367 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,383 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,404 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,419 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,440 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,458 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,474 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,490 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,501 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,518 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,533 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,550 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,566 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,588 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,609 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,623 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,641 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,651 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,677 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,693 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,712 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,727 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,745 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,763 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,782 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,802 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,817 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,839 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,855 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,871 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,890 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,906 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,916 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,938 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,958 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,970 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:47,985 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,006 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,017 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,032 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,052 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,068 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,089 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,111 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,123 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,147 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,163 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,182 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,203 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,220 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,247 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,280 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,304 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,337 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,361 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,381 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,398 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,416 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,437 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,457 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,477 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,494 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,512 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,529 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,550 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,570 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,590 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,617 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,637 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,660 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,678 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,700 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,720 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,742 - baseball_sim - INFO - Game ended due to extra innings limit (inning 12)
-2025-09-10 13:40:48,744 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,758 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,780 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,794 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,814 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,834 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,845 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,866 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,880 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,902 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,925 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,945 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:40:48,966 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:41:06,573 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:41:06,574 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:41:06,574 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:41:06,574 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:41:09,160 - baseball_sim - ERROR - Unexpected error occurred: No module named 'tkinter'
-2025-09-10 13:49:50,633 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:49:50,633 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:49:50,634 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:49:50,634 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:49:50,635 - baseball_sim - ERROR - Unexpected error occurred: EOF when reading a line
-2025-09-10 13:50:05,423 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:50:05,424 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:50:05,424 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:50:05,424 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:50:05,427 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:50:05,438 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:50:05,452 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:50:05,463 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:50:05,474 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:51:24,956 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:51:24,956 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:51:24,956 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:51:24,956 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:51:24,961 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:51:24,975 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:51:24,996 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:52:08,086 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:52:08,086 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:52:08,086 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:52:08,086 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:52:12,086 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:56:40,445 - baseball_sim - INFO - Starting application initialization...
-2025-09-10 13:56:40,446 - baseball_sim - INFO - Application logging initialized
-2025-09-10 13:56:40,446 - baseball_sim - INFO - Random seed set to default: 0
-2025-09-10 13:56:40,446 - baseball_sim - INFO - Application initialization completed successfully
-2025-09-10 13:56:43,723 - baseball_sim - INFO - NN batting model loaded successfully
-2025-09-10 13:56:58,005 - baseball_sim - INFO - Program interrupted by user
+2025-09-10 14:45:48,678 - baseball_sim - INFO - Starting application initialization...
+2025-09-10 14:45:48,679 - baseball_sim - INFO - Application logging initialized
+2025-09-10 14:45:48,679 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-10 14:45:48,679 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-10 14:45:51,666 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,690 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,702 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,712 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,725 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,745 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,759 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,768 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,783 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,797 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,811 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,824 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,837 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,849 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,860 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,876 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,888 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,901 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,919 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,937 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,950 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,963 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,979 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:51,991 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,005 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,017 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,034 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,051 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,066 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,081 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,093 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,103 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,125 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,134 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,153 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,169 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,182 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,194 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,205 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,215 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,224 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,235 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,249 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,259 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,270 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,282 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,293 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,304 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,314 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,327 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,338 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,351 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,360 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,371 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,382 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,477 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,491 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,508 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,521 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,537 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,550 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,563 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,580 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,597 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,611 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,628 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,643 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,658 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,674 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,690 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,706 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,721 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,738 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,749 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,766 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,778 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,791 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,808 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,823 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,839 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,856 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,874 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,889 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,910 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,921 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,936 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,951 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,965 - baseball_sim - INFO - Game ended due to extra innings limit (inning 12)
+2025-09-10 14:45:52,966 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,976 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,986 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:52,995 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,007 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,017 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,029 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,041 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,053 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,063 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,074 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,085 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-10 14:45:53,095 - baseball_sim - INFO - NN batting model loaded successfully

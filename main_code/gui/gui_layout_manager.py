@@ -6,7 +6,11 @@ import tkinter as tk
 from tkinter import ttk
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+# プロジェクト設定を使用
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main_code.project_config import setup_project_environment
+setup_project_environment()
 
 from .gui_constants import get_font_settings, get_ui_text
 from main_code.constants import UIConstants

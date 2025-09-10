@@ -5,11 +5,14 @@ import logging
 import traceback
 from typing import Optional, Callable, Any
 from functools import wraps
+from pathlib import Path
 
-# ログ設定
-import os
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-log_file_path = os.path.join(project_root, "simulation_results", "baseball_sim.log")
+# ログファイルパスの設定
+project_root = Path(__file__).parent.parent
+log_file_path = project_root / "simulation_results" / "baseball_sim.log"
+
+# ログディレクトリが存在しない場合は作成
+log_file_path.parent.mkdir(exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,

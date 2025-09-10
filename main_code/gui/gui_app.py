@@ -7,8 +7,10 @@ from tkinter import ttk, messagebox
 import sys
 import os
 
-# プロジェクトルートの追加
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# プロジェクト設定を使用
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main_code.project_config import setup_project_environment
+setup_project_environment()
 
 from .gui_main import BaseballGUI
 from .gui_team_manager import TeamManager

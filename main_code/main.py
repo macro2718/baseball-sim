@@ -5,29 +5,16 @@
 """
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# プロジェクト設定を最初にロード（パス設定も含む）
+# main.pyは直接実行されるため、絶対インポートを使用
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from project_config import setup_project_environment
+setup_project_environment()
 
 from app_initializer import AppInitializer
 from game_mode_manager import GameModeManager
 from error_handling import logger
-
-# 後方互換性のためのラッパー関数
-def create_sample_teams():
-    """レガシーサポート: DataLoaderを使用してチームを作成"""
-    from player_data.data_loader import DataLoader
-    return DataLoader.create_teams_from_data()
-
-def play_game_gui(home_team=None, away_team=None):
-    """レガシーサポート: GUIゲームを起動"""
-    return GameModeManager.play_game_gui(home_team, away_team)
-
-def get_game_mode_choice():
-    """レガシーサポート: ゲームモード選択"""
-    return GameModeManager.get_game_mode_choice()
-
-def initialize_random_seed():
-    """レガシーサポート: ランダムシード初期化"""
-    AppInitializer.initialize_random_seed()
 
 
 def main():

@@ -4,11 +4,12 @@
 """
 import random
 import numpy as np
-import os
 import joblib
 import torch
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# プロジェクト設定を使用
+from project_config import setup_project_environment
+setup_project_environment()
 
 from prediction_models.prediction import predict_auto, Net
 from constants import (

@@ -3,8 +3,9 @@
 ゲームの起動モードと実行ロジックを管理
 """
 import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# プロジェクト設定を使用
+from project_config import setup_project_environment
+setup_project_environment()
 
 from typing import Optional
 from config import config

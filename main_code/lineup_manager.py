@@ -1,7 +1,8 @@
 """
-Lineup and Defensive Position Manager
-試合開始前やゲーム中の守備位置設定を管理するモジュール
+ラインナップ管理機能
+スタメン、打順、守備位置の管理を行うモジュール
 """
+from typing import Optional, List, Dict, Any
 from constants import Positions
 
 class LineupManager:
