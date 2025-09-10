@@ -1,0 +1,40 @@
+{
+  "game": {
+    "max_innings": 12,
+    "enable_dh": true,
+    "mercy_rule_enabled": false,
+    "mercy_rule_runs": 10
+  },
+  "ui": {
+    "window_width": 1280,
+    "window_height": 800,
+    "field_width": 500,
+    "field_height": 400,
+    "default_language": "ja"
+  },
+  "simulation": {
+    "default_games": 100,
+    "use_ml_prediction": true,
+    "random_seed": null,
+    "prediction_model_type": "nn"
+  },
+  "files": {
+    "data_dir": "player/data",
+    "models_dir": "prediction/models",
+    "players_file": "players.json",
+    "teams_file": "teams.json"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "baseball_sim.log",
+    "console": true
+  },
+  "refactoring": {
+    "version": "2.0",
+    "components": {
+      "data_loader": true,
+      "game_mode_manager": true,
+      "app_initializer": true
+    }
+  }
+}
