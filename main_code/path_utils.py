@@ -101,6 +101,3 @@ class PathManager:
 
 # シングルトンインスタンス
 path_manager = PathManager()
-
-# シングルトンインスタンス
-path_manager = PathManager()

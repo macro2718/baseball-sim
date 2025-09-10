@@ -820,7 +820,6 @@ class StrategyManager:
             
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
-            print("DEBUG: UI components created successfully")
             
             # ラインナップ表示を更新する関数
             def refresh_lineup_display():
@@ -863,21 +862,16 @@ class StrategyManager:
                               
             # ポジション変更機能
             def change_position(player_index):
-                print(f"DEBUG: change_position called with player_index: {player_index}")
-                print(f"DEBUG: Team lineup length: {len(team.lineup)}")
                 try:
                     if player_index >= len(team.lineup):
-                        print(f"DEBUG: Invalid player index: {player_index} >= {len(team.lineup)}")
                         messagebox.showerror("Error", f"Invalid player index: {player_index}")
                         return
                     
                     player = team.lineup[player_index]
-                    print(f"DEBUG: Selected player: {player.name}")
                     
                     pos_window = tk.Toplevel(setup_window)
                     pos_window.title("Change Position")
                     pos_window.geometry("455x585")  # 350x450 * 1.3
-                    print(f"DEBUG: Position change window created for {player.name}")
                     
                     primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
                     current_pos = player.current_position or primary_pos
@@ -910,7 +904,6 @@ class StrategyManager:
                     def apply_position_change():
                         try:
                             new_pos = position_var.get()
-                            print(f"DEBUG: Applying position change: {player.name} -> {new_pos}")
                             
                             # 適性チェック
                             if hasattr(player, 'can_play_position') and not player.can_play_position(new_pos):
@@ -918,7 +911,6 @@ class StrategyManager:
                                 return
                             
                             success, message = lineup_manager.set_player_position(player_index, new_pos)
-                            print(f"DEBUG: Position change result: success={success}, message={message}")
                             if success:
                                 refresh_lineup_display()
                                 pos_window.destroy()
@@ -926,13 +918,11 @@ class StrategyManager:
                             else:
                                 messagebox.showerror("Error", message)
                         except Exception as e:
-                            print(f"DEBUG: Exception in apply_position_change: {e}")
                             messagebox.showerror("Error", f"Failed to change position: {str(e)}")
                     
                     ttk.Button(pos_window, text="Apply", command=apply_position_change).pack(pady=10)
                     ttk.Button(pos_window, text="Cancel", command=pos_window.destroy).pack(pady=5)
                 except Exception as e:
-                    print(f"DEBUG: Exception in change_position: {e}")
                     import traceback
                     traceback.print_exc()
                     messagebox.showerror("Error", f"Failed to open position change dialog: {str(e)}")
@@ -972,7 +962,6 @@ class StrategyManager:
             validate_and_display()
             
         except Exception as e:
-            print(f"DEBUG: Error setting up lineup dialog: {e}")
             import traceback
             traceback.print_exc()
             messagebox.showerror("Error", f"Failed to setup lineup dialog: {e}")
