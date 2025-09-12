@@ -321,6 +321,8 @@ class GameState:
 
     def apply_result(self, result, batter):
         """結果をゲーム状態に適用し、メッセージを返す"""
+        # すべての打席結果で打席数をカウント
+        batter.stats["PA"] += 1
         if result == "strikeout":
             return self._handle_strikeout(batter)
         elif result == "walk":
@@ -450,4 +452,3 @@ class GameState:
             self._add_runs(runs, batter)
             return f"Sacrifice fly! {runs} run scored!"
         return "Flyout."
-
