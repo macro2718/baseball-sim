@@ -1,7 +1,7 @@
 import random
 
-from constants import StatColumns, Positions
-from stats_calculator import StatsCalculator
+from main_code.config import StatColumns, Positions
+from main_code.core.stats_calculator import StatsCalculator
 
 class Player:
     def __init__(self, name, eligible_positions, k_pct, bb_pct, hard_pct, speed, gb_pct, fielding_skill, 

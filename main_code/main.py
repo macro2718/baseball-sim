@@ -9,12 +9,12 @@ import os
 # プロジェクト設定を最初にロード（パス設定も含む）
 # main.pyは直接実行されるため、絶対インポートを使用
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from project_config import setup_project_environment
+from config import setup_project_environment
 setup_project_environment()
 
-from app_initializer import AppInitializer
-from game_mode_manager import GameModeManager
-from error_handling import logger
+from infra.app_initializer import AppInitializer
+from modes.game_mode_manager import GameModeManager
+from infra.error_handling import logger
 
 
 def main():

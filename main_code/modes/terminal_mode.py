@@ -1,6 +1,6 @@
-from game import GameState
-from substitution_manager import SubstitutionManager  # 追加
-from stats_calculator import StatsCalculator
+from main_code.core.game import GameState
+from main_code.core.substitution_manager import SubstitutionManager  # 追加
+from main_code.core.stats_calculator import StatsCalculator
 
 def display_game_info(game_state):
     """Display current game state"""
@@ -316,7 +316,7 @@ def play_game_terminal(home_team, away_team):
         
         if can_bunt:
             # Show bunt success probability
-            from game_utils import BuntCalculator
+            from main_code.core.game_utils import BuntCalculator
             try:
                 bunt_success_rate = BuntCalculator.calculate_bunt_success_probability(batter, pitcher)
                 print(f"2: Bunt (Success rate: {bunt_success_rate:.1%})")

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Union, Any, Dict, Optional
 
 # 定数のみインポート（循環参照を避けるため）
-from constants import FilePaths
+from .constants import FilePaths
 
 
 class FileUtils:
@@ -43,7 +43,7 @@ class PathManager:
         # プロジェクトルートディレクトリを基準にする
         if base_dir is None:
             # main_codeから一つ上のディレクトリ（プロジェクトルート）を取得
-            self.base_dir = str(Path(__file__).parent.parent)
+            self.base_dir = str(Path(__file__).parent.parent.parent)
         else:
             self.base_dir = base_dir
     
@@ -101,3 +101,4 @@ class PathManager:
 
 # シングルトンインスタンス
 path_manager = PathManager()
+

@@ -8,7 +8,7 @@ from functools import wraps
 from pathlib import Path
 
 # ログファイルパスの設定
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 log_file_path = project_root / "simulation_results" / "baseball_sim.log"
 
 # ログディレクトリが存在しない場合は作成

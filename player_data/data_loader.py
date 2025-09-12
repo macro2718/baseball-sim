@@ -9,12 +9,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import Dict, List, Tuple
 from .player import Player, Pitcher
-from main_code.team import Team
-from main_code.path_utils import path_manager
+from main_code.core.team import Team
+from main_code.config import path_manager
 from .player_factory import PlayerFactory
 
 try:
-    from main_code.error_handling import log_error
+    from main_code.infra.error_handling import log_error
 except ImportError:
     # フォールバック用デコレータ
     def log_error(func):

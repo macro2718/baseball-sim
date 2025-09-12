@@ -4,14 +4,14 @@
 """
 import sys
 # プロジェクト設定を使用
-from project_config import setup_project_environment
+from main_code.config import setup_project_environment
 setup_project_environment()
 
 from typing import Optional
-from config import config
+from main_code.config import config
 from player_data.data_loader import DataLoader
-from simulation import simulate_games
-from terminal_mode import play_game_terminal
+from main_code.modes.simulation import simulate_games
+from main_code.modes.terminal_mode import play_game_terminal
 
 
 class GameModeManager:
@@ -52,7 +52,7 @@ class GameModeManager:
     @staticmethod
     def play_game_gui(home_team=None, away_team=None):
         """GUI-based game loop"""
-        from gui.gui_app import BaseballApp
+        from main_code.gui.gui_app import BaseballApp
         
         app = BaseballApp()
         app.initialize()

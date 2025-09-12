@@ -8,7 +8,7 @@ import sys
 
 # プロジェクト設定を使用
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from main_code.project_config import setup_project_environment
+from main_code.config import setup_project_environment
 setup_project_environment()
 
 from .gui_constants import get_font_settings, get_ui_text
@@ -17,7 +17,7 @@ from .gui_scoreboard import ScoreboardManager
 from .gui_stats import StatsManager
 from .gui_strategy import StrategyManager
 from .gui_event_manager import Events
-from constants import UIConstants, GameResults
+from main_code.config import UIConstants, GameResults
 
 class BaseballGUI:
     def __init__(self, root, team_manager, event_manager, layout_manager):
@@ -389,7 +389,7 @@ class BaseballGUI:
             try:
                 current_batter = self.game_state.batting_team.lineup[self.game_state.batting_team.current_batter_index]
                 current_pitcher = self.game_state.fielding_team.current_pitcher
-                from game_utils import BuntCalculator
+                from main_code.core.game_utils import BuntCalculator
                 bunt_success_rate = BuntCalculator.calculate_bunt_success_probability(current_batter, current_pitcher)
                 self.bunt_button.config(text=f"Bunt ({bunt_success_rate:.1%})")
             except:
@@ -672,7 +672,7 @@ class BaseballGUI:
         # ゲーム状態を作成
         home_team, away_team = self.team_manager.get_teams()
         if not self.game_state and home_team and away_team:
-            from game import GameState
+            from main_code.core.game import GameState
             self.game_state = GameState(home_team, away_team)
             
             # 各マネージャーにゲーム状態を設定
@@ -749,4 +749,3 @@ class BaseballGUI:
         if hasattr(self, 'stats_button'):
             self.stats_button.config(state=tk.NORMAL)
     
-

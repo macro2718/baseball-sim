@@ -1,4 +1,4 @@
-from constants import Positions
+from main_code.config import Positions
 
 class Team:
     def __init__(self, name):

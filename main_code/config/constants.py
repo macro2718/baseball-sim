@@ -113,3 +113,4 @@ class StatColumns:
     WALKS = "BB"
     STRIKEOUTS = "SO"
     RUNS_BATTED_IN = "RBI"
+

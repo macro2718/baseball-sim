@@ -8,10 +8,10 @@ import os
 
 # プロジェクト設定を使用
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from main_code.project_config import setup_project_environment
+from main_code.config import setup_project_environment
 setup_project_environment()
 
-from main_code.stats_calculator import StatsCalculator
+from main_code.core.stats_calculator import StatsCalculator
 
 class StatsManager:
     def __init__(self, root, text):

@@ -8,19 +8,18 @@ import joblib
 import torch
 
 # プロジェクト設定を使用
-from project_config import setup_project_environment
+from main_code.config import setup_project_environment
 setup_project_environment()
 
 from prediction_models.prediction import predict_auto, Net
-from constants import (
+from main_code.config import (
     INNINGS_PER_GAME, OUTS_PER_INNING, BASES_COUNT, MAX_EXTRA_INNINGS,
-    GameResults, BuntConstants
+    GameResults, BuntConstants,
+    path_manager, config,
 )
-from path_utils import path_manager
-from config import config
 
 try:
-    from error_handling import GameStateError, log_error, logger
+    from main_code.infra.error_handling import GameStateError, log_error, logger
 except ImportError:
     # フォールバック: エラーハンドリングモジュールが利用できない場合
     def log_error(func):
@@ -38,6 +37,7 @@ except ImportError:
             print(f"ERROR: {msg}")
     
     GameStateError = Exception
+
 
 class GameState:
     def __init__(self, home_team, away_team):
@@ -222,16 +222,8 @@ class GameState:
         return True
 
     def execute_bunt(self, batter, pitcher):
-        """バントを実行し、結果を返す
-        
-        Args:
-            batter: 打者オブジェクト
-            pitcher: 投手オブジェクト
-            
-        Returns:
-            str: バントの結果を説明するメッセージ
-        """
-        from game_utils import BuntProcessor
+        """バントを実行し、結果を返す"""
+        from main_code.core.game_utils import BuntProcessor
         
         # BuntProcessorを使用してバント処理を実行
         bunt_processor = BuntProcessor(self)
@@ -274,10 +266,6 @@ class GameState:
         bb_prob = calculate_prob(batter.bb_pct, pitcher.bb_pct, 8.5)
         hard_prob = calculate_prob(batter.hard_pct, pitcher.hard_pct, 38.6)
         gb_prob = calculate_prob(batter.gb_pct, pitcher.gb_pct, 44.6)
-        # k_prob = 22.8 / 100
-        # bb_prob = 8.5 / 100
-        # hard_prob = 38.6 / 100
-        # gb_prob = 44.6 / 100
         other_prob = 1 - k_prob - bb_prob
         
         # 打席結果の確率計算
@@ -327,27 +315,12 @@ class GameState:
             "flyout": flyout_prob
         }
         
-        # 確率の合計が1になるよう正規化
-        total_prob = sum(probabilities.values())
-        for key in probabilities:
-            probabilities[key] /= total_prob
-        
-        # 結果の決定（確率に基づく乱数選択）
-        roll = random.random()
-        cumulative_prob = 0
-        for result, prob in probabilities.items():
-            cumulative_prob += prob
-            if roll < cumulative_prob:
-                return result
-        
-        # 念のため、デフォルト結果
-        return "groundout"
+        # ランダムに結果を選択
+        result = random.choices(list(probabilities.keys()), weights=probabilities.values(), k=1)[0]
+        return result
 
     def apply_result(self, result, batter):
-        """打席結果の適用と統計更新"""
-        # 統計カウントの更新
-        batter.stats["PA"] += 1
-        
+        """結果をゲーム状態に適用し、メッセージを返す"""
         if result == "strikeout":
             return self._handle_strikeout(batter)
         elif result == "walk":
@@ -384,7 +357,7 @@ class GameState:
         self.fielding_team.current_pitcher.pitching_stats["BB"] += 1
 
         # ランナー進塁はユーティリティに委譲
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs = RunnerEngine(self).apply_walk(batter)
 
         # 得点を加算
@@ -401,7 +374,7 @@ class GameState:
         self.fielding_team.current_pitcher.pitching_stats["H"] += 1
 
         # ランナー進塁はユーティリティに委譲
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs = RunnerEngine(self).apply_single(batter)
 
         if runs > 0:
@@ -416,7 +389,7 @@ class GameState:
         self.fielding_team.current_pitcher.pitching_stats["H"] += 1
 
         # ランナー進塁はユーティリティに委譲
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs = RunnerEngine(self).apply_double(batter)
 
         if runs > 0:
@@ -430,7 +403,7 @@ class GameState:
         batter.stats["3B"] += 1
         self.fielding_team.current_pitcher.pitching_stats["H"] += 1
 
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs = RunnerEngine(self).apply_triple(batter)
         if runs > 0:
             self._add_runs(runs, batter)
@@ -445,7 +418,7 @@ class GameState:
         self.fielding_team.current_pitcher.pitching_stats["H"] += 1
         self.fielding_team.current_pitcher.pitching_stats["HR"] += 1
 
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs = RunnerEngine(self).apply_home_run(batter)
         self._add_runs(runs, batter)
         if runs > 1:
@@ -458,7 +431,7 @@ class GameState:
         self.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
         batter.stats["AB"] += 1
 
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs, message = RunnerEngine(self).apply_groundout(batter)
         if runs > 0:
             self._add_runs(runs, batter)
@@ -470,10 +443,11 @@ class GameState:
         self.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
         batter.stats["AB"] += 1
 
-        from game_utils import RunnerEngine
+        from main_code.core.game_utils import RunnerEngine
         runs = RunnerEngine(self).apply_flyout(batter)
         self.add_out()  # 打者アウト
         if runs > 0:
             self._add_runs(runs, batter)
             return f"Sacrifice fly! {runs} run scored!"
         return "Flyout."
+

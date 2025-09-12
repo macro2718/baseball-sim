@@ -12,7 +12,7 @@ class ProjectPaths:
     
     def __init__(self):
         # main_codeディレクトリの絶対パス
-        self._main_code_dir = Path(__file__).parent.absolute()
+        self._main_code_dir = Path(__file__).parent.parent.absolute()
         # プロジェクトルートディレクトリ（main_codeの親ディレクトリ）
         self._project_root = self._main_code_dir.parent
     
@@ -63,13 +63,17 @@ class ProjectPaths:
 # グローバルインスタンス
 _project_paths = ProjectPaths()
 
+
 def setup_project_environment():
     """プロジェクト環境をセットアップ"""
     _project_paths.ensure_project_paths_in_sys_path()
+
 
 def get_project_paths() -> ProjectPaths:
     """プロジェクトパス管理インスタンスを取得"""
     return _project_paths
 
+
 # 自動的に環境をセットアップ
 setup_project_environment()
+

@@ -5,7 +5,7 @@ GUIとターミナルモードの両方で使用される選手交代機能を�
 """
 
 from typing import Optional, Tuple, List, Dict, Any
-from lineup_manager import LineupManager
+from .lineup_manager import LineupManager
 import itertools
 
 

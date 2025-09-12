@@ -1,11 +1,11 @@
-from game import GameState
-from stats_calculator import StatsCalculator
+from main_code.core.game import GameState
+from main_code.core.stats_calculator import StatsCalculator
 import sys
 import os
 from datetime import datetime
 
 # プロジェクト設定を使用
-from project_config import setup_project_environment
+from main_code.config import setup_project_environment
 setup_project_environment()
 
 def simulate_games(num_games=10, output_file=None):
@@ -16,8 +16,11 @@ def simulate_games(num_games=10, output_file=None):
     # デフォルトのファイル名にタイムスタンプを追加
     if output_file is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        output_file = os.path.join(project_root, "simulation_results", f"simulation_results_{timestamp}.txt")
+        # modes/ からプロジェクトルートへは3階層上がる
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        output_dir = os.path.join(project_root, "simulation_results")
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, f"simulation_results_{timestamp}.txt")
     
     # 結果を保存するデータ構造を初期化
     results = {
@@ -242,8 +245,8 @@ def output_results(results, output_file):
             # チーム打率計算
             team_avg = team_hits / team_ab if team_ab > 0 else 0
             
-            # チーム出塁率計算
-            team_obp = (team_hits + team_bb) / team_pa if team_pa > 0 else 0
+            # チーム出塁率計算（PA未集計のため、OBP = (H + BB) / (AB + BB) と等価の簡略式を使用）
+            team_obp = StatsCalculator.calculate_obp(team_hits, team_bb, team_ab)
             
             # チーム長打率計算（修正版）
             singles = team_hits - team_doubles - team_triples - team_hr
@@ -329,8 +332,8 @@ def output_results(results, output_file):
             # チーム打率計算
             team_avg = team_hits / team_ab if team_ab > 0 else 0
             
-            # チーム出塁率計算
-            team_obp = (team_hits + team_bb) / team_pa if team_pa > 0 else 0
+            # チーム出塁率計算（簡略式）
+            team_obp = StatsCalculator.calculate_obp(team_hits, team_bb, team_ab)
             
             # チーム長打率計算（修正版）
             singles = team_hits - team_doubles - team_triples - team_hr

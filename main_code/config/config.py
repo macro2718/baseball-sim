@@ -5,7 +5,8 @@
 import os
 import json
 from typing import Dict, Any
-from constants import FilePaths
+from .constants import FilePaths
+
 
 class ConfigManager:
     """設定情報を一元管理するクラス"""
@@ -46,7 +47,8 @@ class ConfigManager:
     
     def _load_user_config(self):
         """ユーザー設定ファイルを読み込み（存在する場合）"""
-        config_path = "config.json"
+        # config.json をこのファイルと同じディレクトリから読み込む
+        config_path = os.path.join(os.path.dirname(__file__), "config.json")
         if os.path.exists(config_path):
             try:
                 with open(config_path, 'r', encoding='utf-8') as f:
@@ -90,13 +92,17 @@ class ConfigManager:
         
         config[keys[-1]] = value
     
-    def save_user_config(self, config_path: str = "config.json"):
+    def save_user_config(self, config_path: str = None):
         """ユーザー設定をファイルに保存"""
+        if config_path is None:
+            config_path = os.path.join(os.path.dirname(__file__), "config.json")
         try:
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(self._config, f, indent=2, ensure_ascii=False)
         except IOError as e:
             print(f"Error saving config: {e}")
 
+
 # シングルトンインスタンス
 config = ConfigManager()
+

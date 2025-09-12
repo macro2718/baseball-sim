@@ -7,12 +7,12 @@ import os
 
 # プロジェクト設定を使用
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from main_code.project_config import setup_project_environment
+from main_code.config import setup_project_environment
 setup_project_environment()
 
 from player_data.data_loader import DataLoader
-from main_code.lineup_manager import LineupManager
-from main_code.substitution_manager import SubstitutionManager
+from main_code.core.lineup_manager import LineupManager
+from main_code.core.substitution_manager import SubstitutionManager
 
 
 class TeamManager:

@@ -3,7 +3,7 @@
 スタメン、打順、守備位置の管理を行うモジュール
 """
 from typing import Optional, List, Dict, Any
-from constants import Positions
+from main_code.config import Positions
 
 class LineupManager:
     def __init__(self, team):

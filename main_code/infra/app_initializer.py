@@ -4,8 +4,8 @@
 """
 import random
 import sys
-from config import config
-from error_handling import logger
+from main_code.config import config
+from main_code.infra.error_handling import logger
 
 
 class AppInitializer:
