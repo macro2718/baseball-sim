@@ -531,3 +531,267 @@ class BuntProcessor:
             return "(No advancement)"
         else:
             return "(No base runners)"
+
+
+class RunnerEngine:
+    """通常打席結果のランナー進塁を担当するユーティリティ。
+
+    注意: 既存の game.py の挙動を保つことを最優先にし、
+    確率や計算式は現状のロジックをそのまま反映する。
+    """
+
+    def __init__(self, game_state):
+        self.game_state = game_state
+
+    # ---- 四球 ----
+    def apply_walk(self, batter) -> int:
+        """四球時のランナー進塁処理（得点数を返す）"""
+        runs = 0
+        # 一塁が空くまで全員1つ進塁（game.py の既存ロジックを踏襲）
+        for i in range(2, -1, -1):
+            if i == 0 or self.game_state.bases[i-1] is not None:
+                if i == 2 and self.game_state.bases[i] is not None:
+                    self.game_state.bases[i] = None
+                    runs += 1
+                elif i < 2:
+                    if self.game_state.bases[i] is not None:
+                        self.game_state.bases[i+1] = self.game_state.bases[i]
+                    if i == 0:
+                        self.game_state.bases[i] = batter
+                    else:
+                        self.game_state.bases[i] = None
+        return runs
+
+    # ---- 単打 ----
+    def apply_single(self, batter) -> int:
+        """単打時のランナー進塁処理（得点数を返す）"""
+        runs = 0
+
+        # 三塁走者は必ずホームイン
+        if self.game_state.bases[2] is not None:
+            runs += 1
+            self.game_state.bases[2] = None
+
+        # 二塁走者の処理（既存ロジック踏襲。走者でなく batter.speed を参照していた挙動を保持）
+        if self.game_state.bases[1] is not None:
+            run_probability = 0.65
+            run_probability *= (4.3 / batter.speed)
+            if random.random() < run_probability:
+                runs += 1
+            else:
+                self.game_state.bases[2] = self.game_state.bases[1]
+            self.game_state.bases[1] = None
+
+        # 一塁走者の処理
+        if self.game_state.bases[0] is not None:
+            advance_probability = 0.1
+            advance_probability *= (4.3 / batter.speed)
+            if self.game_state.bases[2] is None and random.random() < advance_probability:
+                self.game_state.bases[2] = self.game_state.bases[0]
+            else:
+                self.game_state.bases[1] = self.game_state.bases[0]
+            self.game_state.bases[0] = None
+
+        # 打者は一塁へ
+        self.game_state.bases[0] = batter
+
+        return runs
+
+    # ---- 二塁打 ----
+    def apply_double(self, batter) -> int:
+        """二塁打時のランナー進塁処理（得点数を返す）"""
+        runs = 0
+
+        # 三塁と二塁の走者はホームイン
+        if self.game_state.bases[2] is not None:
+            runs += 1
+            self.game_state.bases[2] = None
+
+        if self.game_state.bases[1] is not None:
+            runs += 1
+            self.game_state.bases[1] = None
+
+        # 一塁走者の処理
+        if self.game_state.bases[0] is not None:
+            run_probability = 0.2 * (4.3 / batter.speed)
+            if random.random() < run_probability:
+                runs += 1
+            else:
+                self.game_state.bases[2] = self.game_state.bases[0]
+            self.game_state.bases[0] = None
+
+        # 打者は二塁へ
+        self.game_state.bases[1] = batter
+
+        return runs
+
+    # ---- 三塁打 ----
+    def apply_triple(self, batter) -> int:
+        """三塁打時のランナー進塁処理（得点数を返す）"""
+        runs = 0
+        for i in range(3):
+            if self.game_state.bases[i] is not None:
+                runs += 1
+                self.game_state.bases[i] = None
+        # 打者は三塁へ
+        self.game_state.bases[2] = batter
+        return runs
+
+    # ---- 本塁打 ----
+    def apply_home_run(self, batter) -> int:
+        """本塁打時のランナー進塁処理（得点数を返す）"""
+        runs = 1  # 打者の分
+        for i in range(3):
+            if self.game_state.bases[i] is not None:
+                runs += 1
+                self.game_state.bases[i] = None
+        return runs
+
+    # ---- ゴロアウト ----
+    def apply_groundout(self, batter) -> Tuple[int, str]:
+        """ゴロアウト時の進塁・アウト処理。得点数とメッセージを返す。
+
+        前提: 呼び出し元で投手のIPを1/3加算、打者ABを加算済み。
+        ここではアウトカウントの増減、追加のIP（併殺時）を処理する。
+        """
+        if self._is_double_play_possible():
+            return self._handle_double_play_situation(batter)
+        else:
+            return self._handle_regular_groundout(batter)
+
+    def _is_double_play_possible(self) -> bool:
+        return (self.game_state.bases[0] is not None and self.game_state.outs < 2)
+
+    def _handle_double_play_situation(self, batter) -> Tuple[int, str]:
+        runner_situation = self._get_runner_situation()
+        if self.game_state.outs == 0:
+            return self._handle_dp_with_zero_outs(batter, runner_situation)
+        else:  # outs == 1
+            return self._handle_dp_with_one_out(batter, runner_situation)
+
+    def _get_runner_situation(self) -> str:
+        second = self.game_state.bases[1] is not None
+        third = self.game_state.bases[2] is not None
+        if not second and not third:
+            return "first_only"
+        elif second and not third:
+            return "first_second"
+        elif not second and third:
+            return "first_third"
+        else:
+            return "bases_loaded"
+
+    def _handle_dp_with_zero_outs(self, batter, runner_situation) -> Tuple[int, str]:
+        dp_probability = 0.4 * (batter.speed / 4.3)
+        if random.random() < dp_probability:
+            # ダブルプレー成功
+            runs_scored = self._execute_double_play(runner_situation)
+            # 一塁走者アウト、打者アウト（合計2アウト）
+            self.game_state.bases[0] = None
+            self.game_state.add_out()  # 一塁走者
+            self.game_state.add_out()  # 打者
+            # 追加のアウト分のIPを加算
+            self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
+            if runs_scored > 0:
+                return runs_scored, f"Double play! {runs_scored} run(s) scored!"
+            return 0, "Double play!"
+        else:
+            # ダブルプレー失敗 - フォースアウトのみ
+            return self._handle_force_out_only(batter, runner_situation)
+
+    def _handle_dp_with_one_out(self, batter, runner_situation) -> Tuple[int, str]:
+        dp_probability = 0.35 * (batter.speed / 4.3)
+        if random.random() < dp_probability:
+            # ダブルプレー成功 - イニング終了（点は入らない）
+            runs_scored = 0
+            self.game_state.bases[0] = None
+            self.game_state.add_out()  # 一塁走者 (2アウト目)
+            self.game_state.add_out()  # 打者 (3アウト目)
+            self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
+            return 0, "Inning-ending double play!"
+        else:
+            return self._handle_force_out_only(batter, runner_situation)
+
+    def _execute_double_play(self, runner_situation) -> int:
+        runs_scored = 0
+        # 0アウト時の処理（元のロジックを踏襲）
+        if runner_situation == "first_only":
+            pass
+        elif runner_situation == "first_second":
+            if self.game_state.bases[1] is not None:
+                self.game_state.bases[2] = self.game_state.bases[1]
+                self.game_state.bases[1] = None
+        elif runner_situation == "first_third":
+            if self.game_state.bases[2] is not None:
+                scoring_chance = 0.3
+                if random.random() < scoring_chance:
+                    runs_scored += 1
+                self.game_state.bases[2] = None
+        else:  # bases_loaded
+            if self.game_state.bases[2] is not None:
+                scoring_chance = 0.4
+                if random.random() < scoring_chance:
+                    runs_scored += 1
+                self.game_state.bases[2] = None
+            if self.game_state.bases[1] is not None:
+                self.game_state.bases[2] = self.game_state.bases[1]
+                self.game_state.bases[1] = None
+        return runs_scored
+
+    def _handle_force_out_only(self, batter, runner_situation) -> Tuple[int, str]:
+        runs_scored = 0
+        # 三塁走者の得点チェック
+        if runner_situation in ["first_third", "bases_loaded"]:
+            if self.game_state.bases[2] is not None:
+                scoring_chance = 0.5
+                if random.random() < scoring_chance:
+                    runs_scored += 1
+                    self.game_state.bases[2] = None
+        # 走者の進塁
+        if runner_situation == "first_second":
+            if self.game_state.bases[1] is not None:
+                self.game_state.bases[2] = self.game_state.bases[1]
+                self.game_state.bases[1] = None
+        elif runner_situation == "bases_loaded":
+            if self.game_state.bases[1] is not None and self.game_state.bases[2] is None:
+                self.game_state.bases[2] = self.game_state.bases[1]
+                self.game_state.bases[1] = None
+        # 打者は一塁へ（フォースアウトで元一塁走者がアウト）
+        self.game_state.bases[0] = batter
+        self.game_state.add_out()
+        if runs_scored > 0:
+            return runs_scored, f"Groundout, force at second. {runs_scored} run(s) scored!"
+        return 0, "Groundout, force at second."
+
+    def _handle_regular_groundout(self, batter) -> Tuple[int, str]:
+        runs_scored = 0
+        if self.game_state.bases[2] is not None and self.game_state.outs < 2:
+            scoring_probability = 0.4
+            if random.random() < scoring_probability:
+                runs_scored += 1
+                self.game_state.bases[2] = None
+        if self.game_state.bases[1] is not None and self.game_state.bases[2] is None:
+            self.game_state.bases[2] = self.game_state.bases[1]
+            self.game_state.bases[1] = None
+        if self.game_state.bases[0] is not None and self.game_state.bases[1] is None:
+            self.game_state.bases[1] = self.game_state.bases[0]
+            self.game_state.bases[0] = None
+        self.game_state.add_out()  # 打者アウト
+        if runs_scored > 0:
+            return runs_scored, f"Groundout. {runs_scored} run(s) scored!"
+        return 0, "Groundout."
+
+    # ---- フライアウト ----
+    def apply_flyout(self, batter) -> int:
+        """フライアウト時の進塁・得点処理（得点数を返す）。
+
+        前提: 呼び出し元で投手のIPを1/3加算、打者ABを加算し、最後に打者アウトを付与する。
+        ここでは犠牲フライの判定と三塁走者の処理のみを行う。
+        """
+        runs = 0
+        if self.game_state.bases[2] is not None and self.game_state.outs < 2:
+            sac_fly_probability = 0.6 * (batter.hard_pct / 35)
+            if random.random() < sac_fly_probability:
+                runs += 1
+                self.game_state.bases[2] = None
+        return runs
