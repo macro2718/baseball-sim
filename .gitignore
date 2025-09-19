@@ -1,5 +1,6 @@
 # Python bytecode and cache
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -70,6 +71,7 @@ logs/
 
 # Project-specific
 simulation_results/
+simulation_result/
 
 # PyInstaller
 *.manifest
