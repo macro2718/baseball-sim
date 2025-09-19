@@ -785,3 +785,33 @@
 2025-09-19 22:02:28,190 - baseball_sim - INFO - Random seed set to default: 0
 2025-09-19 22:02:28,190 - baseball_sim - INFO - Application initialization completed successfully
 2025-09-19 22:02:32,473 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-19 22:04:08,202 - baseball_sim - INFO - Starting application initialization...
+2025-09-19 22:04:08,203 - baseball_sim - INFO - Application logging initialized
+2025-09-19 22:04:08,203 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-19 22:04:08,203 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-19 22:04:13,980 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-19 22:11:59,222 - baseball_sim - INFO - Starting application initialization...
+2025-09-19 22:11:59,223 - baseball_sim - INFO - Application logging initialized
+2025-09-19 22:11:59,223 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-19 22:11:59,223 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-19 22:12:03,539 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-19 22:23:00,871 - baseball_sim - INFO - Starting application initialization...
+2025-09-19 22:23:00,872 - baseball_sim - INFO - Application logging initialized
+2025-09-19 22:23:00,872 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-19 22:23:00,872 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-19 22:23:03,948 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-19 22:29:50,095 - baseball_sim - INFO - Starting application initialization...
+2025-09-19 22:29:50,095 - baseball_sim - INFO - Application logging initialized
+2025-09-19 22:29:50,095 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-19 22:29:50,095 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-19 22:29:56,207 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-19 22:36:10,017 - baseball_sim - INFO - Starting application initialization...
+2025-09-19 22:36:10,018 - baseball_sim - INFO - Application logging initialized
+2025-09-19 22:36:10,018 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-19 22:36:10,019 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-19 22:36:13,459 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-19 22:41:47,492 - baseball_sim - INFO - Starting application initialization...
+2025-09-19 22:41:47,493 - baseball_sim - INFO - Application logging initialized
+2025-09-19 22:41:47,494 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-19 22:41:47,494 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-19 22:41:51,353 - baseball_sim - INFO - NN batting model loaded successfully
