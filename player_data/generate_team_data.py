@@ -1,11 +1,8 @@
 import json
-import random
 import os
-import sys
+import random
 
-# 親ディレクトリをパスに追加
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from .player_factory import PlayerFactory
+from baseball_sim.data.player_factory import PlayerFactory
 
 # パスの設定
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
