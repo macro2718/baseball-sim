@@ -94,6 +94,17 @@ class Team:
         batter = self.lineup[self.current_batter_index]
         self.current_batter_index = (self.current_batter_index + 1) % len(self.lineup)
         return batter
+
+    @property
+    def current_batter(self):
+        """Return the current batter without advancing the lineup.
+
+        This avoids side effects from calling next_batter() just to inspect
+        the batter, which previously forced code to roll the index back.
+        """
+        if not self.lineup:
+            raise ValueError("No players in lineup")
+        return self.lineup[self.current_batter_index]
     
     def pinch_hit(self, lineup_index, substitute_player):
         """ベンチから代打を送る（基本機能のみ）"""

@@ -124,7 +124,7 @@ class ScoreboardManager:
         # 投手と打者の情報
         if self.pitcher_label and self.batter_label:
             self.pitcher_label.config(text=self.text["pitcher"].format(game_state.fielding_team.current_pitcher))
-            self.batter_label.config(text=self.text["batter"].format(game_state.batting_team.lineup[game_state.batting_team.current_batter_index]))
+            self.batter_label.config(text=self.text["batter"].format(game_state.batting_team.current_batter))
     
     def create_situation_panel(self, parent_frame):
         """試合状況パネルを作成"""

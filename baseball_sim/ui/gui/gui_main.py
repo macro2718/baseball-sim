@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 
 from baseball_sim.config import GameResults, UIConstants, setup_project_environment
+from baseball_sim.infrastructure.logging_utils import logger
 
 from .gui_constants import get_font_settings, get_ui_text
 from .gui_event_manager import Events
@@ -81,7 +82,7 @@ class BaseballGUI:
                 if not success:
                     messagebox.showerror("Error", message)
                     return
-                print(message)
+                logger.info(message)
                 self.event_manager.trigger(Events.TEAMS_CREATED)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to create teams: {e}")
@@ -92,7 +93,7 @@ class BaseballGUI:
     
     def on_teams_created(self):
         """チーム作成完了時のイベントハンドラー"""
-        print("Teams created successfully")
+        logger.info("Teams created successfully")
         # タイトル画面を更新（ラインナップボタンを表示）
         self.show_title_screen()
     
@@ -116,7 +117,7 @@ class BaseballGUI:
     
     def on_lineup_changed(self, team_type):
         """ラインナップ変更時のイベントハンドラー"""
-        print(f"Lineup changed for {team_type} team")
+        logger.info(f"Lineup changed for {team_type} team")
         # 必要に応じて画面を更新
     
     def on_game_state_changed(self, game_state):
@@ -382,12 +383,13 @@ class BaseballGUI:
             self.bunt_button.config(state=tk.NORMAL)
             # バント成功確率を取得してツールチップとして表示
             try:
-                current_batter = self.game_state.batting_team.lineup[self.game_state.batting_team.current_batter_index]
+                current_batter = self.game_state.batting_team.current_batter
                 current_pitcher = self.game_state.fielding_team.current_pitcher
                 from baseball_sim.gameplay.utils import BuntCalculator
                 bunt_success_rate = BuntCalculator.calculate_bunt_success_probability(current_batter, current_pitcher)
                 self.bunt_button.config(text=f"Bunt ({bunt_success_rate:.1%})")
-            except:
+            except Exception as e:
+                logger.debug(f"Failed to compute bunt success rate: {e}")
                 self.bunt_button.config(text="Bunt")
         else:
             self.bunt_button.config(state=tk.DISABLED)
@@ -441,7 +443,7 @@ class BaseballGUI:
         prev_inning = self.game_state.inning
         prev_is_top = self.game_state.is_top_inning
         
-        batter = self.game_state.batting_team.lineup[self.game_state.batting_team.current_batter_index]
+        batter = self.game_state.batting_team.current_batter
         pitcher = self.game_state.fielding_team.current_pitcher
         
         result = self.game_state.calculate_result(batter, pitcher)
@@ -515,7 +517,7 @@ class BaseballGUI:
         prev_inning = self.game_state.inning
         prev_is_top = self.game_state.is_top_inning
         
-        batter = self.game_state.batting_team.lineup[self.game_state.batting_team.current_batter_index]
+        batter = self.game_state.batting_team.current_batter
         pitcher = self.game_state.fielding_team.current_pitcher
         
         # バント結果を取得
@@ -695,13 +697,13 @@ class BaseballGUI:
             # ボタンの状態を更新
             self._update_button_states()
             
-            print("Game started successfully with configured lineups!")
+            logger.info("Game started successfully with configured lineups!")
 
     def _create_teams(self):
         """チームを作成 - 新しいアーキテクチャ用"""
         success, message = self.team_manager.create_teams()
         if success:
-            print(message)
+            logger.info(message)
             self.event_manager.trigger(Events.TEAMS_CREATED)
         else:
             from tkinter import messagebox

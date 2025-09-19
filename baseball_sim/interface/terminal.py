@@ -49,8 +49,7 @@ def display_game_info(game_state):
         
     # 投手と打者の情報
     pitcher = game_state.fielding_team.current_pitcher
-    batter = game_state.batting_team.next_batter()
-    game_state.batting_team.current_batter_index = (game_state.batting_team.current_batter_index - 1) % 9
+    batter = game_state.batting_team.current_batter
     
     print(f"\nPitcher: {pitcher} - Stamina: {pitcher.stamina}% (ERA: {pitcher.get_era():.2f}, WHIP: {pitcher.get_whip():.2f})")
     print(f"Batter: {batter} (AVG: {batter.get_avg():.3f}, OPS: {batter.get_ops():.3f})")
@@ -280,7 +279,7 @@ def play_game_terminal(home_team, away_team):
         manage_team(game, True)
         
         # At-bat selection (normal batting or bunt)
-        batter = game.batting_team.lineup[game.batting_team.current_batter_index]
+        batter = game.batting_team.current_batter
         pitcher = game.fielding_team.current_pitcher
         
         print(f"\n===== {batter.name} vs {pitcher.name} =====")

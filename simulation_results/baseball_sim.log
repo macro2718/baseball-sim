@@ -103,3 +103,17 @@
 2025-09-19 22:59:01,644 - baseball_sim - INFO - NN batting model loaded successfully
 2025-09-19 22:59:01,654 - baseball_sim - INFO - NN batting model loaded successfully
 2025-09-19 22:59:01,670 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-20 00:09:17,359 - baseball_sim - INFO - Starting application initialization...
+2025-09-20 00:09:17,359 - baseball_sim - INFO - Application logging initialized
+2025-09-20 00:09:17,360 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-20 00:09:17,360 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-20 00:09:20,687 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-20 00:21:50,726 - baseball_sim - INFO - Starting application initialization...
+2025-09-20 00:21:50,726 - baseball_sim - INFO - Application logging initialized
+2025-09-20 00:21:50,726 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-20 00:21:50,726 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-20 00:21:53,944 - baseball_sim - INFO - Teams created: Home Team vs Away Team
+2025-09-20 00:21:53,944 - baseball_sim - INFO - Teams created successfully
+2025-09-20 00:21:53,945 - baseball_sim - INFO - Teams created successfully
+2025-09-20 00:21:53,970 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-20 00:21:53,982 - baseball_sim - INFO - Game started successfully with configured lineups!

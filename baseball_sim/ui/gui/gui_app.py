@@ -1,7 +1,6 @@
 """Tkinter based GUI application controller for the simulator."""
 
 import tkinter as tk
-from tkinter import messagebox, ttk
 
 from baseball_sim.config import setup_project_environment
 

@@ -95,7 +95,7 @@ def simulate_single_game(game):
     
     while not game_over:
         # 打席の結果を計算
-        batter = game.batting_team.lineup[game.batting_team.current_batter_index]
+        batter = game.batting_team.current_batter
         pitcher = game.fielding_team.current_pitcher
         
         result = game.calculate_result(batter, pitcher)

@@ -3,6 +3,8 @@ Event Management for GUI
 GUIコンポーネント間のイベント管理
 """
 
+from baseball_sim.infrastructure.logging_utils import logger
+
 
 class EventManager:
     """
@@ -47,7 +49,7 @@ class EventManager:
                 try:
                     handler(*args, **kwargs)
                 except Exception as e:
-                    print(f"Error in event handler for '{event_name}': {e}")
+                    logger.error(f"Error in event handler for '{event_name}': {e}")
     
     def clear_handlers(self, event_name=None):
         """イベントハンドラーをクリア
