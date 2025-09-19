@@ -104,7 +104,7 @@ class DefenseChangeMode:
         """守備変更モードのウィンドウを作成"""
         self.mode_window = tk.Toplevel(self.parent)
         self.mode_window.title("Defense Change Mode")
-        self.mode_window.geometry("960x720")  # 800x600の1.2倍
+        self.mode_window.geometry("1100x820")
         self.mode_window.protocol("WM_DELETE_WINDOW", lambda: self.end_defense_change_mode(False))
         
         # メインフレーム
@@ -170,27 +170,29 @@ class DefenseChangeMode:
         field_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
         
         # 位置の配置座標（行、列、位置名）- ピッチャーを除外
+        # 外野配置は現状を維持しつつ、内野のx軸間隔を圧縮して等脚台形を形成
         positions = [
-            (0, 1, "CF"),  # 中堅手
-            (1, 0, "LF"),  # 左翼手
-            (1, 2, "RF"),  # 右翼手
-            (2, 1, "SS"),  # 遊撃手
-            (3, 0, "3B"),  # 三塁手
-            (3, 1, "2B"),  # 二塁手
-            (3, 2, "1B"),  # 一塁手
-            (4, 1, "C"),   # 捕手
+            (0, 1, "CF", 2),  # 中堅手（中央に寄せて配置）
+            (1, 0, "LF", 1),  # 左翼手
+            (1, 3, "RF", 1),  # 右翼手
+            (2, 2, "2B", 1),  # 二塁手（上辺右の頂点）
+            (2, 1, "SS", 1),  # 遊撃手（上辺左の頂点）
+            (3, 3, "1B", 1),  # 一塁手（下辺右の頂点）
+            (3, 0, "3B", 1),  # 三塁手（下辺左の頂点）
+            (4, 1, "C", 2),   # 捕手（ホームプレート付近）
         ]
-        
-        # グリッドを設定
-        for i in range(5):  # ピッチャーがないので5行に変更
+
+        # グリッドを設定（行5×列4のフィールド）
+        for i in range(5):
             field_frame.grid_rowconfigure(i, weight=1)
-        for j in range(3):
+        for j in range(4):
             field_frame.grid_columnconfigure(j, weight=1)
             
         # 各ポジションのボタンを作成
-        for row, col, position in positions:
+        for row, col, position, colspan in positions:
             button_frame = ttk.Frame(field_frame)
-            button_frame.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
+            button_frame.grid(row=row, column=col, columnspan=colspan,
+                              padx=5, pady=5, sticky="nsew")
             
             # ポジション名ラベル
             pos_label = ttk.Label(button_frame, text=position, 
@@ -206,7 +208,7 @@ class DefenseChangeMode:
             
         # DH（指名打者）は別途右下に配置
         dh_frame = ttk.Frame(field_frame)
-        dh_frame.grid(row=4, column=2, padx=5, pady=5, sticky="se")  # ピッチャーがないので行4に変更
+        dh_frame.grid(row=4, column=3, padx=5, pady=5, sticky="se")
         
         ttk.Label(dh_frame, text="DH", font=("Arial", 10, "bold")).pack()
         dh_button = ttk.Button(dh_frame, text="", width=18,
