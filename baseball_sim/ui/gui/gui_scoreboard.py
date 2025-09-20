@@ -97,14 +97,20 @@ class ScoreboardManager:
         self.home_score_label.config(text=str(game_state.home_score))
         
         # イニング得点を更新（12回分に変更）
+        for label in self.away_inning_labels:
+            label.config(text="")
+        for label in self.home_inning_labels:
+            label.config(text="")
+
         if hasattr(game_state, 'inning_scores'):
-            # アウェイチームのイニング得点
-            for i in range(min(12, len(game_state.inning_scores[0]))):
-                self.away_inning_labels[i].config(text=str(game_state.inning_scores[0][i]))
-            
-            # ホームチームのイニング得点
-            for i in range(min(12, len(game_state.inning_scores[1]))):
-                self.home_inning_labels[i].config(text=str(game_state.inning_scores[1][i]))
+            away_scores = game_state.inning_scores[0] if len(game_state.inning_scores) > 0 else []
+            home_scores = game_state.inning_scores[1] if len(game_state.inning_scores) > 1 else []
+
+            for i, value in enumerate(away_scores[:len(self.away_inning_labels)]):
+                self.away_inning_labels[i].config(text=str(value))
+
+            for i, value in enumerate(home_scores[:len(self.home_inning_labels)]):
+                self.home_inning_labels[i].config(text=str(value))
         
         # 安打数（シングルヒット、ダブル、トリプル、ホームランの合計）
         away_hits = sum(player.stats.get("1B", 0) + player.stats.get("2B", 0) + player.stats.get("3B", 0) + player.stats.get("HR", 0) for player in game_state.away_team.lineup)
@@ -123,8 +129,11 @@ class ScoreboardManager:
         
         # 投手と打者の情報
         if self.pitcher_label and self.batter_label:
-            self.pitcher_label.config(text=self.text["pitcher"].format(game_state.fielding_team.current_pitcher))
-            self.batter_label.config(text=self.text["batter"].format(game_state.batting_team.current_batter))
+            pitcher_obj = getattr(game_state.fielding_team, 'current_pitcher', None)
+            batter_obj = getattr(game_state.batting_team, 'current_batter', None)
+
+            self.pitcher_label.config(text=self.text["pitcher"].format(pitcher_obj if pitcher_obj else ""))
+            self.batter_label.config(text=self.text["batter"].format(batter_obj if batter_obj else ""))
     
     def create_situation_panel(self, parent_frame):
         """試合状況パネルを作成"""

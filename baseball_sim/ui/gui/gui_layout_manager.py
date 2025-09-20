@@ -55,35 +55,99 @@ class LayoutManager:
         Args:
             on_new_game: 新規ゲーム開始時のコールバック
             on_exit: 終了時のコールバック
+
+        Returns:
+            dict: 画面要素への参照を格納した辞書
         """
         self.clear_screen()
         self.current_screen = "title"
-        
+
+        elements = {}
+
         # タイトル
         title_label = ttk.Label(
-            self.main_frame, 
-            text=self.text["title"], 
+            self.main_frame,
+            text=self.text["title"],
             font=self.title_font
         )
-        title_label.pack(pady=50)
-        
+        title_label.pack(pady=(40, 30))
+        elements["title_label"] = title_label
+
+        # ボタン枠
+        button_frame = ttk.Frame(self.main_frame)
+        button_frame.pack(pady=(0, 20))
+        elements["button_frame"] = button_frame
+
         # スタートボタン
+        start_button = None
         if on_new_game:
             start_button = ttk.Button(
-                self.main_frame, 
-                text=self.text["new_game"], 
-                command=on_new_game
+                button_frame,
+                text=self.text["new_game"],
+                command=on_new_game,
+                width=24
             )
-            start_button.pack(pady=20)
-        
+            start_button.pack(pady=5)
+        elements["start_button"] = start_button
+
         # 終了ボタン
+        quit_button = None
         if on_exit:
             quit_button = ttk.Button(
-                self.main_frame, 
-                text=self.text["exit"], 
-                command=on_exit
+                button_frame,
+                text=self.text["exit"],
+                command=on_exit,
+                width=24
             )
-            quit_button.pack(pady=10)
+            quit_button.pack(pady=5)
+        elements["quit_button"] = quit_button
+
+        # チームステータス
+        status_frame = ttk.LabelFrame(
+            self.main_frame,
+            text=self.text["team_status"]
+        )
+        status_frame.pack(fill=tk.X, padx=40, pady=(10, 20))
+        elements["status_frame"] = status_frame
+
+        status_rows = {}
+        for idx, team_key in enumerate(("away", "home")):
+            row_frame = ttk.Frame(status_frame)
+            row_frame.pack(fill=tk.X, padx=10, pady=5)
+
+            name_label = ttk.Label(row_frame, text="-", width=18, anchor=tk.W)
+            name_label.pack(side=tk.LEFT)
+
+            state_label = ttk.Label(row_frame, text=self.text["team_status_unknown"], anchor=tk.W)
+            state_label.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
+
+            detail_button = ttk.Button(
+                row_frame,
+                text=self.text["view_lineup"],
+                state=tk.DISABLED
+            )
+            detail_button.pack(side=tk.RIGHT)
+
+            status_rows[team_key] = {
+                "frame": row_frame,
+                "name_label": name_label,
+                "state_label": state_label,
+                "detail_button": detail_button,
+            }
+
+        elements["status_rows"] = status_rows
+
+        # ヒントテキスト
+        hint_label = ttk.Label(
+            self.main_frame,
+            text=self.text["title_hint"],
+            wraplength=520,
+            justify=tk.CENTER
+        )
+        hint_label.pack(pady=(0, 10))
+        elements["hint_label"] = hint_label
+
+        return elements
     
     def create_game_screen_layout(self):
         """ゲーム画面のレイアウトを作成して返す
@@ -94,8 +158,16 @@ class LayoutManager:
         self.clear_screen()
         self.current_screen = "game"
         
+        # トップツールバー
+        toolbar_frame = ttk.Frame(self.main_frame)
+        toolbar_frame.pack(fill=tk.X, padx=10, pady=(10, 5))
+
+        # コンテンツ領域
+        content_frame = ttk.Frame(self.main_frame)
+        content_frame.pack(fill=tk.BOTH, expand=True)
+
         # 左側：フィールド表示エリア
-        field_frame = ttk.Frame(self.main_frame)
+        field_frame = ttk.Frame(content_frame)
         field_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # フィールドキャンバス
@@ -124,7 +196,7 @@ class LayoutManager:
         scoreboard_frame.pack(fill=tk.X, padx=5, pady=5)
         
         # 右側：情報表示エリアとコントロール
-        info_frame = ttk.Frame(self.main_frame)
+        info_frame = ttk.Frame(content_frame)
         info_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=10, pady=10)
         
         # 試合状況パネル
@@ -142,8 +214,20 @@ class LayoutManager:
         # 結果表示エリア
         result_frame = ttk.LabelFrame(info_frame, text=self.text["play_result"])
         result_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+
+        # ステータスバー
+        status_bar_frame = ttk.Frame(self.main_frame)
+        status_bar_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
+
+        status_label = ttk.Label(status_bar_frame, text="", anchor=tk.W)
+        status_label.pack(side=tk.LEFT)
+
+        action_label = ttk.Label(status_bar_frame, text="", anchor=tk.E)
+        action_label.pack(side=tk.RIGHT)
+
         return {
+            'toolbar_frame': toolbar_frame,
+            'content_frame': content_frame,
             'field_frame': field_frame,
             'field_canvas': field_canvas,
             'offense_roster_frame': offense_roster_frame,
@@ -153,7 +237,10 @@ class LayoutManager:
             'situation_frame': situation_frame,
             'control_frame': control_frame,
             'play_frame': play_frame,
-            'result_frame': result_frame
+            'result_frame': result_frame,
+            'status_bar_frame': status_bar_frame,
+            'status_label': status_label,
+            'action_label': action_label
         }
     
     def create_centered_dialog(self, title, width=600, height=500):

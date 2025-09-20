@@ -111,13 +111,36 @@ class StrategyManager:
         for i, info in enumerate(formatted_pitchers):
             pitcher_frame = ttk.Frame(pitchers_frame)
             pitcher_frame.pack(fill=tk.X, padx=5, pady=2)
-            
-            ttk.Label(pitcher_frame, text=info).pack(side=tk.LEFT, padx=5)
-            ttk.Button(
+
+            # 右側に先にボタンを配置して、左側テキストが領域を食い尽くさないようにする
+            change_btn = ttk.Button(
                 pitcher_frame,
                 text=self.text["change"],
                 command=lambda idx=i, sm=substitution_manager, win=defense_window: self._change_pitcher_unified(idx, sm, win),
-            ).pack(side=tk.RIGHT, padx=5)
+            )
+            change_btn.pack(side=tk.RIGHT, padx=5)
+
+            # 部分着色: (SP)/(RP) のみ色付け
+            role_text = tk.Text(pitcher_frame, height=1, wrap=tk.NONE)
+            role_text.insert(tk.END, info)
+            # 役割抽出
+            start_paren = info.rfind('(')
+            end_paren = info.rfind(')')
+            if start_paren != -1 and end_paren != -1 and end_paren > start_paren + 1:
+                role = info[start_paren+1:end_paren]
+                try:
+                    from .gui_colors import get_position_color
+                    color = get_position_color(role, role)
+                    if color:
+                        tag = f"role_{role}_{color}"
+                        role_text.tag_configure(tag, foreground=color)
+                        start_index = f"1.0+{start_paren+1}c"
+                        end_index = f"1.0+{end_paren}c"
+                        role_text.tag_add(tag, start_index, end_index)
+                except Exception:
+                    pass
+            role_text.configure(state=tk.DISABLED)
+            role_text.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
         # 新しい守備変更モードシステム
         defense_change_frame = ttk.LabelFrame(defense_window, text="Defensive Changes")

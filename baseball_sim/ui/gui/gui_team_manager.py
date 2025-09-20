@@ -97,6 +97,13 @@ class TeamManager:
         for manager in self._lineup_managers.values():
             if hasattr(manager, '_reset_positions'):
                 manager._reset_positions()
+
+    def reset_teams(self):
+        """チーム情報をクリアして再読み込み可能にする"""
+        self.home_team = None
+        self.away_team = None
+        self._lineup_managers.clear()
+        self._substitution_managers.clear()
     
     def get_team_status(self, team_type):
         """チームの状態を取得

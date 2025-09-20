@@ -30,6 +30,7 @@ class DefenseChangeMode:
         self.temp_lineup = None  # 作業用ラインナップ
         self.temp_bench = None   # 作業用ベンチ
         self.retired_players = []  # 退場した選手のリスト（再使用不可）
+        self.retired_details = []  # 退場選手の詳細（表示用）
         self.changes_made = []   # 変更履歴
         
         # GUI要素
@@ -50,6 +51,7 @@ class DefenseChangeMode:
         self.temp_lineup = copy.deepcopy(self.team.lineup)
         self.temp_bench = copy.deepcopy(self.team.bench)
         self.retired_players = []  # 退場選手リストをリセット
+        self.retired_details = []  # 退場選手詳細もリセット
         self.changes_made = []
         
         # 各選手にcurrent_positionが設定されていることを確認
@@ -195,8 +197,11 @@ class DefenseChangeMode:
                               padx=5, pady=5, sticky="nsew")
             
             # ポジション名ラベル
+            from .gui_colors import get_position_color
+            color = get_position_color(position)
             pos_label = ttk.Label(button_frame, text=position, 
-                                 font=("Arial", 10, "bold"))
+                                 font=("Arial", 10, "bold"),
+                                 foreground=(color or "black"))
             pos_label.pack()
             
             # 選手ボタン
@@ -326,18 +331,31 @@ class DefenseChangeMode:
             player_frame = ttk.Frame(self.bench_frame)
             player_frame.pack(fill=tk.X, padx=5, pady=2)
             
-            # 選手情報
+            # 選手情報（ボタンは名前のみ）
             info_text = f"{player.name}"
             player_button = ttk.Button(player_frame, text=info_text, width=20,
                                      command=lambda idx=i: self._on_bench_player_click(idx))
             player_button.pack(side=tk.LEFT, padx=2)
             
-            # 守備位置適性表示（ピッチャーは除外、DHも含める）
-            positions_text = ", ".join([pos for pos in ["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"] 
-                                       if player.can_play_position(pos)])
-            if not positions_text:
-                positions_text = "No positions available"
-            ttk.Label(player_frame, text=positions_text, font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+            # 守備位置適性表示（DH含む）をトークン毎に色付け
+            from .gui_colors import get_position_color
+            positions = [pos for pos in ["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"] if player.can_play_position(pos)]
+            pos_text = tk.Text(player_frame, height=1, wrap=tk.NONE, font=("Arial", 8))
+            if positions:
+                for idx_p, pos in enumerate(positions):
+                    if idx_p > 0:
+                        pos_text.insert(tk.END, ", ")
+                    color = get_position_color(pos, getattr(player, 'pitcher_type', None) if pos in {"P","SP","RP"} else None)
+                    if color:
+                        tag = f"pos_{pos}_{color}"
+                        pos_text.tag_configure(tag, foreground=color)
+                        pos_text.insert(tk.END, pos, tag)
+                    else:
+                        pos_text.insert(tk.END, pos)
+            else:
+                pos_text.insert(tk.END, "No positions available")
+            pos_text.configure(state=tk.DISABLED)
+            pos_text.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
             
     def _update_retired_display(self):
         """退場選手表示を更新"""
@@ -345,11 +363,63 @@ class DefenseChangeMode:
         self.retired_text.delete(1.0, tk.END)
         
         if self.retired_players:
+            # 詳細情報を利用して表示（ポジション語は部分着色）
+            try:
+                from .gui_colors import get_position_color
+            except Exception:
+                get_position_color = None
+
+            # プレイヤー順に詳細を見つけて出力
             for player in self.retired_players:
-                self.retired_text.insert(tk.END, f"{player.name}\n")
+                # 対応する詳細を探す
+                detail = None
+                for d in self.retired_details:
+                    if d.get('player') == player:
+                        detail = d
+                        break
+
+                name = getattr(player, 'name', 'Unknown')
+                actual_pos = detail.get('actual_position') if detail else None
+                eligible = detail.get('eligible_positions', []) if detail else []
+
+                # 名前
+                self.retired_text.insert(tk.END, name)
+
+                # 実際の守備位置
+                self.retired_text.insert(tk.END, " (")
+                if actual_pos and get_position_color:
+                    color = get_position_color(actual_pos)
+                    if color:
+                        tag = f"ret_act_{actual_pos}_{color}"
+                        self.retired_text.tag_configure(tag, foreground=color)
+                        self.retired_text.insert(tk.END, actual_pos, tag)
+                    else:
+                        self.retired_text.insert(tk.END, actual_pos)
+                elif actual_pos:
+                    self.retired_text.insert(tk.END, actual_pos)
+                else:
+                    self.retired_text.insert(tk.END, "-")
+                self.retired_text.insert(tk.END, ") ")
+
+                # Eligible 表示
+                self.retired_text.insert(tk.END, "[Eligible: ")
+                for idx, pos in enumerate(eligible):
+                    if idx > 0:
+                        self.retired_text.insert(tk.END, ", ")
+                    if get_position_color:
+                        color = get_position_color(pos)
+                        if color:
+                            tag = f"ret_elig_{pos}_{color}"
+                            self.retired_text.tag_configure(tag, foreground=color)
+                            self.retired_text.insert(tk.END, pos, tag)
+                        else:
+                            self.retired_text.insert(tk.END, pos)
+                    else:
+                        self.retired_text.insert(tk.END, pos)
+                self.retired_text.insert(tk.END, "]\n")
         else:
             self.retired_text.insert(tk.END, "No retired players")
-            
+        
         self.retired_text.configure(state=tk.DISABLED)
             
     def _update_history_display(self):
@@ -428,6 +498,9 @@ class DefenseChangeMode:
         if not confirm:
             return
             
+        # 表示用に退場時点の情報を保存
+        self._record_retired_detail(player, position)
+
         # ポジションから削除
         setattr(player, 'current_position', None)
         
@@ -448,6 +521,24 @@ class DefenseChangeMode:
         self.changes_made.append(change_text)
         
         self._update_display()
+
+    def _record_retired_detail(self, player, actual_position):
+        """退場選手の表示用詳細を記録する"""
+        # 既に記録済みならスキップ
+        for d in self.retired_details:
+            if d.get('player') == player:
+                return
+        eligible_positions = []
+        if hasattr(player, 'get_display_eligible_positions'):
+            eligible_positions = player.get_display_eligible_positions()
+        elif hasattr(player, 'eligible_positions') and player.eligible_positions:
+            eligible_positions = list(player.eligible_positions)
+        self.retired_details.append({
+            'player': player,
+            'name': getattr(player, 'name', 'Unknown'),
+            'actual_position': actual_position,
+            'eligible_positions': eligible_positions,
+        })
         
     def _assign_to_position(self, bench_index, position):
         """ベンチ選手をポジションに配置"""
@@ -609,6 +700,9 @@ class DefenseChangeMode:
         if bench_player not in self.temp_lineup:
             self.temp_lineup.append(bench_player)
         
+        # 退場時点の情報を保存
+        self._record_retired_detail(field_player, current_pos)
+
         # フィールド選手を退場させる
         setattr(field_player, 'current_position', None)
         if field_player not in self.retired_players:
