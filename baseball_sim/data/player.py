@@ -106,6 +106,10 @@ class Pitcher(Player):
 
     def __str__(self):
         return f"{self.name} ({self.pitcher_type}) - Stamina: {int(self.current_stamina)}%"
+
+    def get_display_eligible_positions(self):
+        """表示用には投手タイプ（SP/RP）を返す。"""
+        return [self.pitcher_type]
     
     def get_effectiveness(self):
         """現在の投球効果を返す（スタミナ影響下）"""

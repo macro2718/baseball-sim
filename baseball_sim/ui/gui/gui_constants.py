@@ -23,6 +23,7 @@ def get_ui_text():
         "title": "Baseball Simulation",
         "new_game": "Start New Game",
         "exit": "Exit",
+        "revalidate_lineups": "Re-validate Lineups",
         "scoreboard": "Scoreboard",
         "team": "Team",
         "score": "Score",

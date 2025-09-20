@@ -71,6 +71,47 @@ class BaseballGUI:
 
         # イベントリスナーの登録
         self._setup_event_listeners()
+
+    # --- Helper for position display ---
+    def _display_position_token(self, pos: str, player) -> str:
+        """Return the display token for a player's position.
+
+        - For pitchers with position 'P', show 'SP' or 'RP' based on pitcher_type.
+        - Otherwise return the original token.
+        """
+        if not pos:
+            return pos
+        if pos.upper() == "P" and hasattr(player, 'pitcher_type') and player.pitcher_type in ("SP", "RP"):
+            return player.pitcher_type
+        return pos
+
+    def _render_eligible_tokens(self, parent, player):
+        """Eligible欄を各ポジション単語のみ色付けして描画"""
+        # 既存の子ウィジェットをクリア
+        for child in parent.winfo_children():
+            child.destroy()
+        # 位置リストの取得（P→SP/RP 変換）
+        positions = []
+        if hasattr(player, 'get_display_eligible_positions'):
+            positions = player.get_display_eligible_positions()
+        elif hasattr(player, 'eligible_positions') and player.eligible_positions:
+            positions = list(player.eligible_positions)
+        # 配置
+        if not positions:
+            ttk.Label(parent, text="-").pack(side=tk.LEFT)
+            return
+        for idx, raw in enumerate(positions):
+            token = self._display_position_token(raw, player)
+            color = get_position_color(token, getattr(player, 'pitcher_type', None) if token in {"P", "SP", "RP"} else None)
+            lbl = ttk.Label(parent, text=token)
+            if color:
+                try:
+                    lbl.configure(foreground=color)
+                except Exception:
+                    pass
+            lbl.pack(side=tk.LEFT)
+            if idx < len(positions) - 1:
+                ttk.Label(parent, text=", ").pack(side=tk.LEFT)
     
     def _setup_event_listeners(self):
         """イベントリスナーを設定"""
@@ -82,9 +123,14 @@ class BaseballGUI:
     def show_title_screen(self):
         """タイトル画面を表示"""
         self._unbind_keyboard_shortcuts()
+        # タイトル画面表示前にチームをロードして、プレビュー/バリデーションを使えるようにする
+        # 通知は不要（イベント再帰を避けるため）
+        self._load_teams(force_reload=False, notify=False)
+
         self.title_screen_elements = self.layout_manager.create_title_screen(
             on_new_game=self._start_game,
-            on_exit=self.root.quit
+            on_exit=self.root.quit,
+            on_revalidate=self._revalidate_lineups
         )
 
         status_rows = self.title_screen_elements.get("status_rows", {})
@@ -98,6 +144,16 @@ class BaseballGUI:
             )
 
         self._update_title_screen_status()
+
+    def _revalidate_lineups(self):
+        """タイトル画面からラインナップのバリデーションを再実行"""
+        # チーム未ロードならロード（通知なし）
+        if not self.team_manager.has_teams():
+            if not self._load_teams(force_reload=False, notify=False):
+                return
+        # ステータスの再計算と反映
+        self._update_title_screen_status()
+        # 追加の通知は不要。視覚的更新で十分。
 
     def _update_title_screen_status(self):
         """タイトル画面のチームステータスを更新"""
@@ -216,7 +272,8 @@ class BaseballGUI:
     
     def _start_game(self):
         """ゲームを開始"""
-        if not self._load_teams():
+        # タイトル画面で既にロード済みの場合が多いので通知は行わない
+        if not self._load_teams(notify=False):
             return
 
         self._proceed_to_game()
@@ -678,12 +735,13 @@ class BaseballGUI:
         text_widget.insert(tk.END, prefix)
 
         # 現在の守備位置（色付き）
-        pos_color = get_position_color(current_pos, getattr(player, 'pitcher_type', None))
+        display_pos = self._display_position_token(current_pos, player)
+        pos_color = get_position_color(display_pos, getattr(player, 'pitcher_type', None))
         if pos_color:
             tag = ensure_tag(pos_color)
-            text_widget.insert(tk.END, current_pos, tag)
+            text_widget.insert(tk.END, display_pos, tag)
         else:
-            text_widget.insert(tk.END, current_pos)
+            text_widget.insert(tk.END, display_pos)
 
         # 区切りと名前
         text_widget.insert(tk.END, f" | {player.name} [Eligible: ")
@@ -692,12 +750,13 @@ class BaseballGUI:
         for idx, pos in enumerate(eligible_positions):
             if idx > 0:
                 text_widget.insert(tk.END, ", ")
-            e_color = get_position_color(pos, getattr(player, 'pitcher_type', None) if pos in {"P", "SP", "RP"} else None)
+            display_epos = self._display_position_token(pos, player)
+            e_color = get_position_color(display_epos, getattr(player, 'pitcher_type', None) if display_epos in {"P", "SP", "RP"} else None)
             if e_color:
                 tag = ensure_tag(e_color)
-                text_widget.insert(tk.END, pos, tag)
+                text_widget.insert(tk.END, display_epos, tag)
             else:
-                text_widget.insert(tk.END, pos)
+                text_widget.insert(tk.END, display_epos)
 
         text_widget.insert(tk.END, "]")
 
@@ -1064,61 +1123,71 @@ class BaseballGUI:
         notebook = ttk.Notebook(dialog)
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # ラインナップタブ
+        # ラインナップタブ（セル内部分色のため、ラベルグリッドで自前描画）
         lineup_tab = ttk.Frame(notebook)
         notebook.add(lineup_tab, text=self.text["team_preview_lineup"])
-        lineup_tree = self._create_preview_table(
-            lineup_tab,
-            columns=("order", "position", "name", "eligible"),
-            headings=(
-                self.text["preview_order"],
-                self.text["preview_position"],
-                self.text["preview_name"],
-                self.text["preview_eligible"],
-            ),
-            widths=(40, 70, 220, 240)
-        )
+        # ヘッダー
+        header = ttk.Frame(lineup_tab)
+        header.pack(fill=tk.X, padx=8, pady=(6, 2))
+        ttk.Label(header, text=self.text["preview_order"], width=4).grid(row=0, column=0, sticky=tk.W, padx=2)
+        ttk.Label(header, text=self.text["preview_position"], width=6).grid(row=0, column=1, sticky=tk.W, padx=2)
+        ttk.Label(header, text=self.text["preview_name"], width=28).grid(row=0, column=2, sticky=tk.W, padx=2)
+        ttk.Label(header, text=self.text["preview_eligible"], width=34).grid(row=0, column=3, sticky=tk.W, padx=2)
+        # 行
+        rows = ttk.Frame(lineup_tab)
+        rows.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 6))
         if team.lineup:
-            for idx, player in enumerate(team.lineup, start=1):
-                position = getattr(player, 'current_position', None) or getattr(player, 'position', '-')
-                lineup_tree.insert("", tk.END, values=(idx, position, player.name, self._format_player_positions(player)))
+            for i, player in enumerate(team.lineup, start=1):
+                raw_pos = getattr(player, 'current_position', None) or getattr(player, 'position', '-')
+                position = self._display_position_token(raw_pos, player)
+                color = get_position_color(position, getattr(player, 'pitcher_type', None))
+                ttk.Label(rows, text=str(i), width=4).grid(row=i, column=0, sticky=tk.W, padx=2, pady=1)
+                pos_lbl = ttk.Label(rows, text=position, width=6)
+                if color:
+                    try:
+                        pos_lbl.configure(foreground=color)
+                    except Exception:
+                        pass
+                pos_lbl.grid(row=i, column=1, sticky=tk.W, padx=2, pady=1)
+                ttk.Label(rows, text=player.name, width=28).grid(row=i, column=2, sticky=tk.W, padx=2, pady=1)
+                # Eligible を各トークン色付けで描画
+                elig_container = ttk.Frame(rows)
+                elig_container.grid(row=i, column=3, sticky=tk.W, padx=2, pady=1)
+                self._render_eligible_tokens(elig_container, player)
         else:
-            lineup_tree.insert("", tk.END, values=("", "", self.text["preview_no_players"], ""))
+            ttk.Label(rows, text=self.text["preview_no_players"]).grid(row=1, column=0, columnspan=4, sticky=tk.W, padx=2, pady=2)
 
-        # ベンチタブ
+        # ベンチタブ（ラベルグリッドで部分色）
         bench_tab = ttk.Frame(notebook)
         notebook.add(bench_tab, text=self.text["team_preview_bench"])
-        bench_tree = self._create_preview_table(
-            bench_tab,
-            columns=("position", "name", "eligible"),
-            headings=(
-                self.text["preview_position"],
-                self.text["preview_name"],
-                self.text["preview_eligible"],
-            ),
-            widths=(70, 240, 240)
-        )
+        b_header = ttk.Frame(bench_tab)
+        b_header.pack(fill=tk.X, padx=8, pady=(6, 2))
+        # ベンチはポジション列を表示しない（要望に合わせて非表示）
+        ttk.Label(b_header, text=self.text["preview_name"], width=28).grid(row=0, column=0, sticky=tk.W, padx=2)
+        ttk.Label(b_header, text=self.text["preview_eligible"], width=34).grid(row=0, column=1, sticky=tk.W, padx=2)
+        b_rows = ttk.Frame(bench_tab)
+        b_rows.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 6))
         bench_players = getattr(team, 'bench', [])
         if bench_players:
-            for player in bench_players:
-                pos = getattr(player, 'current_position', None) or getattr(player, 'position', '-')
-                bench_tree.insert("", tk.END, values=(pos, player.name, self._format_player_positions(player)))
+            for i, player in enumerate(bench_players, start=1):
+                ttk.Label(b_rows, text=player.name, width=28).grid(row=i, column=0, sticky=tk.W, padx=2, pady=1)
+                # Eligible を各トークン色付けで描画
+                elig_container = ttk.Frame(b_rows)
+                elig_container.grid(row=i, column=1, sticky=tk.W, padx=2, pady=1)
+                self._render_eligible_tokens(elig_container, player)
         else:
-            bench_tree.insert("", tk.END, values=("", self.text["preview_no_players"], ""))
+            ttk.Label(b_rows, text=self.text["preview_no_players"]).grid(row=1, column=0, columnspan=2, sticky=tk.W, padx=2, pady=2)
 
-        # 投手タブ
+        # 投手タブ（Eligible の各トークンを色付けするためラベルグリッドで描画）
         pitchers_tab = ttk.Frame(notebook)
         notebook.add(pitchers_tab, text=self.text["team_preview_pitchers"])
-        pitchers_tree = self._create_preview_table(
-            pitchers_tab,
-            columns=("name", "role", "eligible"),
-            headings=(
-                self.text["preview_name"],
-                self.text["preview_role"],
-                self.text["preview_eligible"],
-            ),
-            widths=(220, 120, 210)
-        )
+        p_header = ttk.Frame(pitchers_tab)
+        p_header.pack(fill=tk.X, padx=8, pady=(6, 2))
+        ttk.Label(p_header, text=self.text["preview_name"], width=28).grid(row=0, column=0, sticky=tk.W, padx=2)
+        ttk.Label(p_header, text=self.text["preview_role"], width=14).grid(row=0, column=1, sticky=tk.W, padx=2)
+        ttk.Label(p_header, text=self.text["preview_eligible"], width=34).grid(row=0, column=2, sticky=tk.W, padx=2)
+        p_rows = ttk.Frame(pitchers_tab)
+        p_rows.pack(fill=tk.BOTH, expand=True, padx=8, pady=(0, 6))
 
         pitchers = list(getattr(team, 'pitchers', []))
         current_pitcher = getattr(team, 'current_pitcher', None)
@@ -1126,11 +1195,18 @@ class BaseballGUI:
             pitchers.insert(0, current_pitcher)
 
         if pitchers:
-            for player in pitchers:
+            for i, player in enumerate(pitchers, start=1):
                 role = self.text["preview_role_current_pitcher"] if player == current_pitcher else self.text["preview_role_available"]
-                pitchers_tree.insert("", tk.END, values=(player.name, role, self._format_player_positions(player)))
+                # 名前
+                ttk.Label(p_rows, text=player.name, width=28).grid(row=i, column=0, sticky=tk.W, padx=2, pady=1)
+                # 役割（必要なら色付け可能だが、今回はそのまま）
+                ttk.Label(p_rows, text=role, width=14).grid(row=i, column=1, sticky=tk.W, padx=2, pady=1)
+                # Eligible（SP/RP を色付け）
+                elig_container = ttk.Frame(p_rows)
+                elig_container.grid(row=i, column=2, sticky=tk.W, padx=2, pady=1)
+                self._render_eligible_tokens(elig_container, player)
         else:
-            pitchers_tree.insert("", tk.END, values=(self.text["preview_no_players"], "", ""))
+            ttk.Label(p_rows, text=self.text["preview_no_players"]).grid(row=1, column=0, columnspan=3, sticky=tk.W, padx=2, pady=2)
 
         ttk.Button(dialog, text=self.text["close"], command=dialog.destroy).pack(pady=(0, 12))
 
@@ -1163,7 +1239,9 @@ class BaseballGUI:
         if not positions:
             return "-"
 
-        return ", ".join(positions)
+        # 表示トークン（P→SP/RP 変換）
+        mapped = [self._display_position_token(p, player) for p in positions]
+        return ", ".join(mapped)
     
 
     

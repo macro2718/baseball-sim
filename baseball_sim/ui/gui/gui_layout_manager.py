@@ -49,7 +49,7 @@ class LayoutManager:
             widget.destroy()
         self.current_screen = None
     
-    def create_title_screen(self, on_new_game=None, on_exit=None):
+    def create_title_screen(self, on_new_game=None, on_exit=None, on_revalidate=None):
         """タイトル画面を作成
         
         Args:
@@ -89,6 +89,18 @@ class LayoutManager:
             )
             start_button.pack(pady=5)
         elements["start_button"] = start_button
+
+        # ルールチェック（ラインナップ再バリデート）ボタン
+        revalidate_button = None
+        if on_revalidate:
+            revalidate_button = ttk.Button(
+                button_frame,
+                text=self.text["revalidate_lineups"],
+                command=on_revalidate,
+                width=24
+            )
+            revalidate_button.pack(pady=5)
+        elements["revalidate_button"] = revalidate_button
 
         # 終了ボタン
         quit_button = None

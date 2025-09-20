@@ -259,6 +259,7 @@ class StrategyManager:
         # 現在/主ポジション
         primary_pos = player.eligible_positions[0] if getattr(player, 'eligible_positions', None) else "N/A"
         current_pos = getattr(player, 'current_position', None) or primary_pos
+        display_cur = (player.pitcher_type if str(current_pos).upper() == 'P' and hasattr(player, 'pitcher_type') else current_pos)
         eligible_positions = []
         if hasattr(player, 'get_display_eligible_positions'):
             eligible_positions = player.get_display_eligible_positions()
@@ -272,25 +273,25 @@ class StrategyManager:
             if star:
                 text.insert(tk.END, "★ ")
             # 現在の守備位置（色）
-            pos_color = get_position_color(current_pos, getattr(player, 'pitcher_type', None))
+            pos_color = get_position_color(display_cur, getattr(player, 'pitcher_type', None))
             if pos_color:
-                tag = f"cur_{current_pos}_{pos_color}"
+                tag = f"cur_{display_cur}_{pos_color}"
                 text.tag_configure(tag, foreground=pos_color)
-                text.insert(tk.END, current_pos, tag)
+                text.insert(tk.END, display_cur, tag)
             else:
-                text.insert(tk.END, current_pos)
+                text.insert(tk.END, display_cur)
             # 区切りと名前
             text.insert(tk.END, f" | {player.name} [Eligible: ")
         else:
             # 従来形式: 名前 (CURPOS) [Eligible: ...]
             text.insert(tk.END, f"{player.name} (")
-            pos_color = get_position_color(current_pos, getattr(player, 'pitcher_type', None))
+            pos_color = get_position_color(display_cur, getattr(player, 'pitcher_type', None))
             if pos_color:
-                tag = f"cur_{current_pos}_{pos_color}"
+                tag = f"cur_{display_cur}_{pos_color}"
                 text.tag_configure(tag, foreground=pos_color)
-                text.insert(tk.END, current_pos, tag)
+                text.insert(tk.END, display_cur, tag)
             else:
-                text.insert(tk.END, current_pos)
+                text.insert(tk.END, display_cur)
             text.insert(tk.END, ") [Eligible: ")
 
         # Eligible（各トークンを色）

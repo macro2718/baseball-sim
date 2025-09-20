@@ -4,6 +4,8 @@ Defense Change Mode for GUI
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
+
+from .gui_colors import get_position_color
 import copy
 
 
@@ -391,13 +393,17 @@ class DefenseChangeMode:
                 # 実際の守備位置
                 self.retired_text.insert(tk.END, " (")
                 if actual_pos and get_position_color:
-                    color = get_position_color(actual_pos)
+                    # P は SP/RP に変換して色付け
+                    display_pos = (getattr(player, 'pitcher_type', None)
+                                   if str(actual_pos).upper() == 'P' and hasattr(player, 'pitcher_type')
+                                   else actual_pos)
+                    color = get_position_color(display_pos, getattr(player, 'pitcher_type', None))
                     if color:
-                        tag = f"ret_act_{actual_pos}_{color}"
+                        tag = f"ret_act_{display_pos}_{color}"
                         self.retired_text.tag_configure(tag, foreground=color)
-                        self.retired_text.insert(tk.END, actual_pos, tag)
+                        self.retired_text.insert(tk.END, display_pos, tag)
                     else:
-                        self.retired_text.insert(tk.END, actual_pos)
+                        self.retired_text.insert(tk.END, display_pos)
                 elif actual_pos:
                     self.retired_text.insert(tk.END, actual_pos)
                 else:
@@ -410,13 +416,16 @@ class DefenseChangeMode:
                     if idx > 0:
                         self.retired_text.insert(tk.END, ", ")
                     if get_position_color:
-                        color = get_position_color(pos)
+                        disp_pos = (getattr(player, 'pitcher_type', None)
+                                    if str(pos).upper() == 'P' and hasattr(player, 'pitcher_type')
+                                    else pos)
+                        color = get_position_color(disp_pos, getattr(player, 'pitcher_type', None) if disp_pos in {"P","SP","RP"} else None)
                         if color:
-                            tag = f"ret_elig_{pos}_{color}"
+                            tag = f"ret_elig_{disp_pos}_{color}"
                             self.retired_text.tag_configure(tag, foreground=color)
-                            self.retired_text.insert(tk.END, pos, tag)
+                            self.retired_text.insert(tk.END, disp_pos, tag)
                         else:
-                            self.retired_text.insert(tk.END, pos)
+                            self.retired_text.insert(tk.END, disp_pos)
                     else:
                         self.retired_text.insert(tk.END, pos)
                 self.retired_text.insert(tk.END, "]\n")
