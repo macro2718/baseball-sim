@@ -55,7 +55,17 @@ class StrategyManager:
             player_frame = ttk.Frame(lineup_frame)
             player_frame.pack(fill=tk.X, padx=5, pady=2)
             
-            ttk.Label(player_frame, text=info).pack(side=tk.LEFT, padx=5)
+            # 部分着色: 現在のポジションとEligibleの各ポジショントークンだけ色付け
+            player_obj = team.lineup[i] if i < len(team.lineup) else None
+            text_widget = self._create_colored_info_text(
+                player_frame,
+                prefix=f"{i+1}. ",
+                player=player_obj,
+                style='lineup',
+                star=(i == team.current_batter_index),
+                layout='main_like'
+            )
+            text_widget.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
             
             if i == team.current_batter_index:
                 ttk.Label(player_frame, text=self.text["current_batter"]).pack(side=tk.RIGHT, padx=5)
@@ -65,16 +75,27 @@ class StrategyManager:
         bench_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         formatted_bench = substitution_manager.get_formatted_bench()
+        available_bench = substitution_manager.get_available_bench_players()
         for i, info in enumerate(formatted_bench):
             player_frame = ttk.Frame(bench_frame)
             player_frame.pack(fill=tk.X, padx=5, pady=2)
             
-            ttk.Label(player_frame, text=info).pack(side=tk.LEFT, padx=5)
+            # 右側にボタンを先に配置して、左側のテキストが食い尽くさないようにする
             ttk.Button(
                 player_frame,
                 text=self.text["pinch_hit"],
                 command=lambda idx=i, sm=substitution_manager, win=offense_window: self._pinch_hit_unified(idx, sm, win),
             ).pack(side=tk.RIGHT, padx=5)
+
+            # 部分着色テキスト
+            bench_player = available_bench[i] if i < len(available_bench) else None
+            text_widget = self._create_colored_info_text(
+                player_frame,
+                prefix=f"{i+1}. ",
+                player=bench_player,
+                style='bench'
+            )
+            text_widget.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         
         # 閉じるボタン
         ttk.Button(offense_window, text=self.text["close"], command=offense_window.destroy).pack(pady=10)
@@ -215,6 +236,78 @@ class StrategyManager:
                 
         except Exception as e:
             messagebox.showerror("Error", f"Pitcher change error: {str(e)}")
+
+    def _create_colored_info_text(self, parent, prefix: str, player, style: str, star: bool = False, layout: str = 'name_paren'):
+        """プレイヤー情報を部分着色で描画する Text を返す。
+
+        表示形式:
+          layout='name_paren': "<prefix>PlayerName (CURPOS) [Eligible: P1, P2, ...]"
+          layout='main_like' : "<prefix>[★ ]CURPOS | PlayerName [Eligible: ...]"（メイン画面に合わせる）
+        いずれもCURPOSとEligible内の各ポジションだけ色付け。
+        """
+        text = tk.Text(parent, height=1, wrap=tk.NONE)
+        text.configure(state=tk.NORMAL)
+
+        # 何も無ければダミー
+        if not player:
+            text.insert(tk.END, prefix + "-")
+            text.configure(state=tk.DISABLED)
+            return text
+
+        from .gui_colors import get_position_color
+
+        # 現在/主ポジション
+        primary_pos = player.eligible_positions[0] if getattr(player, 'eligible_positions', None) else "N/A"
+        current_pos = getattr(player, 'current_position', None) or primary_pos
+        eligible_positions = []
+        if hasattr(player, 'get_display_eligible_positions'):
+            eligible_positions = player.get_display_eligible_positions()
+        elif getattr(player, 'eligible_positions', None):
+            eligible_positions = list(player.eligible_positions)
+
+        # メイン風/従来の2パターン
+        text.insert(tk.END, prefix)
+        if layout == 'main_like':
+            # 先頭に星（現在打者）
+            if star:
+                text.insert(tk.END, "★ ")
+            # 現在の守備位置（色）
+            pos_color = get_position_color(current_pos, getattr(player, 'pitcher_type', None))
+            if pos_color:
+                tag = f"cur_{current_pos}_{pos_color}"
+                text.tag_configure(tag, foreground=pos_color)
+                text.insert(tk.END, current_pos, tag)
+            else:
+                text.insert(tk.END, current_pos)
+            # 区切りと名前
+            text.insert(tk.END, f" | {player.name} [Eligible: ")
+        else:
+            # 従来形式: 名前 (CURPOS) [Eligible: ...]
+            text.insert(tk.END, f"{player.name} (")
+            pos_color = get_position_color(current_pos, getattr(player, 'pitcher_type', None))
+            if pos_color:
+                tag = f"cur_{current_pos}_{pos_color}"
+                text.tag_configure(tag, foreground=pos_color)
+                text.insert(tk.END, current_pos, tag)
+            else:
+                text.insert(tk.END, current_pos)
+            text.insert(tk.END, ") [Eligible: ")
+
+        # Eligible（各トークンを色）
+        for idx, pos in enumerate(eligible_positions):
+            if idx > 0:
+                text.insert(tk.END, ", ")
+            e_color = get_position_color(pos, getattr(player, 'pitcher_type', None) if pos in {"P","SP","RP"} else None)
+            if e_color:
+                tag = f"elig_{pos}_{e_color}"
+                text.tag_configure(tag, foreground=e_color)
+                text.insert(tk.END, pos, tag)
+            else:
+                text.insert(tk.END, pos)
+        text.insert(tk.END, "]")
+
+        text.configure(state=tk.DISABLED)
+        return text
     
     def _show_substitution_step2_dialog(self, parent_dialog, fielder_idx, substitution_manager):
         """守備交代 - ステップ2: ベンチ選手を選択（統一化）"""
