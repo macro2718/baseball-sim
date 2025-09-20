@@ -32,6 +32,8 @@ class DefenseChangeMode:
         self.retired_players = []  # 退場した選手のリスト（再使用不可）
         self.retired_details = []  # 退場選手の詳細（表示用）
         self.changes_made = []   # 変更履歴
+        # ラインナップの置換関係を保持（退場した選手名 -> ベンチから入った選手名）
+        self.replacements = {}
         
         # GUI要素
         self.mode_window = None
@@ -53,6 +55,7 @@ class DefenseChangeMode:
         self.retired_players = []  # 退場選手リストをリセット
         self.retired_details = []  # 退場選手詳細もリセット
         self.changes_made = []
+        self.replacements = {}
         
         # 各選手にcurrent_positionが設定されていることを確認
         for player in self.temp_lineup:
@@ -695,10 +698,17 @@ class DefenseChangeMode:
         
         # ベンチ選手を現在のポジションに配置
         setattr(bench_player, 'current_position', current_pos)
-        
+
         # ベンチ選手をラインナップに追加
         if bench_player not in self.temp_lineup:
             self.temp_lineup.append(bench_player)
+
+        # 置換関係を記録（打順維持に利用）
+        try:
+            # 名前で管理（deepcopy環境のため）
+            self.replacements[getattr(field_player, 'name', '')] = getattr(bench_player, 'name', '')
+        except Exception:
+            pass
         
         # 退場時点の情報を保存
         self._record_retired_detail(field_player, current_pos)
@@ -833,6 +843,7 @@ class DefenseChangeMode:
             self.temp_bench = copy.deepcopy(self.team.bench)
             self.retired_players = []  # 退場選手もリセット
             self.changes_made = []
+            self.replacements = {}
             
             # 各選手にcurrent_positionが設定されていることを確認
             for player in self.temp_lineup:
@@ -907,33 +918,105 @@ class DefenseChangeMode:
         
     def _apply_changes(self):
         """変更を実際のチームに適用"""
-        # ラインナップの更新（退場していない選手のみ）
+        # 1) 参照用の辞書を構築
+        original_lineup = list(self.team.lineup)
+        original_bench = list(self.team.bench)
+        name_to_lineup_player = {p.name: p for p in original_lineup}
+        name_to_bench_player = {p.name: p for p in original_bench}
+
+        # temp（作業用）での現役選手とそのポジション
+        temp_active = [tp for tp in self.temp_lineup if tp not in self.retired_players]
+        temp_name_to_pos = {tp.name: getattr(tp, 'current_position', None) for tp in temp_active}
+
+        retired_names = {getattr(p, 'name', '') for p in self.retired_players}
+        original_lineup_names = [p.name for p in original_lineup]
+        temp_active_names = {tp.name for tp in temp_active}
+        new_entrant_names = list(temp_active_names - set(original_lineup_names))
+
+        # 2) 退場選手名 -> 代替選手名 の確定
+        replacement_map = dict(self.replacements)  # 事前に記録した置換関係
+
+        # 退場詳細からポジション一致で補完
+        retired_pos_map = {}
+        for d in getattr(self, 'retired_details', []) or []:
+            rname = d.get('name')
+            rpos = d.get('actual_position')
+            if rname and rpos:
+                retired_pos_map[rname] = rpos
+
+        # 置換未設定の退場枠に対して、同ポジションに入っている新規選手を割り当て
+        if retired_pos_map:
+            for rname, rpos in retired_pos_map.items():
+                if rname in retired_names and rname not in replacement_map:
+                    # temp側でそのポジションに入っている新規選手を探す
+                    candidate = None
+                    for tp in temp_active:
+                        if tp.name in new_entrant_names and getattr(tp, 'current_position', None) == rpos:
+                            candidate = tp.name
+                            break
+                    if candidate:
+                        replacement_map[rname] = candidate
+                        new_entrant_names.remove(candidate)
+
+        # 3) 打順（元の順序）を維持して新ラインナップを構築
         updated_lineup = []
-        for temp_player in self.temp_lineup:
-            if temp_player not in self.retired_players:
-                # 対応する元の選手を見つけて更新
-                for original_player in self.team.lineup:
-                    if original_player.name == temp_player.name:
-                        temp_pos = getattr(temp_player, 'current_position', None)
-                        if temp_pos:
-                            setattr(original_player, 'current_position', temp_pos)
-                        updated_lineup.append(original_player)
-                        break
-        
-        # 退場していないベンチ選手の更新
+        used_bench_names = set()
+        for original_player in original_lineup:
+            oname = original_player.name
+            if oname in retired_names:
+                # この打順枠は退場→代替選手を挿入
+                replacement_name = replacement_map.get(oname)
+                if not replacement_name and new_entrant_names:
+                    # フォールバックとして未使用の新規選手を順に充当
+                    replacement_name = new_entrant_names.pop(0)
+                if replacement_name and replacement_name in name_to_bench_player:
+                    bench_obj = name_to_bench_player[replacement_name]
+                    # 作業側でのポジションを反映
+                    new_pos = temp_name_to_pos.get(replacement_name)
+                    if new_pos:
+                        setattr(bench_obj, 'current_position', new_pos)
+                    updated_lineup.append(bench_obj)
+                    used_bench_names.add(replacement_name)
+                else:
+                    # 代替が見つからない場合は元の選手をスキップ（人数不足は別途バリデーションで検知）
+                    continue
+            else:
+                # 残留選手は同じオブジェクトを保持し、ポジションだけ反映
+                new_pos = temp_name_to_pos.get(oname)
+                if new_pos:
+                    setattr(original_player, 'current_position', new_pos)
+                updated_lineup.append(original_player)
+
+        # 4) ベンチを更新（使用済み・退場を除外）
         updated_bench = []
-        for temp_player in self.temp_bench:
-            if temp_player not in self.retired_players:
-                # 対応する元の選手を見つけて更新
-                for original_player in self.team.bench:
-                    if original_player.name == temp_player.name:
-                        updated_bench.append(original_player)
-                        break
-        
-        # チームのラインナップとベンチを更新
-        self.team.lineup = [player for player in self.team.lineup if not any(retired.name == player.name for retired in self.retired_players)]
+        for p in original_bench:
+            if p.name in used_bench_names:
+                continue
+            if p.name in retired_names:
+                continue
+            updated_bench.append(p)
+
+        # 5) 守備位置マップを同期
+        # まず全クリア（P/DHはここでは対象外だが既存ロジックに合わせる）
+        # チームの定義済み必須ポジションのみ再設定
+        for pos in list(self.team.defensive_positions.keys()):
+            self.team.defensive_positions[pos] = None
+        for p in updated_lineup:
+            pos = getattr(p, 'current_position', None)
+            if pos:
+                self.team.defensive_positions[pos] = p
+
+        # 6) チームへ反映
+        self.team.lineup = updated_lineup
         self.team.bench = updated_bench
-        
+
+        # 打順インデックスの安全化
+        if hasattr(self.team, 'current_batter_index'):
+            if not self.team.lineup:
+                self.team.current_batter_index = 0
+            else:
+                self.team.current_batter_index %= len(self.team.lineup)
+
         # メインGUIの更新
         if self.main_gui:
             self.main_gui._update_scoreboard(self.main_gui.game_state)
