@@ -37,6 +37,8 @@ class DummyGameState:
     def __init__(self, outs: int = 0):
         self.outs = outs
         self.bases = BaseRunners([None, None, None])
+        pitcher = SimpleNamespace(pitching_stats={"IP": 0.0})
+        self.fielding_team = SimpleNamespace(current_pitcher=pitcher)
 
     def add_out(self) -> None:
         self.outs += 1
@@ -93,3 +95,73 @@ def test_apply_flyout_other_runners_tag_up(monkeypatch):
     assert game_state.bases[1] is first_runner
     assert game_state.bases[0] is None
     assert game_state.outs == 0
+
+
+def test_groundout_first_and_third_runner_holds(monkeypatch):
+    game_state = DummyGameState(outs=0)
+    first_runner = object()
+    third_runner = object()
+    batter = SimpleNamespace(speed=4.3)
+
+    game_state.bases[0] = first_runner
+    game_state.bases[2] = third_runner
+
+    roll_sequence = iter([0.9, 0.8])  # ダブルプレー失敗 → 三塁走者は残塁
+    monkeypatch.setattr(random, "random", lambda: next(roll_sequence))
+
+    engine = RunnerEngine(game_state)
+    runs, message = engine.apply_groundout(batter)
+
+    assert runs == 0
+    assert message == "Groundout, force at second."
+    assert game_state.outs == 1
+    assert game_state.bases[2] is third_runner  # 三塁走者が残留
+    assert game_state.bases[1] is None
+    assert game_state.bases[0] is batter
+
+
+def test_groundout_first_and_third_runner_scores(monkeypatch):
+    game_state = DummyGameState(outs=0)
+    first_runner = object()
+    third_runner = object()
+    batter = SimpleNamespace(speed=4.3)
+
+    game_state.bases[0] = first_runner
+    game_state.bases[2] = third_runner
+
+    roll_sequence = iter([0.9, 0.1])  # ダブルプレー失敗 → 三塁走者が生還
+    monkeypatch.setattr(random, "random", lambda: next(roll_sequence))
+
+    engine = RunnerEngine(game_state)
+    runs, message = engine.apply_groundout(batter)
+
+    assert runs == 1
+    assert message == "Groundout, force at second. 1 run(s) scored!"
+    assert game_state.outs == 1
+    assert game_state.bases[2] is None
+    assert game_state.bases[0] is batter
+
+
+def test_groundout_bases_loaded_force_home(monkeypatch):
+    game_state = DummyGameState(outs=0)
+    first_runner = object()
+    second_runner = object()
+    third_runner = object()
+    batter = SimpleNamespace(speed=4.3)
+
+    game_state.bases[0] = first_runner
+    game_state.bases[1] = second_runner
+    game_state.bases[2] = third_runner
+
+    roll_sequence = iter([0.9, 0.8])  # ダブルプレー失敗 → 本塁でフォースアウト
+    monkeypatch.setattr(random, "random", lambda: next(roll_sequence))
+
+    engine = RunnerEngine(game_state)
+    runs, message = engine.apply_groundout(batter)
+
+    assert runs == 0
+    assert message == "Groundout, force at home."
+    assert game_state.outs == 1
+    assert game_state.bases[2] is second_runner  # 二塁走者が三塁へ
+    assert game_state.bases[1] is first_runner  # 一塁走者が二塁へ
+    assert game_state.bases[0] is batter
