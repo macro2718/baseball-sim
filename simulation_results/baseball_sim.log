@@ -352,3 +352,32 @@
 2025-09-21 00:00:48,803 - baseball_sim - INFO - Teams created: Home Team vs Away Team
 2025-09-21 00:01:15,847 - baseball_sim - INFO - NN batting model loaded successfully
 2025-09-21 00:01:15,869 - baseball_sim - INFO - Game started successfully with configured lineups!
+2025-09-21 00:03:56,131 - baseball_sim - INFO - Starting application initialization...
+2025-09-21 00:03:56,131 - baseball_sim - INFO - Application logging initialized
+2025-09-21 00:03:56,131 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-21 00:03:56,131 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-21 00:03:56,634 - baseball_sim - INFO - Teams created: Home Team vs Away Team
+2025-09-21 00:03:58,238 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-21 00:03:58,257 - baseball_sim - INFO - Game started successfully with configured lineups!
+2025-09-21 00:12:47,977 - baseball_sim - INFO - Starting application initialization...
+2025-09-21 00:12:47,977 - baseball_sim - INFO - Application logging initialized
+2025-09-21 00:12:47,977 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-21 00:12:47,977 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-21 00:12:54,544 - baseball_sim - INFO - Teams created: Home Team vs Away Team
+2025-09-21 16:53:16,953 - baseball_sim - INFO - Starting application initialization...
+2025-09-21 16:53:16,954 - baseball_sim - INFO - Application logging initialized
+2025-09-21 16:53:16,954 - baseball_sim - INFO - Random seed set to default: 0
+2025-09-21 16:53:16,954 - baseball_sim - INFO - Application initialization completed successfully
+2025-09-21 16:53:19,867 - baseball_sim - INFO - Teams created: Home Team vs Away Team
+2025-09-21 16:53:40,019 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:53:40,020 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:53:43,589 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:53:43,590 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:54:10,317 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:54:10,317 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:54:56,088 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:54:56,089 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:55:07,003 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:55:07,003 - baseball_sim - INFO - Lineup changed for away team
+2025-09-21 16:55:11,786 - baseball_sim - INFO - NN batting model loaded successfully
+2025-09-21 16:55:11,834 - baseball_sim - INFO - Game started successfully with configured lineups!
