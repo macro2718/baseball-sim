@@ -824,12 +824,51 @@ class RunnerEngine:
         """フライアウト時の進塁・得点処理（得点数を返す）。
 
         前提: 呼び出し元で投手のIPを1/3加算、打者ABを加算し、最後に打者アウトを付与する。
-        ここでは犠牲フライの判定と三塁走者の処理のみを行う。
+        ここでは犠牲フライの判定と走者のタッチアップ処理を行う。
         """
         runs = 0
-        if self.game_state.bases[2] is not None and self.game_state.outs < 2:
-            sac_fly_probability = 0.6 * (batter.hard_pct / 35)
-            if random.random() < sac_fly_probability:
-                runs += 1
-                self.game_state.bases[2] = None
+        if self.game_state.outs < 2:
+            anticipated_outs = self.game_state.outs + 1  # 打者アウト分
+
+            # 三塁走者の処理（犠牲フライ or タッチアップ失敗）
+            third_runner = self.game_state.bases[2]
+            if third_runner is not None:
+                sac_fly_probability = 0.6 * (batter.hard_pct / 35)
+                sac_fly_probability = max(0.0, min(0.95, sac_fly_probability))
+
+                if random.random() < sac_fly_probability:
+                    runs += 1
+                    self.game_state.bases[2] = None
+                else:
+                    # タッチアップ失敗でアウト
+                    self.game_state.bases[2] = None
+                    self.game_state.add_out()
+                    anticipated_outs += 1
+
+            # 既にイニング終了が確定する場合は他走者の処理不要
+            if anticipated_outs >= 3:
+                return runs
+
+            depth_factor = max(0.2, min(1.5, batter.hard_pct / 35))
+
+            # 二塁走者のタッチアップ進塁判定
+            second_runner = self.game_state.bases[1]
+            if second_runner is not None and self.game_state.bases[2] is None:
+                second_speed = getattr(second_runner, "speed", 4.3) or 4.3
+                second_probability = 0.45 * depth_factor * (4.3 / second_speed)
+                second_probability = max(0.0, min(0.8, second_probability))
+                if random.random() < second_probability:
+                    self.game_state.bases[2] = second_runner
+                    self.game_state.bases[1] = None
+
+            # 一塁走者のタッチアップ進塁判定
+            first_runner = self.game_state.bases[0]
+            if first_runner is not None and self.game_state.bases[1] is None:
+                first_speed = getattr(first_runner, "speed", 4.3) or 4.3
+                first_probability = 0.3 * depth_factor * (4.3 / first_speed)
+                first_probability = max(0.0, min(0.65, first_probability))
+                if random.random() < first_probability:
+                    self.game_state.bases[1] = first_runner
+                    self.game_state.bases[0] = None
+
         return runs
