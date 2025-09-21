@@ -641,16 +641,32 @@ class RunnerEngine:
             run_probability = 0.65
             run_probability *= (4.3 / batter.speed)
             if random.random() < run_probability:
-                runs += score_runner(bases, 1)
+                runner = bases[1]
+                runner_speed = getattr(runner, "speed", getattr(batter, "speed", 4.3))
+                success_probability = 0.8 * (4.3 / runner_speed)
+                success_probability = max(0.3, min(0.95, success_probability))
+                if random.random() < success_probability:
+                    runs += score_runner(bases, 1)
+                else:
+                    clear_base(bases, 1)
+                    self.game_state.add_out()
             else:
                 move_runner(bases, 1, 2)
 
         # 一塁走者の処理
         if bases[0] is not None:
+            runner = bases[0]
             advance_probability = 0.1
             advance_probability *= (4.3 / batter.speed)
             if bases[2] is None and random.random() < advance_probability:
-                move_runner(bases, 0, 2)
+                runner_speed = getattr(runner, "speed", getattr(batter, "speed", 4.3))
+                success_probability = 0.7 * (4.3 / runner_speed)
+                success_probability = max(0.25, min(0.9, success_probability))
+                if random.random() < success_probability:
+                    move_runner(bases, 0, 2)
+                else:
+                    clear_base(bases, 0)
+                    self.game_state.add_out()
             else:
                 move_runner(bases, 0, 1)
 
@@ -673,7 +689,15 @@ class RunnerEngine:
         if bases[0] is not None:
             run_probability = 0.2 * (4.3 / batter.speed)
             if random.random() < run_probability:
-                runs += score_runner(bases, 0)
+                runner = bases[0]
+                runner_speed = getattr(runner, "speed", getattr(batter, "speed", 4.3))
+                success_probability = 0.75 * (4.3 / runner_speed)
+                success_probability = max(0.35, min(0.98, success_probability))
+                if random.random() < success_probability:
+                    runs += score_runner(bases, 0)
+                else:
+                    clear_base(bases, 0)
+                    self.game_state.add_out()
             else:
                 move_runner(bases, 0, 2)
 
@@ -687,8 +711,21 @@ class RunnerEngine:
         """三塁打時のランナー進塁処理（得点数を返す）"""
         bases = self.game_state.bases
         runs = score_all_runners(bases)
-        # 打者は三塁へ
-        bases[2] = batter
+
+        batter_speed = getattr(batter, "speed", 4.3)
+        attempt_probability = 0.12 * (4.3 / batter_speed)
+        attempt_probability = max(0.05, min(0.3, attempt_probability))
+
+        if random.random() < attempt_probability:
+            success_probability = 0.55 * (4.3 / batter_speed)
+            success_probability = max(0.25, min(0.85, success_probability))
+            if random.random() < success_probability:
+                runs += 1
+            else:
+                self.game_state.add_out()
+        else:
+            # 打者は三塁へ
+            bases[2] = batter
         return runs
 
     # ---- 本塁打 ----
