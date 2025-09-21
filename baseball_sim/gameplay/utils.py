@@ -1,7 +1,7 @@
 """Utility helpers for in-game calculations such as bunting logic."""
 
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from baseball_sim.config import BuntConstants, GameResults, StatColumns
 from baseball_sim.infrastructure.logging_utils import logger
@@ -247,37 +247,55 @@ class BuntProcessor:
     def _process_bunt_single_advances(self, new_bases, batter):
         """バント内野安打時のランナー進塁処理"""
         runs_scored = 0
-        
+        bases = self.game_state.bases
+
         # 三塁走者：必ずホームイン（内野安打のため）
-        if self.game_state.bases[2] is not None:
+        if bases[2] is not None:
             runs_scored += 1
-        
+
         # 二塁走者：走力によってホームインまたは三塁進塁
-        if self.game_state.bases[1] is not None:
-            runner_speed = self._get_runner_speed(1)
-            if runner_speed < BuntConstants.FAST_RUNNER_SPEED:
-                if random.random() < BuntConstants.HOME_IN_PROBABILITY_FAST_RUNNER:
-                    runs_scored += 1  # ホームイン
-                else:
-                    new_bases[2] = self.game_state.bases[1]  # 三塁進塁
-            else:
-                new_bases[2] = self.game_state.bases[1]  # 三塁進塁
-        
+        second_runner = bases[1]
+        if second_runner is not None:
+            destination, second_runner_runs = self._decide_bunt_single_second_runner()
+            runs_scored += second_runner_runs
+            if destination is not None:
+                new_bases[destination] = second_runner
+
         # 一塁走者：走力によって二塁または三塁進塁
-        if self.game_state.bases[0] is not None:
-            runner_speed = self._get_runner_speed(0)
-            if runner_speed < BuntConstants.VERY_FAST_RUNNER_SPEED:
-                if new_bases[2] is None and random.random() < BuntConstants.TRIPLE_ADVANCE_PROBABILITY:
-                    new_bases[2] = self.game_state.bases[0]  # 三塁進塁
-                else:
-                    new_bases[1] = self.game_state.bases[0]  # 二塁進塁
-            else:
-                new_bases[1] = self.game_state.bases[0]  # 二塁進塁
-        
+        first_runner = bases[0]
+        if first_runner is not None:
+            destination = self._decide_bunt_single_first_runner(new_bases)
+            if destination is not None:
+                new_bases[destination] = first_runner
+
         # 打者は一塁へ進塁（内野安打）
         new_bases[0] = batter
-        
+
         return runs_scored
+
+    def _decide_bunt_single_second_runner(self) -> Tuple[Optional[int], int]:
+        """二塁走者の移動先と得点を判定する。"""
+        if self.game_state.bases[1] is None:
+            return None, 0
+
+        runner_speed = self._get_runner_speed(1)
+        if runner_speed < BuntConstants.FAST_RUNNER_SPEED:
+            if random.random() < BuntConstants.HOME_IN_PROBABILITY_FAST_RUNNER:
+                return None, 1
+
+        return 2, 0
+
+    def _decide_bunt_single_first_runner(self, new_bases) -> Optional[int]:
+        """一塁走者の移動先を判定する。"""
+        if self.game_state.bases[0] is None:
+            return None
+
+        runner_speed = self._get_runner_speed(0)
+        if runner_speed < BuntConstants.VERY_FAST_RUNNER_SPEED:
+            if new_bases[2] is None and random.random() < BuntConstants.TRIPLE_ADVANCE_PROBABILITY:
+                return 2
+
+        return 1
     
     def _process_sacrifice_bunt_advances(self, new_bases):
         """送りバント時のランナー進塁処理"""
@@ -318,64 +336,48 @@ class BuntProcessor:
     
     def _execute_normal_sacrifice_bunt(self, new_bases):
         """通常の送りバント処理
-        
+
         進塁は後ろの塁から順番に処理する（三塁→二塁→一塁）
         各塁の進塁成功/失敗を個別に判定し、実際の進塁結果を正確に反映する
         """
         runs_scored = 0
-        
-        # 三塁走者の処理
-        if self.game_state.bases[2] is not None:
-            if self.game_state.outs < 2:
-                # ホームイン判定を確率的に行う
-                if random.random() < BuntConstants.HOME_IN_PROBABILITY_FROM_THIRD:
-                    runs_scored += 1  # ホームイン
-                    # 三塁は空になる（new_basesでは設定しない）
-                else:
-                    new_bases[2] = self.game_state.bases[2]  # 三塁に留まる
-            else:
-                new_bases[2] = self.game_state.bases[2]  # 2アウトでは三塁に留まる
-        
-        # 二塁走者の処理（三塁の状況を考慮）
-        if self.game_state.bases[1] is not None:
-            can_advance = self._can_runner_advance_safely(1, 2)
-            if can_advance and new_bases[2] is None:  # 三塁が空いている
-                new_bases[2] = self.game_state.bases[1]  # 三塁に進塁
-                # 二塁は空になる（new_basesでは設定しない）
-            else:
-                # 進塁できない場合、二塁に留まる
-                new_bases[1] = self.game_state.bases[1]
-        
-        # 一塁走者の処理（二塁の状況を考慮）
-        if self.game_state.bases[0] is not None:
-            can_advance = self._can_runner_advance_safely(0, 1)
-            if can_advance and new_bases[1] is None:  # 二塁が空いている
-                new_bases[1] = self.game_state.bases[0]  # 二塁に進塁
-                # 一塁は空になる（new_basesでは設定しない）
-            else:
-                # 進塁できない場合、一塁に留まる
-                new_bases[0] = self.game_state.bases[0]
-        
+        bases = self.game_state.bases
+
+        runs_scored += self._handle_third_runner_on_sacrifice(bases, new_bases)
+        self._attempt_runner_advance(bases, 1, 2, new_bases)
+        self._attempt_runner_advance(bases, 0, 1, new_bases)
+
         return runs_scored
+
+    def _handle_third_runner_on_sacrifice(self, bases, new_bases):
+        """三塁走者の処理。ホームインしなければ三塁に残す。"""
+        third_runner = bases[2]
+        if third_runner is None:
+            return 0
+
+        if self.game_state.outs < 2 and random.random() < BuntConstants.HOME_IN_PROBABILITY_FROM_THIRD:
+            return 1
+
+        new_bases[2] = third_runner
+        return 0
+
+    def _attempt_runner_advance(self, bases, from_base, target_base, new_bases):
+        """指定された走者を安全に進塁させ、失敗時は元の塁に残す。"""
+        runner = bases[from_base]
+        if runner is None:
+            return
+
+        if (self._can_runner_advance_safely(from_base, target_base)
+                and new_bases[target_base] is None):
+            new_bases[target_base] = runner
+        else:
+            new_bases[from_base] = runner
     
     def _advance_other_runners(self, new_bases):
         """スクイズプレー後の他ランナーの進塁処理"""
-        # 二塁走者の処理
-        if self.game_state.bases[1] is not None:
-            if self._can_runner_advance_safely(1, 2):
-                new_bases[2] = self.game_state.bases[1]  # 三塁に進塁
-            else:
-                new_bases[1] = self.game_state.bases[1]  # 二塁に留まる
-        
-        # 一塁走者の処理
-        if self.game_state.bases[0] is not None:
-            if self._can_runner_advance_safely(0, 1):
-                if new_bases[1] is None:
-                    new_bases[1] = self.game_state.bases[0]  # 二塁に進塁
-                else:
-                    new_bases[0] = self.game_state.bases[0]  # 一塁に留まる
-            else:
-                new_bases[0] = self.game_state.bases[0]  # 一塁に留まる
+        bases = self.game_state.bases
+        self._attempt_runner_advance(bases, 1, 2, new_bases)
+        self._attempt_runner_advance(bases, 0, 1, new_bases)
     
     def _can_runner_advance_safely(self, from_base, to_base, bunt_type="sacrifice"):
         """ランナーが安全に進塁できるかどうかを判定"""
