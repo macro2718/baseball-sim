@@ -843,10 +843,17 @@ class RunnerEngine:
     def _handle_regular_groundout(self, batter) -> Tuple[int, str]:
         runs_scored = 0
         bases = self.game_state.bases
+        third_runner_out = False
+
         if bases[2] is not None and self.game_state.outs < 2:
             scoring_probability = 0.4
-            if random.random() < scoring_probability:
+            roll = random.random()
+            if roll < scoring_probability:
                 runs_scored += score_runner(bases, 2)
+            else:
+                clear_base(bases, 2)
+                self.game_state.add_out()
+                third_runner_out = True
         if bases[1] is not None and bases[2] is None:
             move_runner(bases, 1, 2)
         if bases[0] is not None and bases[1] is None:
@@ -854,6 +861,8 @@ class RunnerEngine:
         self.game_state.add_out()  # 打者アウト
         if runs_scored > 0:
             return runs_scored, f"Groundout. {runs_scored} run(s) scored!"
+        if third_runner_out:
+            return 0, "Groundout, runner out at home."
         return 0, "Groundout."
 
     # ---- フライアウト ----
