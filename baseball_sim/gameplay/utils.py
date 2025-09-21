@@ -764,13 +764,21 @@ class RunnerEngine:
                 scoring_chance = 0.3
                 if random.random() < scoring_chance:
                     runs_scored += 1
-                self.game_state.bases[2] = None
+                    self.game_state.bases[2] = None
+                else:
+                    # 三塁走者が本塁でアウト
+                    self.game_state.bases[2] = None
+                    self.game_state.add_out()
         else:  # bases_loaded
             if self.game_state.bases[2] is not None:
                 scoring_chance = 0.4
                 if random.random() < scoring_chance:
                     runs_scored += 1
-                self.game_state.bases[2] = None
+                    self.game_state.bases[2] = None
+                else:
+                    # 三塁走者が本塁でアウト
+                    self.game_state.bases[2] = None
+                    self.game_state.add_out()
             if self.game_state.bases[1] is not None:
                 self.game_state.bases[2] = self.game_state.bases[1]
                 self.game_state.bases[1] = None
@@ -778,28 +786,59 @@ class RunnerEngine:
 
     def _handle_force_out_only(self, batter, runner_situation) -> Tuple[int, str]:
         runs_scored = 0
-        # 三塁走者の得点チェック
-        if runner_situation in ["first_third", "bases_loaded"]:
-            if self.game_state.bases[2] is not None:
-                scoring_chance = 0.5
-                if random.random() < scoring_chance:
-                    runs_scored += 1
-                    self.game_state.bases[2] = None
+        bases = self.game_state.bases
+        first_runner = bases[0]
+        second_runner = bases[1]
+        third_runner = bases[2]
+
+        third_runner_scored = False
+        third_runner_out = False
+
+        # 三塁走者の処理
+        if runner_situation in ["first_third", "bases_loaded"] and third_runner is not None:
+            scoring_chance = 0.5
+            roll = random.random()
+            if roll < scoring_chance:
+                runs_scored += 1
+                bases[2] = None
+                third_runner_scored = True
+            elif runner_situation == "bases_loaded":
+                # 満塁ではフォースプレーのため本塁でアウト
+                bases[2] = None
+                third_runner_out = True
+
         # 走者の進塁
         if runner_situation == "first_second":
-            if self.game_state.bases[1] is not None:
-                self.game_state.bases[2] = self.game_state.bases[1]
-                self.game_state.bases[1] = None
+            if second_runner is not None:
+                bases[2] = second_runner
+                bases[1] = None
         elif runner_situation == "bases_loaded":
-            if self.game_state.bases[1] is not None and self.game_state.bases[2] is None:
-                self.game_state.bases[2] = self.game_state.bases[1]
-                self.game_state.bases[1] = None
-        # 打者は一塁へ（フォースアウトで元一塁走者がアウト）
-        self.game_state.bases[0] = batter
+            if third_runner_scored:
+                if second_runner is not None:
+                    bases[2] = second_runner
+                bases[1] = None  # 一塁走者がフォースアウト
+            elif third_runner_out:
+                if second_runner is not None:
+                    bases[2] = second_runner
+                if first_runner is not None:
+                    bases[1] = first_runner
+            else:
+                # 理論上は発生しないが安全のため、現状維持
+                if second_runner is not None:
+                    bases[1] = second_runner
+
+        # 打者は一塁へ
+        bases[0] = batter
+
+        # 本塁封殺時も含めてアウトを記録
         self.game_state.add_out()
+
+        message = "Groundout, force at second."
+        if third_runner_out:
+            message = "Groundout, force at home."
         if runs_scored > 0:
-            return runs_scored, f"Groundout, force at second. {runs_scored} run(s) scored!"
-        return 0, "Groundout, force at second."
+            return runs_scored, f"{message} {runs_scored} run(s) scored!"
+        return 0, message
 
     def _handle_regular_groundout(self, batter) -> Tuple[int, str]:
         runs_scored = 0
