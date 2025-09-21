@@ -25,7 +25,7 @@ from baseball_sim.gameplay.state import (
 from baseball_sim.prediction.batting import BattingModelLoader
 
 try:
-    from baseball_sim.infrastructure.logging_utils import GameStateError, logger
+    from baseball_sim.infrastructure.logging_utils import logger
 except ImportError:  # pragma: no cover - fallback for environments without infra module
     class logger:  # type: ignore
         @staticmethod
@@ -39,8 +39,6 @@ except ImportError:  # pragma: no cover - fallback for environments without infr
         @staticmethod
         def error(msg):
             print(f"ERROR: {msg}")
-
-    GameStateError = Exception  # type: ignore
 
 
 class GameState:
