@@ -857,40 +857,43 @@ class StrategyManager:
             def refresh_lineup_display():
                 for widget in scrollable_frame.winfo_children():
                     widget.destroy()
-                    
-                # ヘッダー
-                header_frame = ttk.Frame(scrollable_frame)
-                header_frame.pack(fill=tk.X, pady=2)
-                ttk.Label(header_frame, text="Order", width=8, anchor="center").pack(side=tk.LEFT)
-                ttk.Label(header_frame, text="Player", width=15, anchor="center").pack(side=tk.LEFT)
-                ttk.Label(header_frame, text="Position", width=8, anchor="center").pack(side=tk.LEFT)
-                ttk.Label(header_frame, text="Actions", width=20, anchor="center").pack(side=tk.LEFT)
-                
-                # 選手リスト
+
+                if not team.lineup:
+                    empty_msg = self.text.get("preview_no_players", "No players available")
+                    ttk.Label(scrollable_frame, text=empty_msg).pack(pady=10)
+                    return
+
+                # 選手リスト（ゲーム中のラインナップ風の表示）
                 for i, player in enumerate(team.lineup):
                     player_frame = ttk.Frame(scrollable_frame)
-                    player_frame.pack(fill=tk.X, pady=1)
-                    
-                    ttk.Label(player_frame, text=str(i+1), width=8, anchor="center").pack(side=tk.LEFT)
-                    # 選手名の後に適性ポジションを表示
-                    primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-                    player_display = f"{player.name} ({primary_pos})"
-                    ttk.Label(player_frame, text=player_display, width=20, anchor="center").pack(side=tk.LEFT)
-                    # 現在の守備位置を表示
-                    current_pos = player.current_position or primary_pos
-                    ttk.Label(player_frame, text=current_pos, width=8, anchor="center").pack(side=tk.LEFT)
-                    
+                    player_frame.pack(fill=tk.X, pady=3, padx=4)
+
+                    info_text = self._create_colored_info_text(
+                        player_frame,
+                        prefix=f"{i+1}. ",
+                        player=player,
+                        style='lineup',
+                        layout='main_like'
+                    )
+                    info_text.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
+
                     # アクションボタン
                     action_frame = ttk.Frame(player_frame)
-                    action_frame.pack(side=tk.LEFT, padx=5)
-                    
-                    ttk.Button(action_frame, text="Change Pos", width=10,
-                              command=lambda idx=i: change_position(idx)).pack(side=tk.LEFT, padx=1)
-                    
-                    order_btn = ttk.Button(action_frame, text="Change Order", width=12,
-                                          command=lambda: self._show_batting_order_dialog(team, lineup_manager, refresh_lineup_display))
-                    order_btn.pack(side=tk.LEFT, padx=1)
-                    order_btn.pack(side=tk.LEFT, padx=1)
+                    action_frame.pack(side=tk.RIGHT, padx=4)
+
+                    ttk.Button(
+                        action_frame,
+                        text="Change Pos",
+                        width=12,
+                        command=lambda idx=i: change_position(idx)
+                    ).pack(anchor=tk.E, pady=1)
+
+                    ttk.Button(
+                        action_frame,
+                        text="Change Order",
+                        width=12,
+                        command=lambda: self._show_batting_order_dialog(team, lineup_manager, refresh_lineup_display)
+                    ).pack(anchor=tk.E, pady=1)
                               
             # ポジション変更機能
             def change_position(player_index):
