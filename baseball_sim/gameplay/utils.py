@@ -547,19 +547,31 @@ class RunnerEngine:
     def apply_walk(self, batter) -> int:
         """四球時のランナー進塁処理（得点数を返す）"""
         runs = 0
-        # 一塁が空くまで全員1つ進塁（game.py の既存ロジックを踏襲）
-        for i in range(2, -1, -1):
-            if i == 0 or self.game_state.bases[i-1] is not None:
-                if i == 2 and self.game_state.bases[i] is not None:
-                    self.game_state.bases[i] = None
-                    runs += 1
-                elif i < 2:
-                    if self.game_state.bases[i] is not None:
-                        self.game_state.bases[i+1] = self.game_state.bases[i]
-                    if i == 0:
-                        self.game_state.bases[i] = batter
-                    else:
-                        self.game_state.bases[i] = None
+        bases = self.game_state.bases
+        base_count = len(bases)
+
+        # 進塁が強制される走者を判定（手前の塁に走者がいる場合のみ）
+        forced = [False] * base_count
+        if base_count > 0:
+            forced[0] = bases[0] is not None
+        for i in range(1, base_count):
+            forced[i] = bases[i] is not None and forced[i - 1]
+
+        # 三塁側から順に進塁させる
+        for i in range(base_count - 1, -1, -1):
+            if not forced[i]:
+                continue
+
+            runner = bases[i]
+            if i == base_count - 1:
+                runs += 1
+            else:
+                bases[i + 1] = runner
+            bases[i] = None
+
+        # 打者は一塁へ
+        if base_count > 0:
+            bases[0] = batter
         return runs
 
     # ---- 単打 ----
