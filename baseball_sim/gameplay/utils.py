@@ -579,10 +579,36 @@ class RunnerEngine:
         """単打時のランナー進塁処理（得点数を返す）"""
         runs = 0
 
-        # 三塁走者は必ずホームイン
-        if self.game_state.bases[2] is not None:
-            runs += 1
-            self.game_state.bases[2] = None
+        # 三塁走者の処理（状況に応じてホーム突入を判断）
+        third_runner = self.game_state.bases[2]
+        if third_runner is not None:
+            runner_speed = getattr(third_runner, "speed", 4.3)
+            forced_home = self.game_state.bases[1] is not None
+
+            # 強制進塁が無い場合のみ「突入しない」選択肢が生じる
+            attempt_probability = 0.85 * (4.3 / runner_speed)
+            attempt_probability = max(0.5, min(0.95, attempt_probability))
+
+            if forced_home or random.random() < attempt_probability:
+                success_probability = 0.75 * (4.3 / runner_speed)
+                success_probability = max(0.4, min(0.98, success_probability))
+
+                if random.random() < success_probability:
+                    runs += 1
+                    self.game_state.bases[2] = None
+                else:
+                    if forced_home:
+                        self.game_state.bases[2] = None
+                        self.game_state.add_out()
+                    else:
+                        out_probability = 0.45 * (runner_speed / 4.3)
+                        out_probability = max(0.25, min(0.7, out_probability))
+                        if random.random() < out_probability:
+                            self.game_state.bases[2] = None
+                            self.game_state.add_out()
+            else:
+                # 突入を見送った場合は三塁に留まる
+                self.game_state.bases[2] = third_runner
 
         # 二塁走者の処理（既存ロジック踏襲。走者でなく batter.speed を参照していた挙動を保持）
         if self.game_state.bases[1] is not None:
