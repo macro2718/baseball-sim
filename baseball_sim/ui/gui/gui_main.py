@@ -1263,18 +1263,30 @@ class BaseballGUI:
 
         lineup_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_lineup"])
         lineup_frame.pack(fill=tk.BOTH, expand=True, pady=(8, 6))
-        lineup_list = tk.Listbox(lineup_frame, height=10)
-        lineup_scroll = ttk.Scrollbar(lineup_frame, orient=tk.VERTICAL, command=lineup_list.yview)
-        lineup_list.config(yscrollcommand=lineup_scroll.set)
-        lineup_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
+        lineup_canvas = tk.Canvas(lineup_frame, highlightthickness=0)
+        lineup_scroll = ttk.Scrollbar(lineup_frame, orient=tk.VERTICAL, command=lineup_canvas.yview)
+        lineup_container = ttk.Frame(lineup_canvas)
+        lineup_container.bind(
+            "<Configure>",
+            lambda e: lineup_canvas.configure(scrollregion=lineup_canvas.bbox("all"))
+        )
+        lineup_canvas.create_window((0, 0), window=lineup_container, anchor="nw")
+        lineup_canvas.configure(yscrollcommand=lineup_scroll.set)
+        lineup_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
         lineup_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
 
         bench_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_bench"])
         bench_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 6))
-        bench_list = tk.Listbox(bench_frame, height=7)
-        bench_scroll = ttk.Scrollbar(bench_frame, orient=tk.VERTICAL, command=bench_list.yview)
-        bench_list.config(yscrollcommand=bench_scroll.set)
-        bench_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
+        bench_canvas = tk.Canvas(bench_frame, highlightthickness=0)
+        bench_scroll = ttk.Scrollbar(bench_frame, orient=tk.VERTICAL, command=bench_canvas.yview)
+        bench_container = ttk.Frame(bench_canvas)
+        bench_container.bind(
+            "<Configure>",
+            lambda e: bench_canvas.configure(scrollregion=bench_canvas.bbox("all"))
+        )
+        bench_canvas.create_window((0, 0), window=bench_container, anchor="nw")
+        bench_canvas.configure(yscrollcommand=bench_scroll.set)
+        bench_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
         bench_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
 
         pitcher_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_pitcher"])
@@ -1286,14 +1298,44 @@ class BaseballGUI:
         controls.pack(fill=tk.X, pady=(4, 6))
 
         def refresh_lists():
-            lineup_list.delete(0, tk.END)
-            for idx, player in enumerate(team.lineup, start=1):
-                position = getattr(player, 'current_position', getattr(player, 'position', '-'))
-                lineup_list.insert(tk.END, f"{idx}. {player.name} ({position})")
+            for child in lineup_container.winfo_children():
+                child.destroy()
+            if team.lineup:
+                for idx, player in enumerate(team.lineup, start=1):
+                    row = ttk.Frame(lineup_container)
+                    row.pack(fill=tk.X, padx=4, pady=2)
+                    info = self.strategy_manager._create_colored_info_text(
+                        row,
+                        prefix=f"{idx}. ",
+                        player=player,
+                        style='lineup',
+                        layout='main_like'
+                    )
+                    info.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            else:
+                empty_msg = self.text.get("preview_no_players", "No players available")
+                ttk.Label(lineup_container, text=empty_msg).pack(pady=6)
 
-            bench_list.delete(0, tk.END)
-            for player in team.bench:
-                bench_list.insert(tk.END, f"{player.name}")
+            for child in bench_container.winfo_children():
+                child.destroy()
+            if team.bench:
+                for idx, player in enumerate(team.bench, start=1):
+                    row = ttk.Frame(bench_container)
+                    row.pack(fill=tk.X, padx=4, pady=2)
+                    info = self.strategy_manager._create_colored_info_text(
+                        row,
+                        prefix=f"{idx}. ",
+                        player=player,
+                        style='bench',
+                        layout='main_like'
+                    )
+                    info.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            else:
+                empty_msg = self.text.get("preview_no_players", "No players available")
+                ttk.Label(bench_container, text=empty_msg).pack(pady=6)
+
+            lineup_canvas.yview_moveto(0)
+            bench_canvas.yview_moveto(0)
 
             current_pitcher = getattr(team, 'current_pitcher', None)
             if current_pitcher:
