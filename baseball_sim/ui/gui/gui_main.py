@@ -1263,19 +1263,62 @@ class BaseballGUI:
 
         lineup_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_lineup"])
         lineup_frame.pack(fill=tk.BOTH, expand=True, pady=(8, 6))
-        lineup_list = tk.Listbox(lineup_frame, height=10)
-        lineup_scroll = ttk.Scrollbar(lineup_frame, orient=tk.VERTICAL, command=lineup_list.yview)
-        lineup_list.config(yscrollcommand=lineup_scroll.set)
-        lineup_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
-        lineup_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
+        lineup_rows = ttk.Frame(lineup_frame)
+        lineup_rows.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
+        lineup_text_widgets = []
+        for _ in range(UIConstants.ROSTER_DISPLAY_COUNT):
+            text_widget = tk.Text(lineup_rows, height=1, wrap=tk.NONE)
+            text_widget.configure(state=tk.DISABLED)
+            text_widget.pack(fill=tk.X, pady=1)
+            lineup_text_widgets.append(text_widget)
 
         bench_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_bench"])
         bench_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 6))
-        bench_list = tk.Listbox(bench_frame, height=7)
-        bench_scroll = ttk.Scrollbar(bench_frame, orient=tk.VERTICAL, command=bench_list.yview)
-        bench_list.config(yscrollcommand=bench_scroll.set)
-        bench_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
-        bench_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
+        bench_rows = ttk.Frame(bench_frame)
+        bench_rows.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
+        bench_text_widgets = []
+        bench_empty_label = ttk.Label(bench_rows, text=self.text["preview_no_players"])
+
+        def ensure_bench_widget(index: int):
+            if index >= len(bench_text_widgets):
+                widget = tk.Text(bench_rows, height=1, wrap=tk.NONE)
+                widget.configure(state=tk.DISABLED)
+                widget.pack(fill=tk.X, pady=1)
+                bench_text_widgets.append(widget)
+            else:
+                widget = bench_text_widgets[index]
+                if not widget.winfo_ismapped():
+                    widget.pack(fill=tk.X, pady=1)
+            return bench_text_widgets[index]
+
+        def hide_unused_bench_widgets(start_index: int):
+            for widget in bench_text_widgets[start_index:]:
+                if widget.winfo_ismapped():
+                    widget.pack_forget()
+                self._clear_roster_line(widget)
+
+        def resolve_display_positions(player):
+            positions = []
+            if hasattr(player, 'get_display_eligible_positions'):
+                try:
+                    positions = list(player.get_display_eligible_positions())
+                except Exception:
+                    positions = []
+            elif getattr(player, 'eligible_positions', None):
+                positions = [pos for pos in player.eligible_positions if pos]
+
+            primary = positions[0] if positions else getattr(player, 'position', None)
+            current = getattr(player, 'current_position', None) or getattr(player, 'position', None) or primary
+            if not current:
+                current = "-"
+
+            if not positions:
+                if primary:
+                    positions = [primary]
+                elif current and current != "-":
+                    positions = [current]
+
+            return current, positions
 
         pitcher_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_pitcher"])
         pitcher_frame.pack(fill=tk.X, pady=(0, 8))
@@ -1286,14 +1329,41 @@ class BaseballGUI:
         controls.pack(fill=tk.X, pady=(4, 6))
 
         def refresh_lists():
-            lineup_list.delete(0, tk.END)
-            for idx, player in enumerate(team.lineup, start=1):
-                position = getattr(player, 'current_position', getattr(player, 'position', '-'))
-                lineup_list.insert(tk.END, f"{idx}. {player.name} ({position})")
+            for idx, widget in enumerate(lineup_text_widgets):
+                if idx < len(team.lineup):
+                    player = team.lineup[idx]
+                    current_pos, eligible_positions = resolve_display_positions(player)
+                    self._render_roster_line(
+                        widget,
+                        line_index=idx + 1,
+                        star=False,
+                        current_pos=current_pos,
+                        player=player,
+                        eligible_positions=eligible_positions,
+                    )
+                else:
+                    self._clear_roster_line(widget)
 
-            bench_list.delete(0, tk.END)
-            for player in team.bench:
-                bench_list.insert(tk.END, f"{player.name}")
+            bench_players = list(getattr(team, 'bench', []))
+            if not bench_players:
+                hide_unused_bench_widgets(0)
+                if not bench_empty_label.winfo_ismapped():
+                    bench_empty_label.pack()
+            else:
+                if bench_empty_label.winfo_ismapped():
+                    bench_empty_label.pack_forget()
+                for idx, player in enumerate(bench_players):
+                    widget = ensure_bench_widget(idx)
+                    current_pos, eligible_positions = resolve_display_positions(player)
+                    self._render_roster_line(
+                        widget,
+                        line_index=idx + 1,
+                        star=False,
+                        current_pos=current_pos,
+                        player=player,
+                        eligible_positions=eligible_positions,
+                    )
+                hide_unused_bench_widgets(len(bench_players))
 
             current_pitcher = getattr(team, 'current_pitcher', None)
             if current_pitcher:
