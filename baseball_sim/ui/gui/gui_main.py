@@ -7,6 +7,7 @@ from baseball_sim.config import GameResults, UIConstants, setup_project_environm
 from baseball_sim.infrastructure.logging_utils import logger
 
 from baseball_sim.gameplay.game import GameState
+from baseball_sim.gameplay.lineup import LineupManager
 
 from .gui_constants import get_ui_text
 from .gui_event_manager import Events
@@ -15,6 +16,7 @@ from .gui_scoreboard import ScoreboardManager
 from .gui_stats import StatsManager
 from .gui_strategy import StrategyManager
 from .gui_colors import get_position_color
+from .gui_defense_mode import DefenseChangeMode
 
 setup_project_environment()
 
@@ -138,9 +140,15 @@ class BaseballGUI:
             status_rows["home"]["detail_button"].config(
                 command=lambda: self._show_team_preview('home')
             )
+            status_rows["home"].get("manage_button").config(
+                command=lambda: self._open_team_management('home')
+            )
         if "away" in status_rows:
             status_rows["away"]["detail_button"].config(
                 command=lambda: self._show_team_preview('away')
+            )
+            status_rows["away"].get("manage_button").config(
+                command=lambda: self._open_team_management('away')
             )
 
         self._update_title_screen_status()
@@ -180,6 +188,9 @@ class BaseballGUI:
                 status = self.team_manager.get_team_status(team_key)
                 widgets["state_label"].config(text=status['message'], foreground=status['color'])
                 widgets["detail_button"].config(state=tk.NORMAL)
+                manage_btn = widgets.get("manage_button")
+                if manage_btn:
+                    manage_btn.config(state=tk.NORMAL)
 
                 if not status['valid'] and status['errors']:
                     invalid_messages.append(f"{team.name}: {len(status['errors'])}")
@@ -187,6 +198,9 @@ class BaseballGUI:
                 widgets["name_label"].config(text=f"- ({label_suffix})")
                 widgets["state_label"].config(text=self.text["team_status_unknown"], foreground="grey")
                 widgets["detail_button"].config(state=tk.DISABLED)
+                manage_btn = widgets.get("manage_button")
+                if manage_btn:
+                    manage_btn.config(state=tk.DISABLED)
 
         if start_button:
             # 無効なラインナップがある場合は注意喚起
@@ -1227,6 +1241,219 @@ class BaseballGUI:
             tree.column(column, width=width, anchor=tk.W, stretch=True)
 
         return tree
+
+    def _open_team_management(self, team_type):
+        """スタート画面からチーム設定ダイアログを開く"""
+        team = self.team_manager.get_team_by_type(team_type)
+        if not team:
+            messagebox.showinfo("Info", "Team is not ready yet.")
+            return
+
+        title_key = "team_manage_title_home" if team_type == 'home' else "team_manage_title_away"
+        dialog = self.layout_manager.create_centered_dialog(self.text[title_key], width=720, height=620)
+
+        main_frame = ttk.Frame(dialog)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+
+        header = ttk.Frame(main_frame)
+        header.pack(fill=tk.X)
+        ttk.Label(header, text=team.name, font=("TkDefaultFont", 14, "bold")).pack(side=tk.LEFT)
+        status_label = ttk.Label(header, text="", foreground="green")
+        status_label.pack(side=tk.RIGHT)
+
+        lineup_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_lineup"])
+        lineup_frame.pack(fill=tk.BOTH, expand=True, pady=(8, 6))
+        lineup_list = tk.Listbox(lineup_frame, height=10)
+        lineup_scroll = ttk.Scrollbar(lineup_frame, orient=tk.VERTICAL, command=lineup_list.yview)
+        lineup_list.config(yscrollcommand=lineup_scroll.set)
+        lineup_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
+        lineup_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
+
+        bench_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_bench"])
+        bench_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 6))
+        bench_list = tk.Listbox(bench_frame, height=7)
+        bench_scroll = ttk.Scrollbar(bench_frame, orient=tk.VERTICAL, command=bench_list.yview)
+        bench_list.config(yscrollcommand=bench_scroll.set)
+        bench_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0), pady=6)
+        bench_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 6), pady=6)
+
+        pitcher_frame = ttk.LabelFrame(main_frame, text=self.text["team_manage_pitcher"])
+        pitcher_frame.pack(fill=tk.X, pady=(0, 8))
+        pitcher_label = ttk.Label(pitcher_frame, text="-")
+        pitcher_label.pack(anchor=tk.W, padx=8, pady=6)
+
+        controls = ttk.Frame(main_frame)
+        controls.pack(fill=tk.X, pady=(4, 6))
+
+        def refresh_lists():
+            lineup_list.delete(0, tk.END)
+            for idx, player in enumerate(team.lineup, start=1):
+                position = getattr(player, 'current_position', getattr(player, 'position', '-'))
+                lineup_list.insert(tk.END, f"{idx}. {player.name} ({position})")
+
+            bench_list.delete(0, tk.END)
+            for player in team.bench:
+                bench_list.insert(tk.END, f"{player.name}")
+
+            current_pitcher = getattr(team, 'current_pitcher', None)
+            if current_pitcher:
+                info = f"{current_pitcher.name}"
+                if hasattr(current_pitcher, 'pitcher_type'):
+                    info += f" ({current_pitcher.pitcher_type})"
+                pitcher_label.config(text=info)
+            else:
+                pitcher_label.config(text="-")
+
+            status = self.team_manager.get_team_status(team_type)
+            status_label.config(text=status['message'], foreground=status['color'])
+
+        def open_defense_setup():
+            substitution_manager = self.team_manager.get_substitution_manager(team_type)
+            if not substitution_manager:
+                messagebox.showerror("Error", "Substitution manager not available")
+                return
+            defense_mode = DefenseChangeMode(dialog, substitution_manager, self, allow_retire=False)
+            defense_mode.start_defense_change_mode()
+            if defense_mode.mode_window:
+                self.root.wait_window(defense_mode.mode_window)
+            refresh_lists()
+            self._update_title_screen_status()
+            self.event_manager.trigger(Events.LINEUP_CHANGED, team_type)
+
+        def open_swap_dialog():
+            self._open_batting_order_swap_dialog(team_type, dialog, refresh_lists)
+
+        def open_pitcher_dialog():
+            self._open_pitcher_selection_dialog(team_type, dialog, refresh_lists)
+
+        ttk.Button(controls, text=self.text["team_manage_defense"], command=open_defense_setup).pack(side=tk.LEFT, padx=4)
+        ttk.Button(controls, text=self.text["team_manage_order"], command=open_swap_dialog).pack(side=tk.LEFT, padx=4)
+        ttk.Button(controls, text=self.text["team_manage_pitcher_button"], command=open_pitcher_dialog).pack(side=tk.LEFT, padx=4)
+
+        ttk.Button(main_frame, text=self.text["team_manage_close"], command=dialog.destroy).pack(anchor=tk.E, pady=(8, 0))
+
+        refresh_lists()
+
+    def _open_batting_order_swap_dialog(self, team_type, parent, refresh_callback):
+        """打順の入れ替えダイアログを表示"""
+        team = self.team_manager.get_team_by_type(team_type)
+        if not team:
+            messagebox.showinfo("Info", "Team is not ready yet.")
+            return
+
+        lineup_manager = self.team_manager.get_lineup_manager(team_type)
+        if not lineup_manager:
+            lineup_manager = LineupManager(team)
+
+        dialog = tk.Toplevel(parent)
+        dialog.title(self.text["order_swap_title"].format(team.name))
+        dialog.geometry("420x460")
+        dialog.transient(parent)
+        dialog.grab_set()
+
+        ttk.Label(dialog, text=self.text["order_swap_instruction"]).pack(pady=8)
+
+        listbox = tk.Listbox(dialog, selectmode=tk.MULTIPLE, height=12)
+        listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        def refresh_list():
+            listbox.delete(0, tk.END)
+            for idx, player in enumerate(team.lineup, start=1):
+                position = getattr(player, 'current_position', getattr(player, 'position', '-'))
+                listbox.insert(tk.END, f"{idx}. {player.name} ({position})")
+
+        def on_swap():
+            selection = listbox.curselection()
+            if len(selection) != 2:
+                messagebox.showinfo("Info", self.text["order_swap_error_selection"])
+                return
+            idx1, idx2 = selection
+            name1 = team.lineup[idx1].name
+            name2 = team.lineup[idx2].name
+            success, message = lineup_manager.swap_players_in_batting_order(idx1, idx2)
+            if success:
+                refresh_list()
+                refresh_callback()
+                self._update_title_screen_status()
+                self.event_manager.trigger(Events.LINEUP_CHANGED, team_type)
+                messagebox.showinfo("Success", self.text["order_swap_success"].format(name1, name2))
+            else:
+                messagebox.showerror("Error", message)
+
+        ttk.Button(dialog, text=self.text["team_manage_order"], command=on_swap).pack(pady=6)
+        ttk.Button(dialog, text=self.text["close"], command=dialog.destroy).pack(pady=(0, 8))
+
+        refresh_list()
+
+    def _open_pitcher_selection_dialog(self, team_type, parent, refresh_callback):
+        """先発投手選択ダイアログを表示"""
+        team = self.team_manager.get_team_by_type(team_type)
+        if not team:
+            messagebox.showinfo("Info", "Team is not ready yet.")
+            return
+
+        dialog = tk.Toplevel(parent)
+        dialog.title(self.text["pitcher_select_title"].format(team.name))
+        dialog.geometry("360x420")
+        dialog.transient(parent)
+        dialog.grab_set()
+
+        ttk.Label(dialog, text=self.text["pitcher_select_instruction"]).pack(pady=10)
+
+        listbox = tk.Listbox(dialog, selectmode=tk.SINGLE, height=10)
+        listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        def build_pitcher_list():
+            pitchers = []
+            current = getattr(team, 'current_pitcher', None)
+            if current:
+                pitchers.append(current)
+            for pitcher in getattr(team, 'pitchers', []):
+                if pitcher not in pitchers:
+                    pitchers.append(pitcher)
+            return pitchers
+
+        pitcher_objects = build_pitcher_list()
+
+        def refresh_listbox():
+            nonlocal pitcher_objects
+            pitcher_objects = build_pitcher_list()
+            listbox.delete(0, tk.END)
+            for pitcher in pitcher_objects:
+                label = pitcher.name
+                if hasattr(pitcher, 'pitcher_type'):
+                    label += f" ({pitcher.pitcher_type})"
+                listbox.insert(tk.END, label)
+
+        def on_apply():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showinfo("Info", "Please select a pitcher.")
+                return
+            idx = selection[0]
+            selected = pitcher_objects[idx]
+            current = getattr(team, 'current_pitcher', None)
+            if selected is current:
+                messagebox.showinfo("Info", self.text["pitcher_set_same"].format(selected.name))
+                dialog.destroy()
+                return
+
+            if selected in team.pitchers:
+                team.pitchers.remove(selected)
+            if current and current not in team.pitchers:
+                team.pitchers.append(current)
+            team.current_pitcher = selected
+
+            messagebox.showinfo("Success", self.text["pitcher_set_success"].format(selected.name))
+            refresh_callback()
+            self._update_title_screen_status()
+            self.event_manager.trigger(Events.LINEUP_CHANGED, team_type)
+            dialog.destroy()
+
+        ttk.Button(dialog, text=self.text["team_manage_pitcher_button"], command=on_apply).pack(pady=6)
+        ttk.Button(dialog, text=self.text["close"], command=dialog.destroy).pack(pady=(0, 8))
+
+        refresh_listbox()
 
     def _format_player_positions(self, player):
         """選手の守備可能ポジションを文字列化"""

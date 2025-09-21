@@ -15,7 +15,7 @@ class DefenseChangeMode:
     パワプロ風の守備変更UIを提供
     """
     
-    def __init__(self, parent, substitution_manager, main_gui=None):
+    def __init__(self, parent, substitution_manager, main_gui=None, allow_retire=True):
         """
         Args:
             parent: 親ウィンドウ
@@ -26,6 +26,7 @@ class DefenseChangeMode:
         self.substitution_manager = substitution_manager
         self.main_gui = main_gui
         self.team = substitution_manager.team
+        self.allow_retire = allow_retire
         
         # 守備変更モードの状態管理
         self.is_mode_active = False
@@ -150,10 +151,11 @@ class DefenseChangeMode:
         self._create_bench_display(bench_label_frame)
         
         # 退場選手フレーム
-        retired_label_frame = ttk.LabelFrame(right_frame, text="Retired Players")
-        retired_label_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        self._create_retired_display(retired_label_frame)
+        if self.allow_retire:
+            retired_label_frame = ttk.LabelFrame(right_frame, text="Retired Players")
+            retired_label_frame.pack(fill=tk.X, pady=(0, 10))
+
+            self._create_retired_display(retired_label_frame)
         
         # コントロールボタン
         control_frame = ttk.LabelFrame(right_frame, text="Controls")
@@ -315,9 +317,10 @@ class DefenseChangeMode:
                 
         # ベンチ選手の更新
         self._update_bench_display()
-        
-        # 退場選手の更新  
-        self._update_retired_display()
+
+        # 退場選手の更新
+        if self.allow_retire:
+            self._update_retired_display()
         
         # 変更履歴の更新
         self._update_history_display()
@@ -504,8 +507,12 @@ class DefenseChangeMode:
             
     def _retire_player(self, position, player):
         """選手を退場させる（再使用不可）"""
+        if not self.allow_retire:
+            messagebox.showinfo("Info", "Retiring players is disabled in pre-game setup")
+            return
+
         # 確認ダイアログ
-        confirm = messagebox.askyesno("Confirm Retirement", 
+        confirm = messagebox.askyesno("Confirm Retirement",
                                     f"Are you sure you want to retire {player.name}?")
         if not confirm:
             return
@@ -651,10 +658,19 @@ class DefenseChangeMode:
         if bench_options:
             if field_exchange_options:  # フィールド選手のオプションがある場合はセパレータを追加
                 menu.add_separator()
-            menu.add_command(label="--- Replace with Bench Players ---", state="disabled")
+            label = "--- Replace with Bench Players ---" if self.allow_retire else "--- Swap with Bench Players ---"
+            menu.add_command(label=label, state="disabled")
             for bench_player, status in bench_options:
-                menu.add_command(label=f"{status} Replace with {bench_player.name} (retire current)",
-                               command=lambda bp=bench_player: self._replace_with_bench_player(player, bp))
+                if self.allow_retire:
+                    menu.add_command(
+                        label=f"{status} Replace with {bench_player.name} (retire current)",
+                        command=lambda bp=bench_player: self._replace_with_bench_player(player, bp)
+                    )
+                else:
+                    menu.add_command(
+                        label=f"{status} Swap with {bench_player.name}",
+                        command=lambda bp=bench_player: self._swap_with_bench_player(player, bp)
+                    )
         
         if not field_exchange_options and not bench_options:
             messagebox.showinfo("Info", "No suitable players for exchange")
@@ -691,20 +707,38 @@ class DefenseChangeMode:
         self._update_display()
         
     def _replace_with_bench_player(self, field_player, bench_player):
-        """フィールド選手をベンチ選手と交代させ、フィールド選手を退場させる"""
+        """フィールド選手をベンチ選手と交代させる"""
         current_pos = getattr(field_player, 'current_position', getattr(field_player, 'position', None))
-        
+
         if not current_pos:
             messagebox.showerror("Error", f"{field_player.name} has no assigned position")
             return
-        
+
+        if not self.allow_retire:
+            if not bench_player.can_play_position(current_pos):
+                messagebox.showerror("Error", f"{bench_player.name} cannot play {current_pos}")
+                return
+
+            confirm = messagebox.askyesno(
+                "Confirm Substitution",
+                f"Start {bench_player.name} at {current_pos}?\n"
+                f"{field_player.name} will move to the bench."
+            )
+            if not confirm:
+                return
+
+            self._swap_with_bench_player(field_player, bench_player)
+            return
+
         # 確認ダイアログ
-        confirm = messagebox.askyesno("Confirm Substitution", 
-                                    f"Replace {field_player.name} with {bench_player.name} at {current_pos}?\n"
-                                    f"{field_player.name} will be retired and cannot be reused.")
+        confirm = messagebox.askyesno(
+            "Confirm Substitution",
+            f"Replace {field_player.name} with {bench_player.name} at {current_pos}?\n"
+            f"{field_player.name} will be retired and cannot be reused."
+        )
         if not confirm:
             return
-        
+
         # ベンチ選手を現在のポジションに配置
         setattr(bench_player, 'current_position', current_pos)
 
@@ -718,7 +752,7 @@ class DefenseChangeMode:
             self.replacements[getattr(field_player, 'name', '')] = getattr(bench_player, 'name', '')
         except Exception:
             pass
-        
+
         # 退場時点の情報を保存
         self._record_retired_detail(field_player, current_pos)
 
@@ -726,21 +760,77 @@ class DefenseChangeMode:
         setattr(field_player, 'current_position', None)
         if field_player not in self.retired_players:
             self.retired_players.append(field_player)
-        
+
         # ラインナップからフィールド選手を削除
         if field_player in self.temp_lineup:
             self.temp_lineup.remove(field_player)
-        
+
         # ベンチからベンチ選手を削除
         if bench_player in self.temp_bench:
             self.temp_bench.remove(bench_player)
-        
+
         # 変更を記録
         change_text = f"{bench_player.name} replaces {field_player.name} at {current_pos} ({field_player.name} retired)"
         self.changes_made.append(change_text)
-        
+
         self._update_display()
-        
+
+    def _swap_with_bench_player(self, field_player, bench_player):
+        """ベンチ選手とスタメン選手を交代（退場なし）"""
+        current_pos = getattr(field_player, 'current_position', getattr(field_player, 'position', None))
+
+        if not current_pos:
+            messagebox.showerror("Error", f"{field_player.name} has no assigned position")
+            return
+
+        if not bench_player.can_play_position(current_pos):
+            messagebox.showerror("Error", f"{bench_player.name} cannot play {current_pos}")
+            return
+
+        # ラインナップ内の位置を特定
+        lineup_index = None
+        for idx, player in enumerate(self.temp_lineup):
+            if player is field_player:
+                lineup_index = idx
+                break
+
+        if lineup_index is not None:
+            self.temp_lineup[lineup_index] = bench_player
+        else:
+            self.temp_lineup.append(bench_player)
+
+        # ベンチ更新
+        if bench_player in self.temp_bench:
+            bench_idx = self.temp_bench.index(bench_player)
+            self.temp_bench[bench_idx] = field_player
+        elif field_player not in self.temp_bench:
+            self.temp_bench.append(field_player)
+
+        # スタメン -> ベンチ
+        setattr(field_player, 'current_position', None)
+        # ベンチ -> スタメン
+        setattr(bench_player, 'current_position', current_pos)
+
+        # ラインナップから古い選手を削除（入れ替え時）
+        if field_player in self.temp_lineup:
+            # lineup_index で置換済みの場合は remove で重複を防ぐ
+            try:
+                while field_player in self.temp_lineup:
+                    self.temp_lineup.remove(field_player)
+            except ValueError:
+                pass
+
+        # 置換関係を記録
+        try:
+            self.replacements[getattr(field_player, 'name', '')] = getattr(bench_player, 'name', '')
+        except Exception:
+            pass
+
+        change_text = f"{bench_player.name} now starts at {current_pos} (replaced {field_player.name})"
+        self.changes_made.append(change_text)
+
+        self._update_display()
+
     def _show_bench_exchange_menu(self, bench_index, bench_player):
         """ベンチ選手の交換メニューを表示"""
         if bench_index >= len(self.temp_bench):
@@ -763,10 +853,19 @@ class DefenseChangeMode:
         
         # フィールド選手との交代オプションを追加
         if field_options:
-            menu.add_command(label="--- Replace Field Players ---", state="disabled")
+            label = "--- Replace Field Players ---" if self.allow_retire else "--- Swap with Field Players ---"
+            menu.add_command(label=label, state="disabled")
             for field_player, field_pos, status in field_options:
-                menu.add_command(label=f"{status} Replace {field_player.name} at {field_pos} (retire current)",
-                               command=lambda fp=field_player: self._bench_replace_field_player(bench_index, fp))
+                if self.allow_retire:
+                    menu.add_command(
+                        label=f"{status} Replace {field_player.name} at {field_pos} (retire current)",
+                        command=lambda fp=field_player: self._bench_replace_field_player(bench_index, fp)
+                    )
+                else:
+                    menu.add_command(
+                        label=f"{status} Swap with {field_player.name} at {field_pos}",
+                        command=lambda fp=field_player: self._swap_with_bench_player(fp, bench_player)
+                    )
         
         # 他のベンチ選手との交換オプション
         other_bench_options = []
@@ -927,6 +1026,61 @@ class DefenseChangeMode:
         
     def _apply_changes(self):
         """変更を実際のチームに適用"""
+        if not self.allow_retire:
+            # プレゲーム設定用の簡略適用ロジック
+            original_lineup = list(self.team.lineup)
+            original_bench = list(self.team.bench)
+            name_to_player = {p.name: p for p in original_lineup + original_bench}
+
+            updated_lineup = []
+            used_names = set()
+
+            for temp_player in self.temp_lineup:
+                name = getattr(temp_player, 'name', None)
+                if not name or name in used_names:
+                    continue
+                original_obj = name_to_player.get(name)
+                if not original_obj:
+                    continue
+
+                new_pos = getattr(temp_player, 'current_position', None)
+                if new_pos:
+                    setattr(original_obj, 'current_position', new_pos)
+                updated_lineup.append(original_obj)
+                used_names.add(name)
+
+            updated_bench = []
+            for bench_player in original_bench:
+                if bench_player.name in used_names:
+                    continue
+                updated_bench.append(bench_player)
+
+            for lineup_player in original_lineup:
+                if lineup_player.name not in used_names:
+                    setattr(lineup_player, 'current_position', None)
+                    updated_bench.append(lineup_player)
+
+            # 守備位置マップを再構築
+            for pos in list(self.team.defensive_positions.keys()):
+                self.team.defensive_positions[pos] = None
+            for player in updated_lineup:
+                position = getattr(player, 'current_position', None)
+                if position:
+                    self.team.defensive_positions[position] = player
+
+            self.team.lineup = updated_lineup
+            self.team.bench = updated_bench
+
+            if hasattr(self.team, 'current_batter_index'):
+                if not self.team.lineup:
+                    self.team.current_batter_index = 0
+                else:
+                    self.team.current_batter_index %= len(self.team.lineup)
+
+            if self.main_gui:
+                self.main_gui._update_scoreboard(self.main_gui.game_state)
+            return
+
         # 1) 参照用の辞書を構築
         original_lineup = list(self.team.lineup)
         original_bench = list(self.team.bench)

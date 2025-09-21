@@ -133,6 +133,13 @@ class LayoutManager:
             state_label = ttk.Label(row_frame, text=self.text["team_status_unknown"], anchor=tk.W)
             state_label.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
+            manage_button = ttk.Button(
+                row_frame,
+                text=self.text["manage_team"],
+                state=tk.DISABLED
+            )
+            manage_button.pack(side=tk.RIGHT, padx=(5, 0))
+
             detail_button = ttk.Button(
                 row_frame,
                 text=self.text["view_lineup"],
@@ -145,6 +152,7 @@ class LayoutManager:
                 "name_label": name_label,
                 "state_label": state_label,
                 "detail_button": detail_button,
+                "manage_button": manage_button,
             }
 
         elements["status_rows"] = status_rows

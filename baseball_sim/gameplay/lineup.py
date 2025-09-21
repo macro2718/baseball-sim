@@ -186,17 +186,31 @@ class LineupManager:
         
     def move_player_in_batting_order(self, from_index, to_index):
         """打順を変更"""
-        if not (0 <= from_index < len(self.team.lineup) and 
+        if not (0 <= from_index < len(self.team.lineup) and
                 0 <= to_index < len(self.team.lineup)):
             return False, "Invalid batting order indices"
-            
+
         if from_index == to_index:
             return False, "Player is already in that position"
-            
+
         player = self.team.lineup.pop(from_index)
         self.team.lineup.insert(to_index, player)
-        
+
         return True, f"Moved {player.name} from {from_index+1} to {to_index+1} in batting order"
+
+    def swap_players_in_batting_order(self, index1, index2):
+        """2人の選手の打順を入れ替える"""
+        if not (0 <= index1 < len(self.team.lineup) and 0 <= index2 < len(self.team.lineup)):
+            return False, "Invalid batting order indices"
+
+        if index1 == index2:
+            return False, "Cannot swap the same player"
+
+        player1 = self.team.lineup[index1]
+        player2 = self.team.lineup[index2]
+        self.team.lineup[index1], self.team.lineup[index2] = player2, player1
+
+        return True, f"Swapped {player1.name} and {player2.name}"
         
     def _reset_positions(self):
         """ポジションを初期状態にリセット"""
