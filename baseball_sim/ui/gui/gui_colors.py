@@ -9,7 +9,7 @@ def get_position_color(position: Optional[str], pitcher_type: Optional[str] = No
 
     Rules (as requested):
     - SP (先発ピッチャー): red
-    - RP (リリーフピッチャー): pink
+    - RP (リリーフピッチャー): purple
     - C (キャッチャー): blue
     - 1B, 2B, 3B, SS (内野): yellow
     - LF, CF, RF (外野): green
@@ -26,7 +26,7 @@ def get_position_color(position: Optional[str], pitcher_type: Optional[str] = No
     if pos == "SP":
         return "red"
     if pos == "RP":
-        return "pink"
+        return "purple"
 
     # Catcher
     if pos == "C":
@@ -45,7 +45,7 @@ def get_position_color(position: Optional[str], pitcher_type: Optional[str] = No
         if pitcher_type and pitcher_type.upper() == "SP":
             return "red"
         if pitcher_type and pitcher_type.upper() == "RP":
-            return "pink"
+            return "purple"
         # Default for pitchers if type unknown
         return "red"
 
