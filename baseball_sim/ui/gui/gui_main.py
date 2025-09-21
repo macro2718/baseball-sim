@@ -1349,6 +1349,24 @@ class BaseballGUI:
             status = self.team_manager.get_team_status(team_type)
             status_label.config(text=status['message'], foreground=status['color'])
 
+        def open_lineup_setup():
+            latest_team = self.team_manager.get_team_by_type(team_type)
+            if not latest_team:
+                messagebox.showinfo("Info", "Team is not ready yet.")
+                return
+            lineup_window = self.strategy_manager._show_lineup_setup_for_team(
+                latest_team,
+                refresh_callback=refresh_lists,
+                team_type=team_type
+            )
+            if lineup_window and lineup_window.winfo_exists():
+                try:
+                    self.root.wait_window(lineup_window)
+                except Exception:
+                    pass
+            refresh_lists()
+            self._update_title_screen_status()
+
         def open_defense_setup():
             substitution_manager = self.team_manager.get_substitution_manager(team_type)
             if not substitution_manager:
@@ -1368,6 +1386,7 @@ class BaseballGUI:
         def open_pitcher_dialog():
             self._open_pitcher_selection_dialog(team_type, dialog, refresh_lists)
 
+        ttk.Button(controls, text=self.text["team_manage_lineup_setup"], command=open_lineup_setup).pack(side=tk.LEFT, padx=4)
         ttk.Button(controls, text=self.text["team_manage_defense"], command=open_defense_setup).pack(side=tk.LEFT, padx=4)
         ttk.Button(controls, text=self.text["team_manage_order"], command=open_swap_dialog).pack(side=tk.LEFT, padx=4)
         ttk.Button(controls, text=self.text["team_manage_pitcher_button"], command=open_pitcher_dialog).pack(side=tk.LEFT, padx=4)

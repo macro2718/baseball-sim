@@ -8,6 +8,7 @@ from baseball_sim.gameplay.lineup import LineupManager
 from baseball_sim.gameplay.substitutions import SubstitutionManager
 
 from .gui_defense_mode import DefenseChangeMode
+from .gui_event_manager import Events
 
 setup_project_environment()
 
@@ -812,48 +813,48 @@ class StrategyManager:
         ttk.Button(formation_window, text="Close", command=formation_window.destroy).pack(pady=10)
      
     
-    def _show_lineup_setup_for_team(self, team):
+    def _show_lineup_setup_for_team(self, team, refresh_callback=None, team_type=None):
         """指定されたチーム用のスタメン設定ダイアログを表示"""
         if not team:
             messagebox.showerror("Error", "Team is not available")
             return
-            
+
         try:
             lineup_manager = LineupManager(team)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to create lineup manager: {e}")
             return
-        
+
         try:
             setup_window = tk.Toplevel(self.root)
             setup_window.title(f"{team.name} - Lineup Setup")
             setup_window.geometry("780x910")  # 600x700 * 1.3
-            
+            setup_window.transient(self.root)
+
             # メインフレーム
             main_frame = ttk.Frame(setup_window)
             main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-            
+
             # 現在のラインナップ表示
             lineup_frame = ttk.LabelFrame(main_frame, text="Current Lineup")
             lineup_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-            
+
             # スクロール可能なフレーム
             canvas = tk.Canvas(lineup_frame)
             scrollbar = ttk.Scrollbar(lineup_frame, orient="vertical", command=canvas.yview)
             scrollable_frame = ttk.Frame(canvas)
-            
+
             scrollable_frame.bind(
                 "<Configure>",
                 lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
             )
-            
+
             canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
             canvas.configure(yscrollcommand=scrollbar.set)
-            
+
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
-            
-            # ラインナップ表示を更新する関数
+
             def refresh_lineup_display():
                 for widget in scrollable_frame.winfo_children():
                     widget.destroy()
@@ -863,7 +864,6 @@ class StrategyManager:
                     ttk.Label(scrollable_frame, text=empty_msg).pack(pady=10)
                     return
 
-                # 選手リスト（ゲーム中のラインナップ風の表示）
                 for i, player in enumerate(team.lineup):
                     player_frame = ttk.Frame(scrollable_frame)
                     player_frame.pack(fill=tk.X, pady=3, padx=4)
@@ -877,7 +877,6 @@ class StrategyManager:
                     )
                     info_text.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
 
-                    # アクションボタン
                     action_frame = ttk.Frame(player_frame)
                     action_frame.pack(side=tk.RIGHT, padx=4)
 
@@ -892,29 +891,27 @@ class StrategyManager:
                         action_frame,
                         text="Change Order",
                         width=12,
-                        command=lambda: self._show_batting_order_dialog(team, lineup_manager, refresh_lineup_display)
+                        command=lambda: self._show_batting_order_dialog(team, lineup_manager, notify_changes)
                     ).pack(anchor=tk.E, pady=1)
-                              
-            # ポジション変更機能
+
             def change_position(player_index):
                 try:
                     if player_index >= len(team.lineup):
                         messagebox.showerror("Error", f"Invalid player index: {player_index}")
                         return
-                    
+
                     player = team.lineup[player_index]
-                    
+
                     pos_window = tk.Toplevel(setup_window)
                     pos_window.title("Change Position")
                     pos_window.geometry("455x585")  # 350x450 * 1.3
-                    
+
                     primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
                     current_pos = player.current_position or primary_pos
                     ttk.Label(pos_window, text=f"Change position for {player.name}").pack(pady=10)
                     ttk.Label(pos_window, text=f"Primary Position: {primary_pos}").pack(pady=2)
                     ttk.Label(pos_window, text=f"Current Position: {current_pos}").pack(pady=2)
-                    
-                    # 選手の適性ポジションを取得（DHを除外）
+
                     if hasattr(player, 'get_display_eligible_positions'):
                         eligible_positions = player.get_display_eligible_positions()
                         ttk.Label(pos_window, text=f"Eligible Positions: {', '.join(eligible_positions)}").pack(pady=5)
@@ -923,52 +920,47 @@ class StrategyManager:
                         ttk.Label(pos_window, text=f"Eligible Positions: {', '.join(eligible_positions)}").pack(pady=5)
                     else:
                         eligible_positions = ["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF"]
-                    
-                    # ポジション選択
+
                     position_var = tk.StringVar(value=current_pos)
-                    
-                    # 適性のあるポジションのみ表示
+
                     for pos in ["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"]:
                         if pos in eligible_positions:
                             ttk.Radiobutton(pos_window, text=f"{pos} ✓", variable=position_var, value=pos).pack(anchor="w", padx=20)
                         else:
-                            # 適性のないポジションは無効化
                             rb = ttk.Radiobutton(pos_window, text=f"{pos} ✗ (Not eligible)", variable=position_var, value=pos, state="disabled")
                             rb.pack(anchor="w", padx=20)
-                    
+
                     def apply_position_change():
                         try:
                             new_pos = position_var.get()
-                            
-                            # 適性チェック
+
                             if hasattr(player, 'can_play_position') and not player.can_play_position(new_pos):
                                 messagebox.showerror("Error", f"{player.name} cannot play position {new_pos}")
                                 return
-                            
+
                             success, message = lineup_manager.set_player_position(player_index, new_pos)
                             if success:
-                                refresh_lineup_display()
+                                notify_changes()
                                 pos_window.destroy()
                                 messagebox.showinfo("Success", message)
                             else:
                                 messagebox.showerror("Error", message)
-                        except Exception as e:
-                            messagebox.showerror("Error", f"Failed to change position: {str(e)}")
-                    
+                        except Exception as exc:
+                            messagebox.showerror("Error", f"Failed to change position: {str(exc)}")
+
                     ttk.Button(pos_window, text="Apply", command=apply_position_change).pack(pady=10)
                     ttk.Button(pos_window, text="Cancel", command=pos_window.destroy).pack(pady=5)
-                except Exception as e:
+                except Exception as exc:
                     import traceback
                     traceback.print_exc()
-                    messagebox.showerror("Error", f"Failed to open position change dialog: {str(e)}")
-            
-            # エラー表示エリア
+                    messagebox.showerror("Error", f"Failed to open position change dialog: {str(exc)}")
+
             error_frame = ttk.LabelFrame(main_frame, text="Lineup Validation")
             error_frame.pack(fill=tk.X, padx=10, pady=5)
-            
+
             validation_text = tk.Text(error_frame, height=4, width=70)
             validation_text.pack(fill=tk.X, padx=5, pady=5)
-            
+
             def validate_and_display():
                 """ラインナップをバリデートして結果を表示"""
                 errors = lineup_manager.validate_lineup()
@@ -981,27 +973,50 @@ class StrategyManager:
                 else:
                     validation_text.insert(tk.END, "✓ Lineup is valid!")
                     validation_text.config(fg="green")
-            
-            # バリデーションボタン
+
+            def notify_changes():
+                refresh_lineup_display()
+                validate_and_display()
+                if refresh_callback:
+                    try:
+                        refresh_callback()
+                    except Exception:
+                        pass
+                if team_type and self.main_gui and getattr(self.main_gui, 'event_manager', None):
+                    try:
+                        self.main_gui.event_manager.trigger(Events.LINEUP_CHANGED, team_type)
+                    except Exception:
+                        pass
+                    if hasattr(self.main_gui, '_update_title_screen_status'):
+                        try:
+                            self.main_gui._update_title_screen_status()
+                        except Exception:
+                            pass
+
             ttk.Button(error_frame, text="Validate Lineup", command=validate_and_display).pack(pady=5)
-            
-            # 完了ボタン
+
             button_frame = ttk.Frame(main_frame)
             button_frame.pack(fill=tk.X, pady=10)
             ttk.Button(button_frame, text="Complete Setup", command=setup_window.destroy).pack(side=tk.LEFT, padx=5)
-            ttk.Button(button_frame, text="Validate & Complete", 
-                      command=lambda: [validate_and_display(), setup_window.destroy() if not lineup_manager.validate_lineup() else None]).pack(side=tk.LEFT, padx=5)
-            
-            # 初期表示
+            ttk.Button(
+                button_frame,
+                text="Validate & Complete",
+                command=lambda: [validate_and_display(), setup_window.destroy() if not lineup_manager.validate_lineup() else None]
+            ).pack(side=tk.LEFT, padx=5)
+
             refresh_lineup_display()
             validate_and_display()
-            
+
+            return setup_window
+
         except Exception as e:
             import traceback
             traceback.print_exc()
             messagebox.showerror("Error", f"Failed to setup lineup dialog: {e}")
             if 'setup_window' in locals():
                 setup_window.destroy()
+
+        return None
 
     def _show_batting_order_dialog(self, team, lineup_manager, refresh_callback):
         """打順変更ダイアログを表示"""

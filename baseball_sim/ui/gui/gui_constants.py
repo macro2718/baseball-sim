@@ -126,6 +126,7 @@ def get_ui_text():
         "team_manage_lineup": "Current Lineup",
         "team_manage_bench": "Bench",
         "team_manage_pitcher": "Starting Pitcher",
+        "team_manage_lineup_setup": "Lineup Setup",
         "team_manage_defense": "Edit Positions",
         "team_manage_order": "Swap Batting Order",
         "team_manage_pitcher_button": "Set Starting Pitcher",
