@@ -729,7 +729,16 @@ class BaseballGUI:
         text_widget.delete("1.0", tk.END)
         text_widget.configure(state=tk.DISABLED)
 
-    def _render_roster_line(self, text_widget, line_index: int, star: bool, current_pos: str, player, eligible_positions):
+    def _render_roster_line(
+        self,
+        text_widget,
+        line_index: int,
+        star: bool,
+        current_pos: str,
+        player,
+        eligible_positions,
+        show_index: bool = True,
+    ):
         """1行分のロスター表示を、ポジション語のみ色付きで描画する"""
         # 準備
         text_widget.configure(state=tk.NORMAL)
@@ -744,8 +753,12 @@ class BaseballGUI:
                 pass
             return tag_name
 
-        # 先頭: 星印と番号
-        prefix = ("★ " if star else "") + f"{line_index}. "
+        # 先頭: 星印と番号（番号は必要に応じて非表示）
+        prefix = ""
+        if star:
+            prefix += "★ "
+        if show_index:
+            prefix += f"{line_index}. "
         text_widget.insert(tk.END, prefix)
 
         # 現在の守備位置（色付き）
@@ -1362,6 +1375,7 @@ class BaseballGUI:
                         current_pos=current_pos,
                         player=player,
                         eligible_positions=eligible_positions,
+                        show_index=False,
                     )
                 hide_unused_bench_widgets(len(bench_players))
 
@@ -1470,8 +1484,9 @@ class BaseballGUI:
 
         ttk.Label(dialog, text=self.text["pitcher_select_instruction"]).pack(pady=10)
 
-        listbox = tk.Listbox(dialog, selectmode=tk.SINGLE, height=10)
-        listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        selection_var = tk.IntVar(value=-1)
+        list_container = ttk.Frame(dialog)
+        list_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         def build_pitcher_list():
             pitchers = []
@@ -1485,22 +1500,67 @@ class BaseballGUI:
 
         pitcher_objects = build_pitcher_list()
 
-        def refresh_listbox():
+        def refresh_pitcher_list():
             nonlocal pitcher_objects
+            previous_selection = selection_var.get()
             pitcher_objects = build_pitcher_list()
-            listbox.delete(0, tk.END)
-            for pitcher in pitcher_objects:
-                label = pitcher.name
-                if hasattr(pitcher, 'pitcher_type'):
-                    label += f" ({pitcher.pitcher_type})"
-                listbox.insert(tk.END, label)
+
+            for child in list_container.winfo_children():
+                child.destroy()
+
+            if not pitcher_objects:
+                ttk.Label(list_container, text=self.text["preview_no_players"]).pack(pady=6)
+                selection_var.set(-1)
+                return
+
+            current = getattr(team, 'current_pitcher', None)
+            new_selection = -1
+
+            for idx, pitcher in enumerate(pitcher_objects):
+                row = ttk.Frame(list_container)
+                row.pack(fill=tk.X, pady=2, anchor=tk.W)
+
+                radio = ttk.Radiobutton(row, text=pitcher.name, variable=selection_var, value=idx)
+                radio.pack(side=tk.LEFT, anchor=tk.W)
+
+                pos_token = self._display_position_token('P', pitcher)
+                if pos_token:
+                    tk.Label(row, text="(").pack(side=tk.LEFT, padx=(6, 0))
+                    pos_label = tk.Label(row, text=pos_token)
+                    color = get_position_color(pos_token, getattr(pitcher, 'pitcher_type', None))
+                    if color:
+                        try:
+                            pos_label.configure(fg=color)
+                        except Exception:
+                            pass
+                    pos_label.pack(side=tk.LEFT)
+                    tk.Label(row, text=")").pack(side=tk.LEFT)
+
+                stamina = getattr(pitcher, 'stamina', None)
+                if stamina is not None:
+                    ttk.Label(row, text=f"  Stamina: {stamina}%").pack(side=tk.LEFT, padx=(6, 0))
+
+                def select_row(event, idx=idx):
+                    selection_var.set(idx)
+
+                row.bind("<Button-1>", select_row)
+                for child in row.winfo_children():
+                    child.bind("<Button-1>", select_row)
+
+                if idx == previous_selection:
+                    new_selection = idx
+                elif pitcher is current and new_selection == -1:
+                    new_selection = idx
+
+            if new_selection == -1 and pitcher_objects:
+                new_selection = 0
+            selection_var.set(new_selection)
 
         def on_apply():
-            selection = listbox.curselection()
-            if not selection:
+            idx = selection_var.get()
+            if idx < 0 or idx >= len(pitcher_objects):
                 messagebox.showinfo("Info", "Please select a pitcher.")
                 return
-            idx = selection[0]
             selected = pitcher_objects[idx]
             current = getattr(team, 'current_pitcher', None)
             if selected is current:
@@ -1523,7 +1583,7 @@ class BaseballGUI:
         ttk.Button(dialog, text=self.text["team_manage_pitcher_button"], command=on_apply).pack(pady=6)
         ttk.Button(dialog, text=self.text["close"], command=dialog.destroy).pack(pady=(0, 8))
 
-        refresh_listbox()
+        refresh_pitcher_list()
 
     def _format_player_positions(self, player):
         """選手の守備可能ポジションを文字列化"""
