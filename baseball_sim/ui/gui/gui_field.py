@@ -217,7 +217,15 @@ class FieldManager:
         )
         
         # 結果に応じてアニメーション
-        if result in ["single", "double", "triple", "home_run", "groundout", "flyout"]:
+        if result in [
+            "single",
+            "double",
+            "triple",
+            "home_run",
+            "groundout",
+            "outfield_flyout",
+            "infield_flyout",
+        ]:
             # ヒットやアウトの場合のボール軌道
             if result == "single":
                 steps = 100
@@ -234,7 +242,7 @@ class FieldManager:
             elif result == "groundout":
                 steps = 100
                 speed = 1.9
-            elif result == "flyout":
+            elif result in ("outfield_flyout", "infield_flyout"):
                 steps = 130
                 speed = 2.5
             rad = math.radians(random.uniform(45, 135))

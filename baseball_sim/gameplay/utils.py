@@ -910,13 +910,15 @@ class RunnerEngine:
         return 0, "Groundout."
 
     # ---- フライアウト ----
-    def apply_flyout(self, batter) -> int:
-        """フライアウト時の進塁・得点処理（得点数を返す）。"""
+    def apply_outfield_flyout(self, batter) -> int:
+        """外野フライ時の進塁・得点処理（得点数を返す）。"""
 
-        fly_ball_roll = random.random()
-        if fly_ball_roll < 0.13:
-            return self._handle_infield_flyout(batter)
         return self._handle_outfield_flyout(batter)
+
+    def apply_infield_flyout(self, batter) -> int:
+        """内野フライ時の進塁・得点処理（得点数を返す）。"""
+
+        return self._handle_infield_flyout(batter)
 
     def _handle_outfield_flyout(self, batter) -> int:
         """外野フライ時のタッチアップ処理と得点計算。"""
