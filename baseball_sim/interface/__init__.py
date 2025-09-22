@@ -1,2 +1,2 @@
-"""Modes package (terminal, GUI wiring, simulations orchestration)."""
+"""Interface package for GUI wiring and simulations orchestration."""
 
