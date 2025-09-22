@@ -1,46 +1,28 @@
 """Game mode selection and execution helpers."""
 
 import sys
-from typing import Optional
 
 from baseball_sim.config import setup_project_environment
-from baseball_sim.interface.simulation import simulate_games
 from baseball_sim.ui.gui.gui_app import BaseballApp
+from baseball_sim.ui.gui.gui_startup import SimulationWindow, StartupWindow
 
 setup_project_environment()
 
 
 class GameModeManager:
     """ゲームモードの選択と実行を管理するクラス"""
-    
-    MODES = {
-        "1": "gui",
-        "2": "simulation",
-        "0": None
-    }
-    
-    @staticmethod
-    def display_mode_selection() -> None:
-        """モード選択画面を表示"""
-        print("========== 野球シミュレーションモード選択 ==========")
-        print("1: GUIモード - グラフィカルインターフェース (スタメン設定可能)")
-        print("2: シミュレーションモード - 複数試合の自動シミュレーション")
-        print("0: 終了")
-    
-    @classmethod
-    def get_game_mode_choice(cls) -> Optional[str]:
-        """ユーザーからゲームモードの選択を取得"""
-        cls.display_mode_selection()
-        choice = input("実行するモードを選択してください (0-2): ")
 
-        mode = cls.MODES.get(choice)
-        if mode is None and choice == "0":
-            print("プログラムを終了します")
+    VALID_MODES = {"gui", "simulation"}
+
+    @classmethod
+    def get_game_mode_choice(cls) -> str:
+        """モード選択ウィンドウを表示して選択されたモードを返す"""
+        selector = StartupWindow()
+        mode = selector.show()
+
+        if mode not in cls.VALID_MODES:
             sys.exit(0)
-        elif mode is None:
-            print("無効な選択です。デフォルトのGUIモードで起動します")
-            mode = "gui"
-        
+
         return mode
     
     @staticmethod
@@ -60,11 +42,9 @@ class GameModeManager:
     @staticmethod
     def play_simulation_mode():
         """シミュレーションモードの実行"""
-        num_games = int(input("シミュレーションする試合数を入力してください: "))
-        output_file = input("結果を出力するファイル名を入力してください (デフォルト: タイムスタンプ付きファイル): ")
-        if not output_file.strip():
-            output_file = None  # Noneを渡すことでsimulate_games内でタイムスタンプ付きファイル名を生成
-        return simulate_games(num_games, output_file)
+        window = SimulationWindow()
+        window.show()
+        return None
     
     @classmethod
     def execute_game_mode(cls, mode: str):

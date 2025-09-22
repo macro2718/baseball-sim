@@ -7,7 +7,7 @@ from baseball_sim.gameplay.statistics import StatsCalculator
 
 setup_project_environment()
 
-def simulate_games(num_games=10, output_file=None):
+def simulate_games(num_games=10, output_file=None, progress_callback=None, message_callback=None):
     """指定された回数の試合をシミュレーションし、結果をファイルに出力する"""
     # データローダーを直接インポート
     from baseball_sim.data.loader import DataLoader
@@ -19,6 +19,11 @@ def simulate_games(num_games=10, output_file=None):
         output_dir = os.path.join(project_root, "simulation_results")
         os.makedirs(output_dir, exist_ok=True)
         output_file = os.path.join(output_dir, f"simulation_results_{timestamp}.txt")
+
+    if message_callback:
+        message_callback(f"結果は {output_file} に保存されます。")
+    else:
+        print(f"結果は {output_file} に保存されます。")
     
     # 結果を保存するデータ構造を初期化
     results = {
@@ -41,7 +46,10 @@ def simulate_games(num_games=10, output_file=None):
             results["pitchers"][pitcher.name] = pitcher
     
     for game_num in range(1, num_games + 1):
-        print(f"シミュレーション中... 試合 {game_num}/{num_games}")
+        if message_callback:
+            message_callback(f"シミュレーション中... 試合 {game_num}/{num_games}")
+        else:
+            print(f"シミュレーション中... 試合 {game_num}/{num_games}")
         
         # 試合前にチームと選手の状態をリセット
         reset_team_and_players(home_team, away_team)
@@ -57,11 +65,23 @@ def simulate_games(num_games=10, output_file=None):
         
         # チームの勝敗統計を更新
         update_statistics(results, game, game_result)
+
+        if progress_callback:
+            progress_callback(game_num, num_games)
+        if message_callback:
+            message_callback(f"試合 {game_num}/{num_games} が完了しました。")
     
     # 結果をファイルに出力
     output_results(results, output_file)
-    print(f"シミュレーション完了。結果は {output_file} に保存されました。")
-    
+
+    results["output_file"] = output_file
+
+    completion_message = f"シミュレーション完了。結果は {output_file} に保存されました。"
+    if message_callback:
+        message_callback(completion_message)
+    else:
+        print(completion_message)
+
     return results
 
 def reset_team_and_players(home_team, away_team):
