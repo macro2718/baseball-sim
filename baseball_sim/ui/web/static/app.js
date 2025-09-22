@@ -828,35 +828,33 @@ function updateRosters(tbody, players) {
   });
 }
 
-function updateBench(listEl, benchPlayers, emptyMessage = '利用可能なベンチ選手はいません') {
+function updateBench(listEl) {
   if (!listEl) return;
+
   listEl.innerHTML = '';
 
-  if (!benchPlayers || benchPlayers.length === 0) {
-    const li = document.createElement('li');
-    li.classList.add('empty');
-    li.textContent = emptyMessage;
-    listEl.appendChild(li);
-    return;
+  const section = listEl.closest('.bench-section');
+  if (section) {
+    section.classList.add('hidden');
+    section.setAttribute('aria-hidden', 'true');
   }
-
-  benchPlayers.forEach((player) => {
-    const li = document.createElement('li');
-    const name = document.createElement('span');
-    name.textContent = player.name;
-    const eligible = document.createElement('span');
-    eligible.classList.add('position-list');
-    eligible.innerHTML = renderPositionList(player.eligible || [], player.pitcher_type);
-    li.appendChild(name);
-    li.appendChild(eligible);
-    listEl.appendChild(li);
-  });
 }
 
 function updatePitchers(listEl, pitchers) {
   if (!listEl) return;
   listEl.innerHTML = '';
-  pitchers.forEach((pitcher) => {
+
+  const visiblePitchers = Array.isArray(pitchers)
+    ? pitchers.filter((pitcher) => {
+        if (!pitcher) return false;
+        if (pitcher.is_current) return true;
+        if ('has_entered_game' in pitcher) return Boolean(pitcher.has_entered_game);
+        if ('has_played' in pitcher) return Boolean(pitcher.has_played);
+        return false;
+      })
+    : [];
+
+  visiblePitchers.forEach((pitcher) => {
     const li = document.createElement('li');
     if (pitcher.is_current) {
       li.classList.add('current');
