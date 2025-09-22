@@ -20,7 +20,8 @@ class AtBatOutcomeHandler:
             "triple": self._handle_triple,
             "home_run": self._handle_home_run,
             "groundout": self._handle_groundout,
-            "flyout": self._handle_flyout,
+            "outfield_flyout": self._handle_outfield_flyout,
+            "infield_flyout": self._handle_infield_flyout,
         }
 
     def apply(self, result: str, batter) -> str:
@@ -97,13 +98,27 @@ class AtBatOutcomeHandler:
             self._game_state._add_runs(runs, batter)
         return message
 
-    def _handle_flyout(self, batter) -> str:
+    def _apply_flyout_result(self, batter, runner_handler: Callable[[object], int], default_message: str) -> str:
         pitcher = self._game_state.fielding_team.current_pitcher
         pitcher.pitching_stats["IP"] += 1 / 3
         batter.stats["AB"] += 1
-        runs = self._runner_engine.apply_flyout(batter)
+        runs = runner_handler(batter)
         self._game_state.add_out()
         if runs > 0:
             self._game_state._add_runs(runs, batter)
             return f"Sacrifice fly! {runs} run scored!"
-        return "Flyout."
+        return default_message
+
+    def _handle_outfield_flyout(self, batter) -> str:
+        return self._apply_flyout_result(
+            batter,
+            self._runner_engine.apply_outfield_flyout,
+            "Flyout.",
+        )
+
+    def _handle_infield_flyout(self, batter) -> str:
+        return self._apply_flyout_result(
+            batter,
+            self._runner_engine.apply_infield_flyout,
+            "Infield flyout.",
+        )

@@ -60,9 +60,9 @@ def test_flyout_tagups_success(monkeypatch, batter):
     game_state.bases[1] = second_runner
     game_state.bases[0] = first_runner
 
-    set_random_sequence(monkeypatch, [0.5, 0.0, 0.0, 0.0, 0.0])
+    set_random_sequence(monkeypatch, [0.0, 0.0, 0.0, 0.0])
 
-    runs = engine.apply_flyout(batter)
+    runs = engine.apply_outfield_flyout(batter)
 
     assert runs == 0
     assert game_state.outs == 0
@@ -78,9 +78,9 @@ def test_flyout_tagup_runner_thrown_out(monkeypatch, batter):
     second_runner = SimpleNamespace(speed=4.3)
     game_state.bases[1] = second_runner
 
-    set_random_sequence(monkeypatch, [0.5, 0.0, 0.99])
+    set_random_sequence(monkeypatch, [0.0, 0.99])
 
-    runs = engine.apply_flyout(batter)
+    runs = engine.apply_outfield_flyout(batter)
 
     assert runs == 0
     assert game_state.outs == 1
@@ -96,9 +96,9 @@ def test_flyout_double_play_leave_early(monkeypatch, batter):
     game_state.bases[1] = second_runner
     game_state.bases[0] = first_runner
 
-    set_random_sequence(monkeypatch, [0.5, 0.99, 0.0, 0.99, 0.0])
+    set_random_sequence(monkeypatch, [0.99, 0.0, 0.99, 0.0])
 
-    runs = engine.apply_flyout(batter)
+    runs = engine.apply_outfield_flyout(batter)
 
     assert runs == 0
     assert game_state.outs == 2
@@ -114,9 +114,9 @@ def test_infield_flyout_no_advancement(monkeypatch, batter):
     first_runner = SimpleNamespace(speed=4.3)
     game_state.bases[0] = first_runner
 
-    set_random_sequence(monkeypatch, [0.05, 0.5])
+    set_random_sequence(monkeypatch, [0.5])
 
-    runs = engine.apply_flyout(batter)
+    runs = engine.apply_infield_flyout(batter)
 
     assert runs == 0
     assert game_state.outs == 0
@@ -131,9 +131,9 @@ def test_infield_flyout_double_off_lead_runner(monkeypatch, batter):
     first_runner = SimpleNamespace(speed=4.3)
     game_state.bases[0] = first_runner
 
-    set_random_sequence(monkeypatch, [0.05, 0.01])
+    set_random_sequence(monkeypatch, [0.01])
 
-    runs = engine.apply_flyout(batter)
+    runs = engine.apply_infield_flyout(batter)
 
     assert runs == 0
     assert game_state.outs == 1

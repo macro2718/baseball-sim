@@ -7,6 +7,7 @@ from typing import Dict, Optional
 from prediction_models.prediction import predict_auto
 
 _DEFAULT_MODEL_OUTPUT = [0.15, 0.05, 0.01, 0.03, 0.76]
+_INFIELD_FLY_RATIO = 0.13
 
 
 @dataclass
@@ -46,6 +47,8 @@ class OutcomeProbabilityCalculator:
 
         groundout_prob = out_woSO_prob * gb_prob
         flyout_prob = max(0.0, out_woSO_prob - groundout_prob)
+        infield_flyout_prob = flyout_prob * _INFIELD_FLY_RATIO
+        outfield_flyout_prob = max(0.0, flyout_prob - infield_flyout_prob)
 
         return {
             "strikeout": k_prob,
@@ -55,7 +58,8 @@ class OutcomeProbabilityCalculator:
             "triple": triple_prob,
             "home_run": hr_prob,
             "groundout": groundout_prob,
-            "flyout": flyout_prob,
+            "infield_flyout": infield_flyout_prob,
+            "outfield_flyout": outfield_flyout_prob,
         }
 
     def _calculate_component(self, batter_value: float, pitcher_value: float, league_average: float) -> float:
