@@ -3,7 +3,12 @@
 import random
 from typing import Any, Dict, List, Optional, Tuple
 
-from baseball_sim.config import BuntConstants, GameResults, StatColumns
+from baseball_sim.config import (
+    BuntConstants,
+    GameResults,
+    OUTS_PER_INNING,
+    StatColumns,
+)
 from baseball_sim.infrastructure.logging_utils import logger
 
 
@@ -913,8 +918,8 @@ class RunnerEngine:
         """
         runs = 0
         if self.game_state.outs < 2:
-            anticipated_outs = self.game_state.outs + 1  # 打者アウト分
             bases = self.game_state.bases
+            outs_available = max(0, OUTS_PER_INNING - (self.game_state.outs + 1))
 
             # 三塁走者の処理（犠牲フライ or タッチアップ失敗）
             third_runner = bases[2]
@@ -928,30 +933,68 @@ class RunnerEngine:
                     # タッチアップ失敗でアウト
                     clear_base(bases, 2)
                     self.game_state.add_out()
-                    anticipated_outs += 1
+                    outs_available = max(0, outs_available - 1)
 
             # 既にイニング終了が確定する場合は他走者の処理不要
-            if anticipated_outs >= 3:
+            if outs_available <= 0:
                 return runs
 
             depth_factor = max(0.2, min(1.5, batter.hard_pct / 35))
 
             # 二塁走者のタッチアップ進塁判定
             second_runner = bases[1]
-            if second_runner is not None and bases[2] is None:
+            if second_runner is not None and bases[2] is None and outs_available > 0:
                 second_speed = getattr(second_runner, "speed", 4.3) or 4.3
-                second_probability = 0.45 * depth_factor * (4.3 / second_speed)
-                second_probability = max(0.0, min(0.8, second_probability))
-                if random.random() < second_probability:
-                    move_runner(bases, 1, 2)
+                attempt_probability = 0.45 * depth_factor * (4.3 / second_speed)
+                attempt_probability = max(0.0, min(0.8, attempt_probability))
+                attempt_roll = random.random()
+                if attempt_roll < attempt_probability:
+                    success_probability = 0.65 * depth_factor * (4.3 / second_speed)
+                    success_probability = max(0.2, min(0.9, success_probability))
+                    if random.random() < success_probability:
+                        move_runner(bases, 1, 2)
+                    else:
+                        clear_base(bases, 1)
+                        self.game_state.add_out()
+                        outs_available -= 1
+                        if outs_available <= 0:
+                            return runs
+                else:
+                    leave_early_probability = 0.05 * (4.3 / second_speed)
+                    leave_early_probability = max(0.0, min(0.25, leave_early_probability))
+                    if random.random() < leave_early_probability:
+                        clear_base(bases, 1)
+                        self.game_state.add_out()
+                        outs_available -= 1
+                        if outs_available <= 0:
+                            return runs
 
             # 一塁走者のタッチアップ進塁判定
             first_runner = bases[0]
-            if first_runner is not None and bases[1] is None:
+            if first_runner is not None and bases[1] is None and outs_available > 0:
                 first_speed = getattr(first_runner, "speed", 4.3) or 4.3
-                first_probability = 0.3 * depth_factor * (4.3 / first_speed)
-                first_probability = max(0.0, min(0.65, first_probability))
-                if random.random() < first_probability:
-                    move_runner(bases, 0, 1)
+                attempt_probability = 0.3 * depth_factor * (4.3 / first_speed)
+                attempt_probability = max(0.0, min(0.65, attempt_probability))
+                attempt_roll = random.random()
+                if attempt_roll < attempt_probability:
+                    success_probability = 0.55 * depth_factor * (4.3 / first_speed)
+                    success_probability = max(0.15, min(0.85, success_probability))
+                    if random.random() < success_probability:
+                        move_runner(bases, 0, 1)
+                    else:
+                        clear_base(bases, 0)
+                        self.game_state.add_out()
+                        outs_available -= 1
+                        if outs_available <= 0:
+                            return runs
+                else:
+                    leave_early_probability = 0.04 * (4.3 / first_speed)
+                    leave_early_probability = max(0.0, min(0.2, leave_early_probability))
+                    if random.random() < leave_early_probability:
+                        clear_base(bases, 0)
+                        self.game_state.add_out()
+                        outs_available -= 1
+                        if outs_available <= 0:
+                            return runs
 
         return runs
