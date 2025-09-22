@@ -65,10 +65,10 @@
               </div>
 
               <div class="bases" id="base-state">
-                <div class="base base3" data-base="2"><span></span></div>
-                <div class="base base2" data-base="1"><span></span></div>
-                <div class="base base1" data-base="0"><span></span></div>
-                <div class="home-plate"></div>
+                <div class="home-plate" aria-hidden="true"></div>
+                <div class="base base-third" data-base="2"><span></span></div>
+                <div class="base base-second" data-base="1"><span></span></div>
+                <div class="base base-first" data-base="0"><span></span></div>
               </div>
 
               <div class="roster-panel">
@@ -113,34 +113,18 @@
             </div>
 
             <div class="control-column">
-              <div class="controls-card">
-                <h3>打撃操作</h3>
-                <button id="swing-button" class="primary">通常打撃</button>
-                <button id="bunt-button">バント</button>
+              <div class="controls-card main-controls">
+                <h3>プレー操作</h3>
+                <div class="action-buttons">
+                  <button id="swing-button" class="primary">通常打撃</button>
+                  <button id="bunt-button">バント</button>
+                  <button id="open-offense-strategy">攻撃側采配</button>
+                  <button id="open-defense-strategy">守備側采配</button>
+                  <button id="open-stats">成績</button>
+                </div>
               </div>
 
-              <div class="controls-card strategy-card" id="offense-strategy">
-                <h3>采配（攻撃）</h3>
-                <label for="pinch-target">代打対象</label>
-                <select id="pinch-target"></select>
-                <label for="pinch-player">ベンチ選手</label>
-                <select id="pinch-player"></select>
-                <button id="pinch-hit-button">代打を送る</button>
-              </div>
-
-              <div class="controls-card strategy-card" id="defense-strategy">
-                <h3>采配（守備）</h3>
-                <label for="defense-target">交代する守備位置</label>
-                <select id="defense-target"></select>
-                <label for="defense-player">ベンチ選手</label>
-                <select id="defense-player"></select>
-                <button id="defense-sub-button">守備交代</button>
-                <label for="pitcher-select">投手交代</label>
-                <select id="pitcher-select"></select>
-                <button id="change-pitcher-button">新しい投手を投入</button>
-              </div>
-
-              <div class="defense-alert" id="defense-errors"></div>
+              <div class="defense-alert hidden" id="defense-errors"></div>
 
               <div class="log-panel">
                 <h3>試合ログ</h3>
@@ -154,6 +138,88 @@
       <footer class="app-footer">
         <small>&copy; 2024 Baseball Simulation</small>
       </footer>
+    </div>
+
+    <div class="modal hidden" id="offense-modal" aria-hidden="true">
+      <div class="modal-card strategy-modal" role="dialog" aria-modal="true" aria-labelledby="offense-modal-title">
+        <div class="modal-header">
+          <h3 id="offense-modal-title">攻撃側采配</h3>
+          <button type="button" class="modal-close" data-close="offense-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">代打を送りたい打順とベンチ選手を選択してください。</p>
+          <div class="form-grid">
+            <label for="pinch-target">代打を出す打順</label>
+            <select id="pinch-target"></select>
+            <label for="pinch-player">ベンチ選手</label>
+            <select id="pinch-player"></select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="pinch-hit-button" class="primary">代打を送る</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="defense-modal" aria-hidden="true">
+      <div class="modal-card strategy-modal wide" role="dialog" aria-modal="true" aria-labelledby="defense-modal-title">
+        <div class="modal-header">
+          <h3 id="defense-modal-title">守備側采配</h3>
+          <button type="button" class="modal-close" data-close="defense-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body defense-modal-body">
+          <div class="defense-section">
+            <h4>現在の守備</h4>
+            <div class="defense-field" id="defense-field"></div>
+            <div class="defense-extras hidden" id="defense-extras"></div>
+          </div>
+          <div class="defense-section">
+            <h4>ベンチ</h4>
+            <div class="defense-bench" id="defense-bench-panel"></div>
+          </div>
+        </div>
+        <div class="modal-footer defense-footer">
+          <p class="selection-info" id="defense-selection-info">守備交代を行う守備位置とベンチ選手を選択してください。</p>
+          <div class="defense-actions">
+            <button id="defense-sub-button" class="primary">守備交代を適用</button>
+          </div>
+          <div class="pitcher-change">
+            <h4>投手交代</h4>
+            <select id="pitcher-select"></select>
+            <button id="change-pitcher-button">新しい投手を投入</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="stats-modal" aria-hidden="true">
+      <div class="modal-card stats-modal" role="dialog" aria-modal="true" aria-labelledby="stats-modal-title">
+        <div class="modal-header">
+          <h3 id="stats-modal-title">成績</h3>
+          <button type="button" class="modal-close" data-close="stats-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body stats-modal-body">
+          <div class="stats-controls">
+            <div class="toggle-group" role="radiogroup" aria-label="チーム選択">
+              <button type="button" class="toggle" data-stats-team="away">ビジター</button>
+              <button type="button" class="toggle" data-stats-team="home">ホーム</button>
+            </div>
+            <div class="toggle-group" role="radiogroup" aria-label="表示切替">
+              <button type="button" class="toggle" data-stats-type="batting">打撃成績</button>
+              <button type="button" class="toggle" data-stats-type="pitching">投球成績</button>
+            </div>
+          </div>
+          <h4 id="stats-title" class="stats-title"></h4>
+          <div class="stats-table-wrapper">
+            <table id="stats-table" class="stats-table">
+              <thead>
+                <tr></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="{{ url_for('static', filename='app.js') }}" defer></script>

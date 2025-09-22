@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from baseball_sim.config import GameResults, setup_project_environment
 from baseball_sim.data.loader import DataLoader
 from baseball_sim.gameplay.game import GameState
+from baseball_sim.gameplay.statistics import StatsCalculator
 from baseball_sim.gameplay.substitutions import SubstitutionManager
 
 setup_project_environment()
@@ -552,9 +553,137 @@ class WebGameSession:
                 "bench": bench,
                 "pitchers": pitchers,
                 "pitcher_options": pitcher_options,
+                "stats": self._build_team_stats(team),
             }
 
         return teams
+
+    def _build_team_stats(self, team) -> Dict[str, List[Dict[str, object]]]:
+        batting: List[Dict[str, object]] = []
+        pitching: List[Dict[str, object]] = []
+
+        if not team:
+            return {"batting": batting, "pitching": pitching}
+
+        seen_batters = set()
+
+        def add_batter(player) -> None:
+            player_id = id(player)
+            if player_id in seen_batters:
+                return
+            seen_batters.add(player_id)
+            position = getattr(player, "position", "") or ""
+            if position.upper() == "P":
+                return
+            batting.append(self._serialize_batter_stats(player))
+
+        for batter in getattr(team, "lineup", []):
+            add_batter(batter)
+        for batter in getattr(team, "bench", []):
+            add_batter(batter)
+
+        seen_pitchers = set()
+
+        def add_pitcher(player) -> None:
+            player_id = id(player)
+            if player_id in seen_pitchers:
+                return
+            seen_pitchers.add(player_id)
+            pitching.append(self._serialize_pitcher_stats(player))
+
+        for pitcher in getattr(team, "lineup", []):
+            if getattr(pitcher, "position", "").upper() == "P":
+                add_pitcher(pitcher)
+        for pitcher in getattr(team, "pitchers", []):
+            add_pitcher(pitcher)
+        for pitcher in getattr(team, "bench", []):
+            if getattr(pitcher, "position", "").upper() == "P":
+                add_pitcher(pitcher)
+
+        return {"batting": batting, "pitching": pitching}
+
+    def _serialize_batter_stats(self, player) -> Dict[str, object]:
+        stats = getattr(player, "stats", {}) or {}
+        singles = stats.get("1B", 0)
+        doubles = stats.get("2B", 0)
+        triples = stats.get("3B", 0)
+        homers = stats.get("HR", 0)
+        hits = singles + doubles + triples + homers
+        at_bats = stats.get("AB", 0)
+        if hasattr(player, "get_avg"):
+            try:
+                avg_value = float(player.get_avg())
+            except Exception:  # pragma: no cover - defensive guard
+                avg_value = StatsCalculator.calculate_batting_average(hits, at_bats)
+        else:
+            avg_value = StatsCalculator.calculate_batting_average(hits, at_bats)
+        average = StatsCalculator.format_average(avg_value)
+
+        return {
+            "name": getattr(player, "name", "-"),
+            "ab": at_bats,
+            "single": singles,
+            "double": doubles,
+            "triple": triples,
+            "hr": homers,
+            "runs": stats.get("R", 0),
+            "rbi": stats.get("RBI", 0),
+            "bb": stats.get("BB", 0),
+            "so": stats.get("SO", stats.get("K", 0)),
+            "avg": average,
+        }
+
+    def _serialize_pitcher_stats(self, player) -> Dict[str, object]:
+        raw_stats = getattr(player, "pitching_stats", None) or getattr(player, "stats", {}) or {}
+        innings = raw_stats.get("IP", 0)
+        try:
+            ip_display = StatsCalculator.format_inning_display(innings)
+        except Exception:  # pragma: no cover - defensive guard
+            ip_display = "0.0"
+
+        if innings > 0 and hasattr(player, "get_era"):
+            try:
+                era_value = float(player.get_era())
+            except Exception:  # pragma: no cover - defensive guard
+                era_value = StatsCalculator.calculate_era(raw_stats.get("ER", 0), innings)
+            era = StatsCalculator.format_average(era_value, 2)
+        elif innings > 0:
+            era = StatsCalculator.format_average(
+                StatsCalculator.calculate_era(raw_stats.get("ER", 0), innings),
+                2,
+            )
+        else:
+            era = "-.--"
+
+        if innings > 0 and hasattr(player, "get_whip"):
+            try:
+                whip_value = float(player.get_whip())
+            except Exception:  # pragma: no cover - defensive guard
+                whip_value = StatsCalculator.calculate_whip(
+                    raw_stats.get("H", 0), raw_stats.get("BB", 0), innings
+                )
+            whip = StatsCalculator.format_average(whip_value, 2)
+        elif innings > 0:
+            whip = StatsCalculator.format_average(
+                StatsCalculator.calculate_whip(raw_stats.get("H", 0), raw_stats.get("BB", 0), innings),
+                2,
+            )
+        else:
+            whip = "-.--"
+
+        strikeouts = raw_stats.get("SO", raw_stats.get("K", 0))
+
+        return {
+            "name": getattr(player, "name", "-"),
+            "ip": ip_display,
+            "h": raw_stats.get("H", 0),
+            "r": raw_stats.get("R", 0),
+            "er": raw_stats.get("ER", 0),
+            "bb": raw_stats.get("BB", 0),
+            "k": strikeouts,
+            "era": era,
+            "whip": whip,
+        }
 
     def _serialize_pitcher(self, pitcher, is_current: bool) -> Dict[str, object]:
         return {
