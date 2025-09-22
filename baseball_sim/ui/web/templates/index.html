@@ -11,6 +11,9 @@
       <header class="app-header">
         <h1>Baseball Simulation</h1>
         <p class="subtitle">ブラウザで遊べる野球シミュレーター</p>
+        <div class="developer-hint">
+          <small>💡 開発者向け: <kbd>Tab</kbd>キーでログパネルを表示/非表示</small>
+        </div>
       </header>
 
       <main class="app-main">
@@ -47,6 +50,7 @@
               <button id="clear-log">ログをクリア</button>
             </div>
             <div class="toolbar-right">
+              <span class="log-hint"><kbd>Tab</kbd>でログ表示</span>
               <span id="action-warning" class="action-warning"></span>
             </div>
           </div>
@@ -137,8 +141,8 @@
 
               <div class="defense-alert hidden" id="defense-errors"></div>
 
-              <div class="log-panel">
-                <h3>試合ログ</h3>
+              <div class="log-panel hidden" id="log-panel">
+                <h3>試合ログ <small>(開発者用)</small></h3>
                 <div class="log-entries" id="log-entries"></div>
               </div>
             </div>

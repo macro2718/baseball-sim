@@ -89,6 +89,7 @@ const elements = {
   pitcherMenuButton: document.getElementById('open-pitcher-change-menu'),
   actionWarning: document.getElementById('action-warning'),
   titleHint: document.getElementById('title-hint'),
+  logPanel: document.getElementById('log-panel'),
   logContainer: document.getElementById('log-entries'),
   scoreboard: document.getElementById('scoreboard'),
   situationText: document.getElementById('situation-text'),
@@ -320,6 +321,19 @@ function closeModal(name) {
   modal.setAttribute('aria-hidden', 'true');
 }
 
+function toggleLogPanel() {
+  const { logPanel } = elements;
+  if (!logPanel) return;
+  
+  if (logPanel.classList.contains('hidden')) {
+    logPanel.classList.remove('hidden');
+    console.log('📝 開発者ログパネルが表示されました (Tabキーで非表示にできます)');
+  } else {
+    logPanel.classList.add('hidden');
+    console.log('📝 開発者ログパネルが非表示になりました');
+  }
+}
+
 function hideDefenseMenu() {
   const { defenseMenu } = elements;
   if (!defenseMenu) return;
@@ -442,6 +456,11 @@ function initEventListeners() {
           closeModal(modal);
         }
       });
+    }
+    // Tabキーでログパネルの表示を切り替え（開発者用機能）
+    if (event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      toggleLogPanel();
     }
   });
 }
@@ -1455,6 +1474,11 @@ function showStatus(message, level = 'danger') {
 
 async function bootstrap() {
   initEventListeners();
+  
+  // 開発者向けヒントをコンソールに表示
+  console.log('%c🏟️ Baseball Simulation - Developer Mode', 'color: #f97316; font-size: 16px; font-weight: bold;');
+  console.log('%cTabキーを押すと開発者用ログパネルを表示/非表示できます', 'color: #60a5fa; font-size: 14px;');
+  
   try {
     const initialState = await apiRequest('/api/game/state');
     render(initialState);
