@@ -1,7 +1,5 @@
 """Lineup management utilities for batting order and defensive positions."""
 
-from typing import Any, Dict, List, Optional
-
 from baseball_sim.config import Positions
 
 class LineupManager:
@@ -11,49 +9,6 @@ class LineupManager:
         self.all_positions = Positions.ALL_POSITIONS
         self.valid_positions = Positions.ALL_POSITIONS
         
-    def display_current_lineup(self):
-        """現在のラインナップと守備位置を表示"""
-        print(f"\n===== {self.team.name} Current Lineup =====")
-        print("Batting Order | Player Name         | Primary Pos | Current Pos | Eligible Positions")
-        print("-" * 80)
-        for i, player in enumerate(self.team.lineup):
-            primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-            eligible_str = ", ".join(player.get_display_eligible_positions()) if hasattr(player, 'get_display_eligible_positions') else primary_pos
-            current_pos = player.current_position if hasattr(player, 'current_position') else player.position
-            print(f"{i+1:>12} | {player.name:<19} | {primary_pos:<11} | {current_pos:<11} | {eligible_str}")
-            
-    def display_defensive_positions(self):
-        """守備位置別の選手配置を表示"""
-        print(f"\n===== {self.team.name} Defensive Positions =====")
-        
-        for pos in self.all_positions:
-            if hasattr(self.team, 'defensive_positions'):
-                player = self.team.defensive_positions.get(pos)
-            else:
-                # 後方互換性
-                player = self.find_player_by_position(pos)
-                
-            if player:
-                player_name = player.name
-                batting_order = self.team.lineup.index(player) + 1 if player in self.team.lineup else "-"
-                # 適性チェック：選手がそのポジションを守れるかどうか
-                eligible_indicator = "✓" if (hasattr(player, 'can_play_position') and player.can_play_position(pos)) else "✗"
-                primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-                pos_info = f"(Primary: {primary_pos})" if primary_pos != pos else ""
-            else:
-                player_name = "EMPTY"
-                batting_order = "-"
-                eligible_indicator = "⚠️"
-                pos_info = ""
-            print(f"{pos:>3}: {player_name:<15} {pos_info:<15} Batting #{batting_order} {eligible_indicator}")
-        
-        # 未配置ポジションの警告
-        missing_positions = self.team.get_missing_positions() if hasattr(self.team, 'get_missing_positions') else []
-        if missing_positions:
-            print(f"\n⚠️  Missing positions: {', '.join(missing_positions)}")
-        
-        print("\n✓ = Eligible for position | ✗ = Not eligible | ⚠️  = Position empty")
-            
     def find_player_by_position(self, position):
         """指定されたポジションの選手を見つける（後方互換性）"""
         for player in self.team.lineup:
@@ -89,36 +44,6 @@ class LineupManager:
         
         return errors
     
-    def suggest_optimal_positions(self):
-        """選手の適性に基づいて最適なポジション配置を提案"""
-        print(f"\n===== Position Suggestions for {self.team.name} =====")
-        
-        # 各ポジションに最適な選手を見つける
-        suggestions = {}
-        
-        for pos in self.all_positions:
-            eligible_players = []
-            for player in self.team.lineup + self.team.bench:
-                if hasattr(player, 'can_play_position') and player.can_play_position(pos):
-                    # 主ポジションの場合はスコアを高くする
-                    primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-                    score = 100 if primary_pos == pos else 50
-                    eligible_players.append((player, score))
-            
-            # スコア順でソート
-            eligible_players.sort(key=lambda x: x[1], reverse=True)
-            suggestions[pos] = eligible_players[:3]  # 上位3人
-        
-        for pos in self.all_positions:
-            print(f"\n{pos} suggestions:")
-            if suggestions[pos]:
-                for i, (player, score) in enumerate(suggestions[pos], 1):
-                    primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-                    primary_indicator = " (PRIMARY)" if primary_pos == pos else ""
-                    print(f"  {i}. {player.name}{primary_indicator}")
-            else:
-                print("  No eligible players found!")
-        
     def set_player_position(self, player_index, new_position):
         """指定された選手のポジションを変更"""
         if not (0 <= player_index < len(self.team.lineup)):
@@ -211,12 +136,3 @@ class LineupManager:
         self.team.lineup[index1], self.team.lineup[index2] = player2, player1
 
         return True, f"Swapped {player1.name} and {player2.name}"
-        
-    def _reset_positions(self):
-        """ポジションを初期状態にリセット"""
-        confirm = input("Reset all positions to original? (y/N): ")
-        if confirm.lower() == 'y':
-            # 元のデータから復元する処理をここに実装
-            print("Positions have been reset to original configuration.")
-        else:
-            print("Reset cancelled.")
