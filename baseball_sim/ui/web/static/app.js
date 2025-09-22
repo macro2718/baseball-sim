@@ -12,6 +12,9 @@ const elements = {
   openOffenseButton: document.getElementById('open-offense-strategy'),
   openDefenseButton: document.getElementById('open-defense-strategy'),
   openStatsButton: document.getElementById('open-stats'),
+  defenseMenu: document.getElementById('defense-strategy-menu'),
+  defenseSubMenuButton: document.getElementById('open-defense-sub'),
+  pitcherMenuButton: document.getElementById('open-pitcher-change-menu'),
   actionWarning: document.getElementById('action-warning'),
   titleHint: document.getElementById('title-hint'),
   logContainer: document.getElementById('log-entries'),
@@ -28,11 +31,12 @@ const elements = {
   homePitchers: document.querySelector('#home-pitchers ul'),
   awayPitchers: document.querySelector('#away-pitchers ul'),
   baseState: document.getElementById('base-state'),
-  pinchTarget: document.getElementById('pinch-target'),
   pinchPlayer: document.getElementById('pinch-player'),
   pinchButton: document.getElementById('pinch-hit-button'),
+  pinchCurrentBatter: document.getElementById('pinch-current-batter'),
   offenseModal: document.getElementById('offense-modal'),
   defenseModal: document.getElementById('defense-modal'),
+  pitcherModal: document.getElementById('pitcher-modal'),
   statsModal: document.getElementById('stats-modal'),
   modalCloseButtons: Array.from(document.querySelectorAll('.modal-close')),
   defenseApplyButton: document.getElementById('defense-sub-button'),
@@ -94,6 +98,7 @@ const stateCache = {
   data: null,
   defenseSelection: { lineupIndex: null, benchIndex: null },
   defenseContext: { lineup: {}, bench: {}, canSub: false },
+  currentBatterIndex: null,
   statsView: { team: 'away', type: 'batting' },
 };
 
@@ -135,6 +140,7 @@ function resolveModal(target) {
 function openModal(name) {
   const modal = resolveModal(name);
   if (!modal) return;
+  hideDefenseMenu();
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
   if (modal === elements.statsModal) {
@@ -152,6 +158,35 @@ function closeModal(name) {
   modal.setAttribute('aria-hidden', 'true');
 }
 
+function hideDefenseMenu() {
+  const { defenseMenu } = elements;
+  if (!defenseMenu) return;
+  if (!defenseMenu.classList.contains('hidden')) {
+    defenseMenu.classList.add('hidden');
+  }
+  defenseMenu.setAttribute('aria-hidden', 'true');
+}
+
+function showDefenseMenu() {
+  const { defenseMenu } = elements;
+  if (!defenseMenu) return;
+  defenseMenu.classList.remove('hidden');
+  defenseMenu.setAttribute('aria-hidden', 'false');
+}
+
+function toggleDefenseMenu() {
+  const { defenseMenu, openDefenseButton } = elements;
+  if (!defenseMenu) return;
+  if (openDefenseButton && openDefenseButton.disabled) {
+    return;
+  }
+  if (defenseMenu.classList.contains('hidden')) {
+    showDefenseMenu();
+  } else {
+    hideDefenseMenu();
+  }
+}
+
 function initEventListeners() {
   elements.startButton.addEventListener('click', () => handleStart(false));
   elements.reloadTeams.addEventListener('click', handleReloadTeams);
@@ -167,7 +202,13 @@ function initEventListeners() {
     elements.openOffenseButton.addEventListener('click', () => openModal('offense'));
   }
   if (elements.openDefenseButton) {
-    elements.openDefenseButton.addEventListener('click', () => openModal('defense'));
+    elements.openDefenseButton.addEventListener('click', toggleDefenseMenu);
+  }
+  if (elements.defenseSubMenuButton) {
+    elements.defenseSubMenuButton.addEventListener('click', () => openModal('defense'));
+  }
+  if (elements.pitcherMenuButton) {
+    elements.pitcherMenuButton.addEventListener('click', () => openModal('pitcher'));
   }
   if (elements.openStatsButton) {
     elements.openStatsButton.addEventListener('click', () => openModal('stats'));
@@ -182,7 +223,7 @@ function initEventListeners() {
     const target = button.dataset.close;
     button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
   });
-  ['offense', 'defense', 'stats'].forEach((name) => {
+  ['offense', 'defense', 'pitcher', 'stats'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
@@ -192,6 +233,19 @@ function initEventListeners() {
       });
     }
   });
+  if (elements.defenseMenu) {
+    document.addEventListener('click', (event) => {
+      if (elements.defenseMenu.classList.contains('hidden')) {
+        return;
+      }
+      const clickedInsideMenu = elements.defenseMenu.contains(event.target);
+      const clickedToggle =
+        elements.openDefenseButton && elements.openDefenseButton.contains(event.target);
+      if (!clickedInsideMenu && !clickedToggle) {
+        hideDefenseMenu();
+      }
+    });
+  }
   if (elements.defenseField) {
     elements.defenseField.addEventListener('click', handleDefenseFieldClick);
   }
@@ -220,7 +274,7 @@ function initEventListeners() {
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      ['offense', 'defense', 'stats'].forEach((name) => {
+      ['offense', 'defense', 'pitcher', 'stats'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);
@@ -288,17 +342,20 @@ async function handleBunt() {
 }
 
 async function handlePinchHit() {
-  if (!elements.pinchTarget || !elements.pinchPlayer) return;
-  const lineupValue = elements.pinchTarget.value;
+  if (!elements.pinchPlayer) return;
   const benchValue = elements.pinchPlayer.value;
-  if (!lineupValue || !benchValue) {
-    showStatus('代打対象とベンチ選手を選択してください。', 'danger');
+  const lineupIndex = stateCache.currentBatterIndex;
+  if (!Number.isInteger(lineupIndex)) {
+    showStatus('現在の打者が見つかりません。', 'danger');
+    return;
+  }
+  if (!benchValue) {
+    showStatus('代打に出すベンチ選手を選択してください。', 'danger');
     return;
   }
 
-  const lineupIndex = Number(lineupValue);
   const benchIndex = Number(benchValue);
-  if (Number.isNaN(lineupIndex) || Number.isNaN(benchIndex)) {
+  if (Number.isNaN(benchIndex)) {
     showStatus('選択内容を解釈できませんでした。', 'danger');
     return;
   }
@@ -646,12 +703,14 @@ function populateSelect(selectEl, options, placeholder) {
 
 function updateStrategyControls(gameState, teams) {
   const {
-    pinchTarget,
     pinchPlayer,
     pinchButton,
+    pinchCurrentBatter,
     openOffenseButton,
     openDefenseButton,
     openStatsButton,
+    defenseSubMenuButton,
+    pitcherMenuButton,
     pitcherSelect,
     pitcherButton,
   } = elements;
@@ -661,24 +720,29 @@ function updateStrategyControls(gameState, teams) {
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const offenseLineup = offenseTeam?.lineup || [];
   const offenseBench = offenseTeam?.bench || [];
-  const canPinch = isActive && offenseLineup.length > 0 && offenseBench.length > 0;
+  const currentBatter = offenseLineup.find((player) => player.is_current_batter) || null;
 
-  if (pinchTarget && pinchPlayer && pinchButton) {
-    const lineupPlaceholder = offenseLineup.length
-      ? '代打対象を選択'
-      : '出場中の選手がいません';
-    const benchPlaceholder = offenseBench.length
+  stateCache.currentBatterIndex =
+    currentBatter && Number.isInteger(currentBatter.index) ? currentBatter.index : null;
+
+  if (pinchCurrentBatter) {
+    if (currentBatter) {
+      const orderLabel = Number.isInteger(currentBatter.order)
+        ? `${currentBatter.order}. `
+        : '';
+      const positionLabel = currentBatter.position ? `${currentBatter.position} ` : '';
+      pinchCurrentBatter.textContent = `現在の打者: ${orderLabel}${positionLabel}${currentBatter.name}`;
+    } else {
+      pinchCurrentBatter.textContent = '現在の打者: -';
+    }
+  }
+
+  if (pinchPlayer && pinchButton) {
+    const benchPlaceholder = !currentBatter
+      ? '現在の打者が見つかりません'
+      : offenseBench.length
       ? 'ベンチ選手を選択'
       : '選択可能な選手がいません';
-
-    populateSelect(
-      pinchTarget,
-      offenseLineup.map((player) => ({
-        value: player.index,
-        label: `${player.order}. ${player.position || '-'} ${player.name}`,
-      })),
-      lineupPlaceholder,
-    );
 
     populateSelect(
       pinchPlayer,
@@ -689,11 +753,10 @@ function updateStrategyControls(gameState, teams) {
       benchPlaceholder,
     );
 
+    const canPinch = isActive && Boolean(currentBatter) && offenseBench.length > 0;
     pinchButton.disabled = !canPinch;
-    pinchTarget.disabled = !canPinch;
     pinchPlayer.disabled = !canPinch;
     if (!canPinch) {
-      pinchTarget.value = '';
       pinchPlayer.value = '';
     }
   }
@@ -723,6 +786,12 @@ function updateStrategyControls(gameState, teams) {
   if (openDefenseButton) {
     openDefenseButton.disabled = !isActive;
   }
+  if (!isActive) {
+    hideDefenseMenu();
+  }
+  if (defenseSubMenuButton) {
+    defenseSubMenuButton.disabled = !canDefenseSub;
+  }
 
   if (pitcherSelect && pitcherButton) {
     const pitcherPlaceholder = pitcherOptions.length
@@ -744,6 +813,11 @@ function updateStrategyControls(gameState, teams) {
     if (!canChangePitcher) {
       pitcherSelect.value = '';
     }
+    if (pitcherMenuButton) {
+      pitcherMenuButton.disabled = !canChangePitcher;
+    }
+  } else if (pitcherMenuButton) {
+    pitcherMenuButton.disabled = true;
   }
 
   if (openStatsButton) {

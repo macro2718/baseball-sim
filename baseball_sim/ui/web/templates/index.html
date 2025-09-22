@@ -122,6 +122,17 @@
                   <button id="open-defense-strategy">守備側采配</button>
                   <button id="open-stats">成績</button>
                 </div>
+                <div
+                  class="strategy-menu hidden"
+                  id="defense-strategy-menu"
+                  aria-hidden="true"
+                >
+                  <p class="strategy-menu-title">守備側の采配を選択</p>
+                  <div class="strategy-menu-actions">
+                    <button type="button" id="open-defense-sub">守備交代</button>
+                    <button type="button" id="open-pitcher-change-menu">投手交代</button>
+                  </div>
+                </div>
               </div>
 
               <div class="defense-alert hidden" id="defense-errors"></div>
@@ -147,11 +158,10 @@
           <button type="button" class="modal-close" data-close="offense-modal" aria-label="閉じる">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-description">代打を送りたい打順とベンチ選手を選択してください。</p>
+          <p class="modal-description">現在の打者に代打を送ります。ベンチから選手を選択してください。</p>
+          <div class="current-batter" id="pinch-current-batter">現在の打者: -</div>
           <div class="form-grid">
-            <label for="pinch-target">代打を出す打順</label>
-            <select id="pinch-target"></select>
-            <label for="pinch-player">ベンチ選手</label>
+            <label for="pinch-player">代打に出すベンチ選手</label>
             <select id="pinch-player"></select>
           </div>
         </div>
@@ -183,11 +193,25 @@
           <div class="defense-actions">
             <button id="defense-sub-button" class="primary">守備交代を適用</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="pitcher-modal" aria-hidden="true">
+      <div class="modal-card strategy-modal" role="dialog" aria-modal="true" aria-labelledby="pitcher-modal-title">
+        <div class="modal-header">
+          <h3 id="pitcher-modal-title">投手交代</h3>
+          <button type="button" class="modal-close" data-close="pitcher-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">交代する投手を選択してください。</p>
           <div class="pitcher-change">
-            <h4>投手交代</h4>
+            <label for="pitcher-select">投手</label>
             <select id="pitcher-select"></select>
-            <button id="change-pitcher-button">新しい投手を投入</button>
           </div>
+        </div>
+        <div class="modal-footer">
+          <button id="change-pitcher-button" class="primary">新しい投手を投入</button>
         </div>
       </div>
     </div>
