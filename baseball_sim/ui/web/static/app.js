@@ -9,6 +9,9 @@ const elements = {
   clearLog: document.getElementById('clear-log'),
   swingButton: document.getElementById('swing-button'),
   buntButton: document.getElementById('bunt-button'),
+  openOffenseButton: document.getElementById('open-offense-strategy'),
+  openDefenseButton: document.getElementById('open-defense-strategy'),
+  openStatsButton: document.getElementById('open-stats'),
   actionWarning: document.getElementById('action-warning'),
   titleHint: document.getElementById('title-hint'),
   logContainer: document.getElementById('log-entries'),
@@ -21,22 +24,77 @@ const elements = {
   offenseRoster: document.querySelector('#offense-roster tbody'),
   defenseRoster: document.querySelector('#defense-roster tbody'),
   offenseBench: document.getElementById('offense-bench'),
-  defenseBench: document.getElementById('defense-bench'),
+  defenseBenchList: document.getElementById('defense-bench'),
   homePitchers: document.querySelector('#home-pitchers ul'),
   awayPitchers: document.querySelector('#away-pitchers ul'),
   baseState: document.getElementById('base-state'),
   pinchTarget: document.getElementById('pinch-target'),
   pinchPlayer: document.getElementById('pinch-player'),
   pinchButton: document.getElementById('pinch-hit-button'),
-  defenseTarget: document.getElementById('defense-target'),
-  defensePlayer: document.getElementById('defense-player'),
-  defenseButton: document.getElementById('defense-sub-button'),
+  offenseModal: document.getElementById('offense-modal'),
+  defenseModal: document.getElementById('defense-modal'),
+  statsModal: document.getElementById('stats-modal'),
+  modalCloseButtons: Array.from(document.querySelectorAll('.modal-close')),
+  defenseApplyButton: document.getElementById('defense-sub-button'),
+  defenseField: document.getElementById('defense-field'),
+  defenseBench: document.getElementById('defense-bench-panel'),
+  defenseExtras: document.getElementById('defense-extras'),
+  defenseSelectionInfo: document.getElementById('defense-selection-info'),
   pitcherSelect: document.getElementById('pitcher-select'),
   pitcherButton: document.getElementById('change-pitcher-button'),
+  statsTeamButtons: Array.from(document.querySelectorAll('[data-stats-team]')),
+  statsTypeButtons: Array.from(document.querySelectorAll('[data-stats-type]')),
+  statsTableHead: document.querySelector('#stats-table thead tr'),
+  statsTableBody: document.querySelector('#stats-table tbody'),
+  statsTitle: document.getElementById('stats-title'),
 };
+
+const FIELD_POSITIONS = [
+  { key: 'CF', label: 'CF', className: 'pos-cf' },
+  { key: 'LF', label: 'LF', className: 'pos-lf' },
+  { key: 'RF', label: 'RF', className: 'pos-rf' },
+  { key: '2B', label: '2B', className: 'pos-2b' },
+  { key: 'SS', label: 'SS', className: 'pos-ss' },
+  { key: '3B', label: '3B', className: 'pos-3b' },
+  { key: '1B', label: '1B', className: 'pos-1b' },
+  { key: 'P', label: 'P', className: 'pos-p' },
+  { key: 'C', label: 'C', className: 'pos-c' },
+  { key: 'DH', label: 'DH', className: 'pos-dh' },
+];
+
+const FIELD_POSITION_KEYS = new Set(FIELD_POSITIONS.map((slot) => slot.key));
+
+const BATTING_COLUMNS = [
+  { key: 'name', label: '選手' },
+  { key: 'ab', label: '打数' },
+  { key: 'single', label: '単打' },
+  { key: 'double', label: '二塁打' },
+  { key: 'triple', label: '三塁打' },
+  { key: 'hr', label: '本塁打' },
+  { key: 'runs', label: '得点' },
+  { key: 'rbi', label: '打点' },
+  { key: 'bb', label: '四球' },
+  { key: 'so', label: '三振' },
+  { key: 'avg', label: '打率' },
+];
+
+const PITCHING_COLUMNS = [
+  { key: 'name', label: '選手' },
+  { key: 'ip', label: '投球回' },
+  { key: 'h', label: '被安打' },
+  { key: 'r', label: '失点' },
+  { key: 'er', label: '自責点' },
+  { key: 'bb', label: '四球' },
+  { key: 'k', label: '奪三振' },
+  { key: 'era', label: '防御率' },
+  { key: 'whip', label: 'WHIP' },
+];
 
 const stateCache = {
   data: null,
+  defenseSelection: { lineupIndex: null, benchIndex: null },
+  defenseContext: { lineup: {}, bench: {}, canSub: false },
+  statsView: { team: 'away', type: 'batting' },
 };
 
 async function apiRequest(url, options = {}) {
@@ -58,6 +116,42 @@ async function apiRequest(url, options = {}) {
   return payload;
 }
 
+function resolveModal(target) {
+  if (!target) return null;
+  if (target instanceof HTMLElement) return target;
+  if (typeof target === 'string') {
+    if (target.endsWith('-modal')) {
+      return document.getElementById(target);
+    }
+    const key = `${target}Modal`;
+    if (Object.prototype.hasOwnProperty.call(elements, key)) {
+      return elements[key];
+    }
+    return document.getElementById(`${target}-modal`);
+  }
+  return null;
+}
+
+function openModal(name) {
+  const modal = resolveModal(name);
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  if (modal === elements.statsModal) {
+    updateStatsPanel(stateCache.data);
+  }
+  if (modal === elements.defenseModal) {
+    updateDefenseSelectionInfo();
+  }
+}
+
+function closeModal(name) {
+  const modal = resolveModal(name);
+  if (!modal) return;
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
 function initEventListeners() {
   elements.startButton.addEventListener('click', () => handleStart(false));
   elements.reloadTeams.addEventListener('click', handleReloadTeams);
@@ -69,12 +163,71 @@ function initEventListeners() {
   if (elements.pinchButton) {
     elements.pinchButton.addEventListener('click', handlePinchHit);
   }
-  if (elements.defenseButton) {
-    elements.defenseButton.addEventListener('click', handleDefenseSubstitution);
+  if (elements.openOffenseButton) {
+    elements.openOffenseButton.addEventListener('click', () => openModal('offense'));
+  }
+  if (elements.openDefenseButton) {
+    elements.openDefenseButton.addEventListener('click', () => openModal('defense'));
+  }
+  if (elements.openStatsButton) {
+    elements.openStatsButton.addEventListener('click', () => openModal('stats'));
+  }
+  if (elements.defenseApplyButton) {
+    elements.defenseApplyButton.addEventListener('click', handleDefenseSubstitution);
   }
   if (elements.pitcherButton) {
     elements.pitcherButton.addEventListener('click', handlePitcherChange);
   }
+  elements.modalCloseButtons.forEach((button) => {
+    const target = button.dataset.close;
+    button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
+  });
+  ['offense', 'defense', 'stats'].forEach((name) => {
+    const modal = resolveModal(name);
+    if (modal) {
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeModal(modal);
+        }
+      });
+    }
+  });
+  if (elements.defenseField) {
+    elements.defenseField.addEventListener('click', handleDefenseFieldClick);
+  }
+  if (elements.defenseBench) {
+    elements.defenseBench.addEventListener('click', handleDefenseBenchClick);
+  }
+  if (elements.defenseExtras) {
+    elements.defenseExtras.addEventListener('click', handleDefenseBenchClick);
+  }
+  elements.statsTeamButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      const teamKey = button.dataset.statsTeam;
+      if (!teamKey) return;
+      stateCache.statsView.team = teamKey;
+      updateStatsPanel(stateCache.data);
+    });
+  });
+  elements.statsTypeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const viewType = button.dataset.statsType;
+      if (!viewType) return;
+      stateCache.statsView.type = viewType;
+      updateStatsPanel(stateCache.data);
+    });
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      ['offense', 'defense', 'stats'].forEach((name) => {
+        const modal = resolveModal(name);
+        if (modal && !modal.classList.contains('hidden')) {
+          closeModal(modal);
+        }
+      });
+    }
+  });
 }
 
 async function handleStart(reload) {
@@ -162,18 +315,17 @@ async function handlePinchHit() {
 }
 
 async function handleDefenseSubstitution() {
-  if (!elements.defenseTarget || !elements.defensePlayer) return;
-  const lineupValue = elements.defenseTarget.value;
-  const benchValue = elements.defensePlayer.value;
-  if (!lineupValue || !benchValue) {
-    showStatus('守備交代の対象と選手を選択してください。', 'danger');
+  const { lineupIndex, benchIndex } = stateCache.defenseSelection;
+  if (!stateCache.defenseContext.canSub) {
+    showStatus('守備交代は現在行えません。', 'danger');
     return;
   }
-
-  const lineupIndex = Number(lineupValue);
-  const benchIndex = Number(benchValue);
-  if (Number.isNaN(lineupIndex) || Number.isNaN(benchIndex)) {
-    showStatus('選択内容を解釈できませんでした。', 'danger');
+  if (!Number.isInteger(lineupIndex) || lineupIndex < 0) {
+    showStatus('交代させる守備位置を選択してください。', 'danger');
+    return;
+  }
+  if (!Number.isInteger(benchIndex) || benchIndex < 0) {
+    showStatus('ベンチから交代させる選手を選択してください。', 'danger');
     return;
   }
 
@@ -182,6 +334,7 @@ async function handleDefenseSubstitution() {
       method: 'POST',
       body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
     });
+    stateCache.defenseSelection = { lineupIndex: null, benchIndex: null };
     render(payload);
   } catch (err) {
     console.warn(err);
@@ -218,6 +371,7 @@ function render(data) {
   setStatusMessage(data.notification);
   renderTitle(data.title);
   renderGame(data.game, data.teams, data.log);
+  updateStatsPanel(data);
 }
 
 function setStatusMessage(notification) {
@@ -276,7 +430,7 @@ function renderGame(gameState, teams, log) {
     updateRosters(elements.offenseRoster, []);
     updateRosters(elements.defenseRoster, []);
     updateBench(elements.offenseBench, [], 'ゲーム開始後に表示されます');
-    updateBench(elements.defenseBench, [], 'ゲーム開始後に表示されます');
+    updateBench(elements.defenseBenchList, [], 'ゲーム開始後に表示されます');
     updateLog(log || []);
     elements.defenseErrors.classList.add('hidden');
     elements.defenseErrors.textContent = '';
@@ -301,7 +455,7 @@ function renderGame(gameState, teams, log) {
   updateRosters(elements.offenseRoster, offenseTeam?.lineup || []);
   updateBench(elements.offenseBench, offenseTeam?.bench || []);
   updateRosters(elements.defenseRoster, defenseTeam?.lineup || []);
-  updateBench(elements.defenseBench, defenseTeam?.bench || []);
+  updateBench(elements.defenseBenchList, defenseTeam?.bench || []);
 
   updatePitchers(elements.homePitchers, teams.home?.pitchers || []);
   updatePitchers(elements.awayPitchers, teams.away?.pitchers || []);
@@ -495,9 +649,9 @@ function updateStrategyControls(gameState, teams) {
     pinchTarget,
     pinchPlayer,
     pinchButton,
-    defenseTarget,
-    defensePlayer,
-    defenseButton,
+    openOffenseButton,
+    openDefenseButton,
+    openStatsButton,
     pitcherSelect,
     pitcherButton,
   } = elements;
@@ -507,6 +661,7 @@ function updateStrategyControls(gameState, teams) {
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const offenseLineup = offenseTeam?.lineup || [];
   const offenseBench = offenseTeam?.bench || [];
+  const canPinch = isActive && offenseLineup.length > 0 && offenseBench.length > 0;
 
   if (pinchTarget && pinchPlayer && pinchButton) {
     const lineupPlaceholder = offenseLineup.length
@@ -534,7 +689,6 @@ function updateStrategyControls(gameState, teams) {
       benchPlaceholder,
     );
 
-    const canPinch = isActive && offenseLineup.length > 0 && offenseBench.length > 0;
     pinchButton.disabled = !canPinch;
     pinchTarget.disabled = !canPinch;
     pinchPlayer.disabled = !canPinch;
@@ -544,45 +698,30 @@ function updateStrategyControls(gameState, teams) {
     }
   }
 
+  if (openOffenseButton) {
+    openOffenseButton.disabled = !isActive;
+  }
+
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
   const defenseLineup = defenseTeam?.lineup || [];
   const defenseBenchPlayers = defenseTeam?.bench || [];
   const pitcherOptions = defenseTeam?.pitcher_options || [];
 
-  if (defenseTarget && defensePlayer && defenseButton) {
-    const lineupPlaceholder = defenseLineup.length
-      ? '守備交代する選手を選択'
-      : '守備につく選手がいません';
-    const benchPlaceholder = defenseBenchPlayers.length
-      ? 'ベンチ選手を選択'
-      : '選択可能な選手がいません';
+  const canDefenseSub = isActive && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
 
-    populateSelect(
-      defenseTarget,
-      defenseLineup.map((player) => ({
-        value: player.index,
-        label: `${player.position || '-'} ${player.name}`,
-      })),
-      lineupPlaceholder,
-    );
+  if (!defenseLineup.some((player) => player.index === stateCache.defenseSelection.lineupIndex)) {
+    stateCache.defenseSelection.lineupIndex = null;
+  }
+  if (!defenseBenchPlayers.some((player) => player.index === stateCache.defenseSelection.benchIndex)) {
+    stateCache.defenseSelection.benchIndex = null;
+  }
 
-    populateSelect(
-      defensePlayer,
-      defenseBenchPlayers.map((player) => ({
-        value: player.index,
-        label: `${player.name} (${(player.eligible || []).join(', ') || '-'})`,
-      })),
-      benchPlaceholder,
-    );
+  stateCache.defenseContext.canSub = canDefenseSub;
+  updateDefensePanel(defenseTeam, gameState);
+  updateDefenseSelectionInfo();
 
-    const canSubDefense = isActive && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
-    defenseButton.disabled = !canSubDefense;
-    defenseTarget.disabled = !canSubDefense;
-    defensePlayer.disabled = !canSubDefense;
-    if (!canSubDefense) {
-      defenseTarget.value = '';
-      defensePlayer.value = '';
-    }
+  if (openDefenseButton) {
+    openDefenseButton.disabled = !isActive;
   }
 
   if (pitcherSelect && pitcherButton) {
@@ -605,6 +744,327 @@ function updateStrategyControls(gameState, teams) {
     if (!canChangePitcher) {
       pitcherSelect.value = '';
     }
+  }
+
+  if (openStatsButton) {
+    const homeStatsAvailable = Boolean(teams.home?.stats);
+    const awayStatsAvailable = Boolean(teams.away?.stats);
+    openStatsButton.disabled = !(homeStatsAvailable || awayStatsAvailable);
+  }
+}
+
+function handleDefenseFieldClick(event) {
+  const button = event.target.closest('button[data-lineup-index]');
+  if (!button || button.disabled) return;
+  const value = button.dataset.lineupIndex;
+  if (value === undefined || value === '') return;
+  const index = Number(value);
+  if (Number.isNaN(index)) return;
+  stateCache.defenseSelection.lineupIndex = index;
+  applyDefenseSelectionHighlights();
+  updateDefenseSelectionInfo();
+}
+
+function handleDefenseBenchClick(event) {
+  const lineupButton = event.target.closest('button[data-lineup-index]');
+  if (lineupButton && !lineupButton.disabled) {
+    const value = lineupButton.dataset.lineupIndex;
+    if (value !== undefined && value !== '') {
+      const index = Number(value);
+      if (!Number.isNaN(index)) {
+        stateCache.defenseSelection.lineupIndex = index;
+        applyDefenseSelectionHighlights();
+        updateDefenseSelectionInfo();
+        return;
+      }
+    }
+  }
+
+  const benchButton = event.target.closest('button[data-bench-index]');
+  if (!benchButton || benchButton.disabled) return;
+  const benchValue = benchButton.dataset.benchIndex;
+  if (benchValue === undefined || benchValue === '') return;
+  const benchIndex = Number(benchValue);
+  if (Number.isNaN(benchIndex)) return;
+  stateCache.defenseSelection.benchIndex = benchIndex;
+  applyDefenseSelectionHighlights();
+  updateDefenseSelectionInfo();
+}
+
+function applyDefenseSelectionHighlights() {
+  const { lineupIndex, benchIndex } = stateCache.defenseSelection;
+  if (elements.defenseField) {
+    elements.defenseField.querySelectorAll('[data-lineup-index]').forEach((button) => {
+      const value = button.dataset.lineupIndex;
+      const index = Number(value);
+      const isSelected = value !== undefined && value !== '' && Number.isInteger(index) && index === lineupIndex;
+      button.classList.toggle('selected', isSelected);
+    });
+  }
+  if (elements.defenseExtras) {
+    elements.defenseExtras.querySelectorAll('[data-lineup-index]').forEach((button) => {
+      const value = button.dataset.lineupIndex;
+      const index = Number(value);
+      const isSelected = value !== undefined && value !== '' && Number.isInteger(index) && index === lineupIndex;
+      button.classList.toggle('selected', isSelected);
+    });
+  }
+  if (elements.defenseBench) {
+    elements.defenseBench.querySelectorAll('[data-bench-index]').forEach((button) => {
+      const value = button.dataset.benchIndex;
+      const index = Number(value);
+      const isSelected = value !== undefined && value !== '' && Number.isInteger(index) && index === benchIndex;
+      button.classList.toggle('selected', isSelected);
+    });
+  }
+}
+
+function updateDefenseSelectionInfo() {
+  const infoEl = elements.defenseSelectionInfo;
+  const { lineupIndex, benchIndex } = stateCache.defenseSelection;
+  const lineupMap = stateCache.defenseContext.lineup || {};
+  const benchMap = stateCache.defenseContext.bench || {};
+  const lineupPlayer = Object.prototype.hasOwnProperty.call(lineupMap, lineupIndex)
+    ? lineupMap[lineupIndex]
+    : null;
+  const benchPlayer = Object.prototype.hasOwnProperty.call(benchMap, benchIndex)
+    ? benchMap[benchIndex]
+    : null;
+
+  if (infoEl) {
+    if (!stateCache.defenseContext.canSub) {
+      infoEl.textContent = '守備交代を行える状況ではありません。';
+    } else if (!lineupPlayer && !benchPlayer) {
+      infoEl.textContent = '守備交代を行う守備位置とベンチ選手を選択してください。';
+    } else if (!lineupPlayer) {
+      infoEl.textContent = benchPlayer
+        ? `${benchPlayer.name} を投入する守備位置を選択してください。`
+        : '守備交代を行う守備位置を選択してください。';
+    } else if (!benchPlayer) {
+      infoEl.textContent = `${lineupPlayer.name} を交代させる選手を選択してください。`;
+    } else {
+      infoEl.textContent = `${lineupPlayer.name} ↔ ${benchPlayer.name} の守備交代を実行できます。`;
+    }
+  }
+
+  const canApply = stateCache.defenseContext.canSub && Boolean(lineupPlayer) && Boolean(benchPlayer);
+  if (elements.defenseApplyButton) {
+    elements.defenseApplyButton.disabled = !canApply;
+  }
+
+  applyDefenseSelectionHighlights();
+}
+
+function updateDefensePanel(defenseTeam, gameState) {
+  const lineup = defenseTeam?.lineup || [];
+  const benchPlayers = defenseTeam?.bench || [];
+
+  const lineupMap = {};
+  lineup.forEach((player) => {
+    lineupMap[player.index] = player;
+  });
+  const benchMap = {};
+  benchPlayers.forEach((player) => {
+    benchMap[player.index] = player;
+  });
+  stateCache.defenseContext.lineup = lineupMap;
+  stateCache.defenseContext.bench = benchMap;
+
+  const normalizePosition = (position) => {
+    if (!position) return null;
+    const upper = String(position).toUpperCase();
+    if (upper === 'SP' || upper === 'RP') return 'P';
+    return upper;
+  };
+
+  if (elements.defenseField) {
+    elements.defenseField.innerHTML = '';
+    const assigned = new Map();
+    const extras = [];
+
+    lineup.forEach((player) => {
+      const key = normalizePosition(player.position);
+      if (key && FIELD_POSITION_KEYS.has(key) && !assigned.has(key)) {
+        assigned.set(key, player);
+      } else {
+        extras.push(player);
+      }
+    });
+
+    FIELD_POSITIONS.forEach((slot) => {
+      const player = assigned.get(slot.key);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `position-slot ${slot.className}`;
+      button.dataset.position = slot.key;
+      if (player) {
+        button.dataset.lineupIndex = player.index;
+        const eligibleText = (player.eligible || []).join(', ') || '-';
+        button.innerHTML = `
+          <span class="position-label">${slot.label}</span>
+          <strong>${player.name}</strong>
+          <span>${eligibleText}</span>
+        `;
+        button.disabled = !gameState.active;
+      } else {
+        button.dataset.lineupIndex = '';
+        button.innerHTML = `
+          <span class="position-label">${slot.label}</span>
+          <strong>空席</strong>
+          <span>-</span>
+        `;
+        button.disabled = true;
+      }
+      elements.defenseField.appendChild(button);
+    });
+
+    if (elements.defenseExtras) {
+      if (extras.length) {
+        elements.defenseExtras.classList.remove('hidden');
+        elements.defenseExtras.innerHTML = '';
+        const title = document.createElement('p');
+        title.className = 'extras-title';
+        title.textContent = '配置外の選手';
+        elements.defenseExtras.appendChild(title);
+        extras.forEach((player) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'bench-card';
+          button.dataset.lineupIndex = player.index;
+          const eligibleText = (player.eligible || []).join(', ') || '-';
+          button.innerHTML = `
+            <strong>${player.name}</strong>
+            <span class="eligible-label">現在: ${player.position || '-'}</span>
+            <span class="eligible-positions">適性: ${eligibleText}</span>
+          `;
+          button.disabled = !gameState.active;
+          elements.defenseExtras.appendChild(button);
+        });
+      } else {
+        elements.defenseExtras.classList.add('hidden');
+        elements.defenseExtras.innerHTML = '';
+      }
+    }
+  }
+
+  if (elements.defenseBench) {
+    elements.defenseBench.innerHTML = '';
+    if (!benchPlayers.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty-message';
+      empty.textContent = 'ベンチに交代可能な選手がいません。';
+      elements.defenseBench.appendChild(empty);
+    } else {
+      benchPlayers.forEach((player) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'bench-card';
+        button.dataset.benchIndex = player.index;
+        const eligibleText = (player.eligible || []).join(', ') || '-';
+        button.innerHTML = `
+          <strong>${player.name}</strong>
+          <span class="eligible-label">守備適性</span>
+          <span class="eligible-positions">${eligibleText}</span>
+        `;
+        button.disabled = !(gameState.active && stateCache.defenseContext.canSub);
+        elements.defenseBench.appendChild(button);
+      });
+    }
+  }
+
+  applyDefenseSelectionHighlights();
+}
+
+function updateStatsPanel(state) {
+  if (!state) return;
+  const teams = state.teams || {};
+  const availableTeams = ['away', 'home'].filter((key) => teams[key]?.stats);
+
+  elements.statsTeamButtons.forEach((button) => {
+    button.disabled = !availableTeams.includes(button.dataset.statsTeam);
+  });
+
+  if (!availableTeams.length) {
+    if (elements.statsTableHead) {
+      elements.statsTableHead.innerHTML = '';
+    }
+    if (elements.statsTableBody) {
+      elements.statsTableBody.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = BATTING_COLUMNS.length;
+      td.textContent = '成績データがありません。';
+      td.classList.add('empty');
+      tr.appendChild(td);
+      elements.statsTableBody.appendChild(tr);
+    }
+    if (elements.statsTitle) {
+      elements.statsTitle.textContent = '成績データがありません';
+    }
+    elements.statsTypeButtons.forEach((button) => button.classList.remove('active'));
+    return;
+  }
+
+  if (!availableTeams.includes(stateCache.statsView.team)) {
+    stateCache.statsView.team = availableTeams[0];
+  }
+  if (!['batting', 'pitching'].includes(stateCache.statsView.type)) {
+    stateCache.statsView.type = 'batting';
+  }
+
+  const teamKey = stateCache.statsView.team;
+  const viewType = stateCache.statsView.type;
+  const columns = viewType === 'pitching' ? PITCHING_COLUMNS : BATTING_COLUMNS;
+  const teamData = teams[teamKey] || {};
+  const stats = teamData.stats || {};
+  const rows = stats[viewType] || [];
+
+  elements.statsTeamButtons.forEach((button) => {
+    const isActive = button.dataset.statsTeam === teamKey;
+    button.classList.toggle('active', isActive);
+  });
+  elements.statsTypeButtons.forEach((button) => {
+    const isActive = button.dataset.statsType === viewType;
+    button.classList.toggle('active', isActive);
+  });
+
+  if (elements.statsTableHead) {
+    elements.statsTableHead.innerHTML = '';
+    columns.forEach((column) => {
+      const th = document.createElement('th');
+      th.textContent = column.label;
+      elements.statsTableHead.appendChild(th);
+    });
+  }
+
+  if (elements.statsTableBody) {
+    elements.statsTableBody.innerHTML = '';
+    if (!rows.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length;
+      td.textContent = '成績データがありません。';
+      td.classList.add('empty');
+      tr.appendChild(td);
+      elements.statsTableBody.appendChild(tr);
+    } else {
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        columns.forEach((column) => {
+          const td = document.createElement('td');
+          const value = row[column.key];
+          td.textContent = value != null && value !== '' ? value : '-';
+          tr.appendChild(td);
+        });
+        elements.statsTableBody.appendChild(tr);
+      });
+    }
+  }
+
+  if (elements.statsTitle) {
+    const teamName = teamData?.name || (teamKey === 'home' ? 'Home' : 'Away');
+    const typeLabel = viewType === 'pitching' ? '投球成績' : '打撃成績';
+    elements.statsTitle.textContent = `${teamName} の${typeLabel}`;
   }
 }
 
