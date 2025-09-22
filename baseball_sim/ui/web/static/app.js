@@ -698,9 +698,21 @@ function renderGame(gameState, teams, log) {
 
   updateLog(log || []);
 
-  elements.swingButton.disabled = !gameState.actions?.swing;
-  elements.buntButton.disabled = !gameState.actions?.bunt;
-  elements.actionWarning.textContent = gameState.action_block_reason || '';
+  // ゲーム終了時の特別な処理
+  if (gameState.game_over) {
+    // GUI版に近いゲーム終了時の表示
+    elements.swingButton.disabled = true;
+    elements.buntButton.disabled = true;
+    elements.swingButton.textContent = 'Game Over';
+    elements.buntButton.textContent = 'Game Over';
+    elements.actionWarning.textContent = 'ゲーム終了 - 新しい試合を開始するか、タイトルに戻ってください';
+  } else {
+    elements.swingButton.disabled = !gameState.actions?.swing;
+    elements.buntButton.disabled = !gameState.actions?.bunt;
+    elements.swingButton.textContent = '通常打撃';
+    elements.buntButton.textContent = 'バント';
+    elements.actionWarning.textContent = gameState.action_block_reason || '';
+  }
 
   const errors = gameState.defensive_errors || [];
   if (errors.length) {
@@ -899,6 +911,7 @@ function updateStrategyControls(gameState, teams) {
   } = elements;
 
   const isActive = Boolean(gameState.active);
+  const isGameOver = Boolean(gameState.game_over);
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const offenseLineup = offenseTeam?.lineup || [];
@@ -945,16 +958,27 @@ function updateStrategyControls(gameState, teams) {
       benchPlaceholder,
     );
 
-    const canPinch = isActive && Boolean(currentBatter) && offenseBench.length > 0;
-    pinchButton.disabled = !canPinch;
-    pinchPlayer.disabled = !canPinch;
-    if (!canPinch) {
+    const canPinch = isActive && !isGameOver && Boolean(currentBatter) && offenseBench.length > 0;
+    pinchButton.disabled = !canPinch || isGameOver;
+    pinchPlayer.disabled = !canPinch || isGameOver;
+    if (!canPinch || isGameOver) {
       pinchPlayer.value = '';
+    }
+    // ゲーム終了時は代打ボタンのテキストを変更
+    if (isGameOver && pinchButton) {
+      pinchButton.textContent = 'Game Over';
+    } else if (pinchButton) {
+      pinchButton.textContent = '代打';
     }
   }
 
   if (openOffenseButton) {
-    openOffenseButton.disabled = !isActive;
+    openOffenseButton.disabled = !isActive || isGameOver;
+    if (isGameOver) {
+      openOffenseButton.textContent = 'Game Over';
+    } else {
+      openOffenseButton.textContent = '攻撃戦略';
+    }
   }
 
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
@@ -962,7 +986,7 @@ function updateStrategyControls(gameState, teams) {
   const defenseBenchPlayers = defenseTeam?.bench || [];
   const pitcherOptions = defenseTeam?.pitcher_options || [];
 
-  const canDefenseSub = isActive && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
+  const canDefenseSub = isActive && !isGameOver && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
 
   if (!defenseLineup.some((player) => player.index === stateCache.defenseSelection.lineupIndex)) {
     stateCache.defenseSelection.lineupIndex = null;
@@ -971,18 +995,28 @@ function updateStrategyControls(gameState, teams) {
     stateCache.defenseSelection.benchIndex = null;
   }
 
-  stateCache.defenseContext.canSub = canDefenseSub;
+  stateCache.defenseContext.canSub = canDefenseSub && !isGameOver;
   updateDefensePanel(defenseTeam, gameState);
   updateDefenseSelectionInfo();
 
   if (openDefenseButton) {
-    openDefenseButton.disabled = !isActive;
+    openDefenseButton.disabled = !isActive || isGameOver;
+    if (isGameOver) {
+      openDefenseButton.textContent = 'Game Over';
+    } else {
+      openDefenseButton.textContent = '守備戦略';
+    }
   }
-  if (!isActive) {
+  if (!isActive || isGameOver) {
     hideDefenseMenu();
   }
   if (defenseSubMenuButton) {
-    defenseSubMenuButton.disabled = !canDefenseSub;
+    defenseSubMenuButton.disabled = !canDefenseSub || isGameOver;
+    if (isGameOver) {
+      defenseSubMenuButton.textContent = 'Game Over';
+    } else {
+      defenseSubMenuButton.textContent = '守備交代';
+    }
   }
 
   if (pitcherSelect && pitcherButton) {
@@ -999,14 +1033,26 @@ function updateStrategyControls(gameState, teams) {
       pitcherPlaceholder,
     );
 
-    const canChangePitcher = isActive && pitcherOptions.length > 0;
-    pitcherButton.disabled = !canChangePitcher;
-    pitcherSelect.disabled = !canChangePitcher;
-    if (!canChangePitcher) {
+    const canChangePitcher = isActive && !isGameOver && pitcherOptions.length > 0;
+    pitcherButton.disabled = !canChangePitcher || isGameOver;
+    pitcherSelect.disabled = !canChangePitcher || isGameOver;
+    if (!canChangePitcher || isGameOver) {
       pitcherSelect.value = '';
     }
+    // ゲーム終了時は投手交代ボタンのテキストを変更
+    if (isGameOver && pitcherButton) {
+      pitcherButton.textContent = 'Game Over';
+    } else if (pitcherButton) {
+      pitcherButton.textContent = '投手交代';
+    }
+    
     if (pitcherMenuButton) {
-      pitcherMenuButton.disabled = !canChangePitcher;
+      pitcherMenuButton.disabled = !canChangePitcher || isGameOver;
+      if (isGameOver) {
+        pitcherMenuButton.textContent = 'Game Over';
+      } else {
+        pitcherMenuButton.textContent = '投手交代';
+      }
     }
   } else if (pitcherMenuButton) {
     pitcherMenuButton.disabled = true;
