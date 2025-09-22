@@ -426,6 +426,7 @@ class WebGameSession:
                 "name": batter.name,
                 "order": batting_team.current_batter_index + 1,
                 "position": self._display_position(batter),
+                "pitcher_type": getattr(batter, "pitcher_type", None),
             }
 
         current_pitcher = None
@@ -504,6 +505,7 @@ class WebGameSession:
                         "position_key": self._defensive_position_key(player),
                         "eligible": self._eligible_positions(player),
                         "eligible_all": self._eligible_positions_raw(player),
+                        "pitcher_type": getattr(player, "pitcher_type", None),
                         "is_current_batter": is_offense and index == current_batter_index,
                     }
                 )
@@ -521,6 +523,7 @@ class WebGameSession:
                         "name": player.name,
                         "eligible": self._eligible_positions(player),
                         "eligible_all": self._eligible_positions_raw(player),
+                        "pitcher_type": getattr(player, "pitcher_type", None),
                     }
                 )
 
