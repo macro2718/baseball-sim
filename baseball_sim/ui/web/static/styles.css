@@ -403,6 +403,32 @@ button:disabled {
   gap: 12px;
 }
 
+.controls-card label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: none;
+}
+
+.controls-card select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--text);
+  font-size: 14px;
+  appearance: none;
+}
+
+.controls-card select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.strategy-card button {
+  margin-top: 4px;
+}
+
 .defense-alert {
   min-height: 32px;
   border-radius: 12px;
@@ -472,6 +498,50 @@ button:disabled {
   border-color: var(--accent);
   color: var(--accent-muted);
   font-weight: 700;
+}
+
+.bench-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.bench-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.bench-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bench-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.8);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.bench-list li span:last-child {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.bench-list li.empty {
+  justify-content: center;
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 .app-footer {

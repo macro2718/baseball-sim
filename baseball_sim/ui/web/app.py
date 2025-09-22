@@ -70,6 +70,56 @@ def create_app() -> Flask:
             return jsonify({"error": str(exc), "state": session.build_state()}), 400
         return jsonify(state)
 
+    @app.post("/api/strategy/pinch_hit")
+    def pinch_hit() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        try:
+            lineup_index = int(payload.get("lineup_index", -1))
+        except (TypeError, ValueError):
+            lineup_index = -1
+        try:
+            bench_index = int(payload.get("bench_index", -1))
+        except (TypeError, ValueError):
+            bench_index = -1
+        try:
+            state = session.execute_pinch_hit(lineup_index=lineup_index, bench_index=bench_index)
+        except GameSessionError as exc:
+            return jsonify({"error": str(exc), "state": session.build_state()}), 400
+        return jsonify(state)
+
+    @app.post("/api/strategy/defense_substitution")
+    def defensive_substitution() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        try:
+            lineup_index = int(payload.get("lineup_index", -1))
+        except (TypeError, ValueError):
+            lineup_index = -1
+        try:
+            bench_index = int(payload.get("bench_index", -1))
+        except (TypeError, ValueError):
+            bench_index = -1
+        try:
+            state = session.execute_defensive_substitution(
+                lineup_index=lineup_index,
+                bench_index=bench_index,
+            )
+        except GameSessionError as exc:
+            return jsonify({"error": str(exc), "state": session.build_state()}), 400
+        return jsonify(state)
+
+    @app.post("/api/strategy/change_pitcher")
+    def change_pitcher() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        try:
+            pitcher_index = int(payload.get("pitcher_index", -1))
+        except (TypeError, ValueError):
+            pitcher_index = -1
+        try:
+            state = session.execute_pitcher_change(pitcher_index=pitcher_index)
+        except GameSessionError as exc:
+            return jsonify({"error": str(exc), "state": session.build_state()}), 400
+        return jsonify(state)
+
     @app.post("/api/log/clear")
     def clear_log() -> Dict[str, Any]:
         state = session.clear_log()
