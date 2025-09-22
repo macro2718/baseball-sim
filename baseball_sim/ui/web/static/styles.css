@@ -853,6 +853,12 @@ button:disabled {
   transform: none;
 }
 
+.defense-bench button.bench-card.ineligible,
+.defense-extras button.bench-card.ineligible {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.12);
+}
+
 .bench-card .eligible-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -861,6 +867,11 @@ button:disabled {
 .bench-card .eligible-positions {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.bench-card .ineligible-hint {
+  font-size: 12px;
+  color: var(--danger);
 }
 
 .selection-info {

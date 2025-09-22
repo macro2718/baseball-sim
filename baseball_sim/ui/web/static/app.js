@@ -68,6 +68,43 @@ const FIELD_POSITIONS = [
 
 const FIELD_POSITION_KEYS = new Set(FIELD_POSITIONS.map((slot) => slot.key));
 
+function normalizePositionKey(position) {
+  if (!position) return null;
+  const upper = String(position).toUpperCase();
+  if (upper === 'SP' || upper === 'RP') return 'P';
+  return upper;
+}
+
+function getLineupPlayer(index) {
+  const lineupMap = stateCache.defenseContext.lineup || {};
+  if (!Number.isInteger(index)) return null;
+  return Object.prototype.hasOwnProperty.call(lineupMap, index) ? lineupMap[index] : null;
+}
+
+function getBenchPlayer(index) {
+  const benchMap = stateCache.defenseContext.bench || {};
+  if (!Number.isInteger(index)) return null;
+  return Object.prototype.hasOwnProperty.call(benchMap, index) ? benchMap[index] : null;
+}
+
+function getLineupPositionKey(lineupPlayer) {
+  if (!lineupPlayer) return null;
+  return normalizePositionKey(lineupPlayer.position_key || lineupPlayer.position);
+}
+
+function getEligiblePositionsAll(player) {
+  if (!player) return [];
+  const raw = Array.isArray(player.eligible_all) ? player.eligible_all : player.eligible;
+  if (!raw) return [];
+  return raw.map((pos) => String(pos).toUpperCase());
+}
+
+function canBenchPlayerCoverPosition(benchPlayer, positionKey) {
+  if (!benchPlayer || !positionKey) return false;
+  const eligiblePositions = getEligiblePositionsAll(benchPlayer);
+  return eligiblePositions.includes(positionKey);
+}
+
 const BATTING_COLUMNS = [
   { key: 'name', label: '選手' },
   { key: 'ab', label: '打数' },
@@ -383,6 +420,23 @@ async function handleDefenseSubstitution() {
   }
   if (!Number.isInteger(benchIndex) || benchIndex < 0) {
     showStatus('ベンチから交代させる選手を選択してください。', 'danger');
+    return;
+  }
+
+  const lineupPlayer = getLineupPlayer(lineupIndex);
+  if (!lineupPlayer) {
+    showStatus('選択された守備位置が無効です。', 'danger');
+    return;
+  }
+  const benchPlayer = getBenchPlayer(benchIndex);
+  if (!benchPlayer) {
+    showStatus('選択されたベンチ選手が見つかりません。', 'danger');
+    return;
+  }
+  const targetPositionKey = getLineupPositionKey(lineupPlayer);
+  if (targetPositionKey && !canBenchPlayerCoverPosition(benchPlayer, targetPositionKey)) {
+    const positionLabel = lineupPlayer.position || targetPositionKey;
+    showStatus(`${benchPlayer.name} は ${positionLabel} を守れません。別の選手を選択してください。`, 'danger');
     return;
   }
 
@@ -893,17 +947,80 @@ function applyDefenseSelectionHighlights() {
   }
 }
 
+function updateDefenseBenchAvailability() {
+  if (!elements.defenseBench) return;
+
+  const lineupPlayer = getLineupPlayer(stateCache.defenseSelection.lineupIndex);
+  const lineupPositionKey = getLineupPositionKey(lineupPlayer);
+  const positionLabel = lineupPlayer ? lineupPlayer.position || lineupPositionKey || '' : '';
+  const canSubBase = stateCache.defenseContext.canSub;
+
+  elements.defenseBench.querySelectorAll('[data-bench-index]').forEach((button) => {
+    const benchValue = button.dataset.benchIndex;
+    const benchIndex = Number(benchValue);
+    const benchPlayer = Number.isInteger(benchIndex) ? getBenchPlayer(benchIndex) : null;
+
+    const hasLineupSelection = Boolean(lineupPlayer);
+    const hasBenchPlayer = Boolean(benchPlayer);
+    let eligibleForPosition = false;
+    if (canSubBase && hasLineupSelection && hasBenchPlayer) {
+      if (lineupPositionKey) {
+        eligibleForPosition = canBenchPlayerCoverPosition(benchPlayer, lineupPositionKey);
+      } else {
+        eligibleForPosition = true;
+      }
+    }
+
+    const enableButton = canSubBase && hasLineupSelection && hasBenchPlayer && eligibleForPosition;
+    const markIneligible = canSubBase
+      && hasLineupSelection
+      && hasBenchPlayer
+      && Boolean(lineupPositionKey)
+      && !eligibleForPosition;
+
+    button.disabled = !enableButton;
+    button.classList.toggle('ineligible', markIneligible);
+
+    if (!enableButton && stateCache.defenseSelection.benchIndex === benchIndex) {
+      stateCache.defenseSelection.benchIndex = null;
+    }
+
+    let hint = button.querySelector('.ineligible-hint');
+    if (markIneligible) {
+      if (!hint) {
+        hint = document.createElement('span');
+        hint.className = 'ineligible-hint';
+        button.appendChild(hint);
+      }
+      hint.textContent = '守備不可';
+      hint.classList.remove('hidden');
+      button.title = positionLabel
+        ? `${benchPlayer.name} は ${positionLabel} を守れません。`
+        : `${benchPlayer.name} はこの守備位置を守れません。`;
+    } else if (hint) {
+      hint.textContent = '';
+      hint.classList.add('hidden');
+      button.title = '';
+    } else {
+      button.title = '';
+    }
+  });
+}
+
 function updateDefenseSelectionInfo() {
+  updateDefenseBenchAvailability();
+
   const infoEl = elements.defenseSelectionInfo;
   const { lineupIndex, benchIndex } = stateCache.defenseSelection;
-  const lineupMap = stateCache.defenseContext.lineup || {};
-  const benchMap = stateCache.defenseContext.bench || {};
-  const lineupPlayer = Object.prototype.hasOwnProperty.call(lineupMap, lineupIndex)
-    ? lineupMap[lineupIndex]
-    : null;
-  const benchPlayer = Object.prototype.hasOwnProperty.call(benchMap, benchIndex)
-    ? benchMap[benchIndex]
-    : null;
+  const lineupPlayer = getLineupPlayer(lineupIndex);
+  const benchPlayer = getBenchPlayer(benchIndex);
+  const lineupPositionKey = getLineupPositionKey(lineupPlayer);
+  const positionLabel = lineupPlayer ? lineupPlayer.position || lineupPositionKey || '指定ポジション' : '';
+
+  let benchEligible = true;
+  if (lineupPlayer && benchPlayer && lineupPositionKey) {
+    benchEligible = canBenchPlayerCoverPosition(benchPlayer, lineupPositionKey);
+  }
 
   if (infoEl) {
     if (!stateCache.defenseContext.canSub) {
@@ -916,12 +1033,18 @@ function updateDefenseSelectionInfo() {
         : '守備交代を行う守備位置を選択してください。';
     } else if (!benchPlayer) {
       infoEl.textContent = `${lineupPlayer.name} を交代させる選手を選択してください。`;
+    } else if (lineupPositionKey && !benchEligible) {
+      infoEl.textContent = `${benchPlayer.name} は ${positionLabel} を守れません。別の選手を選択してください。`;
     } else {
       infoEl.textContent = `${lineupPlayer.name} ↔ ${benchPlayer.name} の守備交代を実行できます。`;
     }
   }
 
-  const canApply = stateCache.defenseContext.canSub && Boolean(lineupPlayer) && Boolean(benchPlayer);
+  const canApply =
+    stateCache.defenseContext.canSub
+    && Boolean(lineupPlayer)
+    && Boolean(benchPlayer)
+    && (!lineupPositionKey || benchEligible);
   if (elements.defenseApplyButton) {
     elements.defenseApplyButton.disabled = !canApply;
   }
@@ -944,20 +1067,13 @@ function updateDefensePanel(defenseTeam, gameState) {
   stateCache.defenseContext.lineup = lineupMap;
   stateCache.defenseContext.bench = benchMap;
 
-  const normalizePosition = (position) => {
-    if (!position) return null;
-    const upper = String(position).toUpperCase();
-    if (upper === 'SP' || upper === 'RP') return 'P';
-    return upper;
-  };
-
   if (elements.defenseField) {
     elements.defenseField.innerHTML = '';
     const assigned = new Map();
     const extras = [];
 
     lineup.forEach((player) => {
-      const key = normalizePosition(player.position);
+      const key = normalizePositionKey(player.position_key || player.position);
       if (key && FIELD_POSITION_KEYS.has(key) && !assigned.has(key)) {
         assigned.set(key, player);
       } else {
@@ -1046,6 +1162,7 @@ function updateDefensePanel(defenseTeam, gameState) {
     }
   }
 
+  updateDefenseBenchAvailability();
   applyDefenseSelectionHighlights();
 }
 
