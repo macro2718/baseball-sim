@@ -139,6 +139,102 @@ const stateCache = {
   statsView: { team: 'away', type: 'batting' },
 };
 
+const MAX_OUTS_DISPLAY = 3;
+
+function escapeHtml(value) {
+  if (value == null) {
+    return '';
+  }
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getPositionColorClass(position, pitcherType = null) {
+  if (!position) return null;
+  const key = String(position).toUpperCase();
+  if (key === 'SP') return 'pos-color-sp';
+  if (key === 'RP') return 'pos-color-rp';
+  if (key === 'C') return 'pos-color-c';
+  if (['1B', '2B', '3B', 'SS'].includes(key)) return 'pos-color-infield';
+  if (['LF', 'CF', 'RF'].includes(key)) return 'pos-color-outfield';
+  if (key === 'P') {
+    const type = pitcherType ? String(pitcherType).toUpperCase() : null;
+    if (type === 'RP') return 'pos-color-rp';
+    if (type === 'SP') return 'pos-color-sp';
+    return 'pos-color-sp';
+  }
+  return null;
+}
+
+function renderPositionToken(position, pitcherType = null, extraClass = '') {
+  const classes = ['position-token'];
+  if (extraClass) {
+    extraClass
+      .split(' ')
+      .map((cls) => cls.trim())
+      .filter(Boolean)
+      .forEach((cls) => classes.push(cls));
+  }
+
+  if (position == null) {
+    classes.push('position-token-empty');
+    return `<span class="${classes.join(' ')}">-</span>`;
+  }
+
+  const token = String(position).trim();
+  if (!token || token === '-') {
+    classes.push('position-token-empty');
+    return `<span class="${classes.join(' ')}">-</span>`;
+  }
+
+  const colorClass = getPositionColorClass(token, pitcherType);
+  if (colorClass) {
+    classes.push(colorClass);
+  }
+  return `<span class="${classes.join(' ')}">${escapeHtml(token)}</span>`;
+}
+
+function renderPositionList(positions, pitcherType = null) {
+  const tokens = [];
+  if (Array.isArray(positions)) {
+    positions.forEach((pos) => {
+      const raw = pos == null ? '' : String(pos).trim();
+      if (!raw) return;
+      tokens.push(renderPositionToken(raw, pitcherType));
+    });
+  }
+
+  if (!tokens.length) {
+    return renderPositionToken('-', null);
+  }
+
+  return tokens.join('<span class="position-separator">, </span>');
+}
+
+function updateOutsIndicator(outs) {
+  if (!elements.outsIndicator) return;
+  const numericValue = Number(outs);
+  const numeric = Number.isFinite(numericValue) ? numericValue : 0;
+  const clamped = Math.max(0, Math.min(Math.trunc(numeric), MAX_OUTS_DISPLAY));
+  const dots = [];
+  for (let i = 0; i < MAX_OUTS_DISPLAY; i += 1) {
+    const active = i < clamped;
+    dots.push(`<span class="out-dot${active ? ' active' : ''}" aria-hidden="true"></span>`);
+  }
+  const announcement = `アウトカウント: ${clamped}`;
+  elements.outsIndicator.innerHTML = `
+    <div class="outs-dots" aria-hidden="true">${dots.join('')}</div>
+    <span class="outs-label">OUT</span>
+    <span class="visually-hidden">${announcement}</span>
+  `;
+  elements.outsIndicator.setAttribute('aria-label', announcement);
+  elements.outsIndicator.dataset.outs = String(clamped);
+}
+
 async function apiRequest(url, options = {}) {
   const response = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
@@ -535,6 +631,7 @@ function renderGame(gameState, teams, log) {
     elements.gameScreen.classList.add('hidden');
     elements.titleScreen.classList.remove('hidden');
     updateScoreboard(gameState, teams);
+    updateOutsIndicator(0);
     elements.actionWarning.textContent = '';
     elements.swingButton.disabled = true;
     elements.buntButton.disabled = true;
@@ -555,8 +652,7 @@ function renderGame(gameState, teams, log) {
   updateScoreboard(gameState, teams);
   elements.situationText.textContent = gameState.situation || '';
   elements.halfIndicator.textContent = `${gameState.half_label} ${gameState.inning}`;
-  const outsLabel = gameState.outs === 1 ? 'OUT' : 'OUTS';
-  elements.outsIndicator.textContent = `${gameState.outs} ${outsLabel}`;
+  updateOutsIndicator(gameState.outs);
   elements.matchupText.textContent = gameState.matchup || '';
   updateBases(gameState.bases || []);
 
@@ -658,11 +754,15 @@ function updateRosters(tbody, players) {
     if (player.is_current_batter) {
       tr.classList.add('active');
     }
+    const orderLabel = escapeHtml(player.order ?? '');
+    const positionHtml = renderPositionToken(player.position, player.pitcher_type);
+    const nameHtml = escapeHtml(player.name ?? '-');
+    const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
     tr.innerHTML = `
-      <td>${player.order}</td>
-      <td>${player.position || '-'}</td>
-      <td>${player.name}</td>
-      <td>${(player.eligible || []).join(', ')}</td>
+      <td>${orderLabel}</td>
+      <td>${positionHtml}</td>
+      <td>${nameHtml}</td>
+      <td>${eligibleHtml}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -685,8 +785,8 @@ function updateBench(listEl, benchPlayers, emptyMessage = '利用可能なベン
     const name = document.createElement('span');
     name.textContent = player.name;
     const eligible = document.createElement('span');
-    const eligibleText = (player.eligible || []).join(', ');
-    eligible.textContent = eligibleText || '-';
+    eligible.classList.add('position-list');
+    eligible.innerHTML = renderPositionList(player.eligible || [], player.pitcher_type);
     li.appendChild(name);
     li.appendChild(eligible);
     listEl.appendChild(li);
@@ -784,8 +884,17 @@ function updateStrategyControls(gameState, teams) {
       const orderLabel = Number.isInteger(currentBatter.order)
         ? `${currentBatter.order}. `
         : '';
-      const positionLabel = currentBatter.position ? `${currentBatter.position} ` : '';
-      pinchCurrentBatter.textContent = `現在の打者: ${orderLabel}${positionLabel}${currentBatter.name}`;
+      let positionSegment = '';
+      if (currentBatter.position && currentBatter.position !== '-') {
+        const positionHtml = renderPositionToken(
+          currentBatter.position,
+          currentBatter.pitcher_type,
+        );
+        positionSegment = positionHtml ? `${positionHtml} ` : '';
+      }
+      pinchCurrentBatter.innerHTML = `現在の打者: ${orderLabel}${positionSegment}${escapeHtml(
+        currentBatter.name ?? '-',
+      )}`;
     } else {
       pinchCurrentBatter.textContent = '現在の打者: -';
     }
@@ -1087,21 +1196,23 @@ function updateDefensePanel(defenseTeam, gameState) {
       button.type = 'button';
       button.className = `position-slot ${slot.className}`;
       button.dataset.position = slot.key;
+      const labelHtml = renderPositionToken(slot.label, null, 'position-label');
       if (player) {
         button.dataset.lineupIndex = player.index;
-        const eligibleText = (player.eligible || []).join(', ') || '-';
+        const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
         button.innerHTML = `
-          <span class="position-label">${slot.label}</span>
-          <strong>${player.name}</strong>
-          <span>${eligibleText}</span>
+          ${labelHtml}
+          <strong>${escapeHtml(player.name ?? '-')}</strong>
+          <span class="eligible-positions">${eligibleHtml}</span>
         `;
         button.disabled = !gameState.active;
       } else {
         button.dataset.lineupIndex = '';
+        const emptyEligible = renderPositionList([], null);
         button.innerHTML = `
-          <span class="position-label">${slot.label}</span>
+          ${labelHtml}
           <strong>空席</strong>
-          <span>-</span>
+          <span class="eligible-positions">${emptyEligible}</span>
         `;
         button.disabled = true;
       }
@@ -1121,11 +1232,13 @@ function updateDefensePanel(defenseTeam, gameState) {
           button.type = 'button';
           button.className = 'bench-card';
           button.dataset.lineupIndex = player.index;
-          const eligibleText = (player.eligible || []).join(', ') || '-';
+          const currentPosition = player.position && player.position !== '-' ? player.position : '-';
+          const currentPositionHtml = renderPositionToken(currentPosition, player.pitcher_type);
+          const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
           button.innerHTML = `
-            <strong>${player.name}</strong>
-            <span class="eligible-label">現在: ${player.position || '-'}</span>
-            <span class="eligible-positions">適性: ${eligibleText}</span>
+            <strong>${escapeHtml(player.name ?? '-')}</strong>
+            <span class="eligible-label">現在: ${currentPositionHtml}</span>
+            <span class="eligible-positions">適性: ${eligibleHtml}</span>
           `;
           button.disabled = !gameState.active;
           elements.defenseExtras.appendChild(button);
@@ -1150,11 +1263,11 @@ function updateDefensePanel(defenseTeam, gameState) {
         button.type = 'button';
         button.className = 'bench-card';
         button.dataset.benchIndex = player.index;
-        const eligibleText = (player.eligible || []).join(', ') || '-';
+        const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
         button.innerHTML = `
-          <strong>${player.name}</strong>
+          <strong>${escapeHtml(player.name ?? '-')}</strong>
           <span class="eligible-label">守備適性</span>
-          <span class="eligible-positions">${eligibleText}</span>
+          <span class="eligible-positions">${eligibleHtml}</span>
         `;
         button.disabled = !(gameState.active && stateCache.defenseContext.canSub);
         elements.defenseBench.appendChild(button);
