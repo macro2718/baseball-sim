@@ -84,6 +84,8 @@ const elements = {
   openOffenseButton: document.getElementById('open-offense-strategy'),
   openDefenseButton: document.getElementById('open-defense-strategy'),
   openStatsButton: document.getElementById('open-stats'),
+  offenseMenu: document.getElementById('offense-strategy-menu'),
+  offensePinchMenuButton: document.getElementById('open-offense-pinch-menu'),
   defenseMenu: document.getElementById('defense-strategy-menu'),
   defenseSubMenuButton: document.getElementById('open-defense-sub'),
   pitcherMenuButton: document.getElementById('open-pitcher-change-menu'),
@@ -304,6 +306,7 @@ function openModal(name) {
   const modal = resolveModal(name);
   if (!modal) return;
   hideDefenseMenu();
+  hideOffenseMenu();
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
   if (modal === elements.statsModal) {
@@ -334,6 +337,36 @@ function toggleLogPanel() {
   }
 }
 
+function hideOffenseMenu() {
+  const { offenseMenu } = elements;
+  if (!offenseMenu) return;
+  if (!offenseMenu.classList.contains('hidden')) {
+    offenseMenu.classList.add('hidden');
+  }
+  offenseMenu.setAttribute('aria-hidden', 'true');
+}
+
+function showOffenseMenu() {
+  const { offenseMenu } = elements;
+  if (!offenseMenu) return;
+  offenseMenu.classList.remove('hidden');
+  offenseMenu.setAttribute('aria-hidden', 'false');
+}
+
+function toggleOffenseMenu() {
+  const { offenseMenu, openOffenseButton } = elements;
+  if (!offenseMenu) return;
+  if (openOffenseButton && openOffenseButton.disabled) {
+    return;
+  }
+  if (offenseMenu.classList.contains('hidden')) {
+    hideDefenseMenu();
+    showOffenseMenu();
+  } else {
+    hideOffenseMenu();
+  }
+}
+
 function hideDefenseMenu() {
   const { defenseMenu } = elements;
   if (!defenseMenu) return;
@@ -357,6 +390,7 @@ function toggleDefenseMenu() {
     return;
   }
   if (defenseMenu.classList.contains('hidden')) {
+    hideOffenseMenu();
     showDefenseMenu();
   } else {
     hideDefenseMenu();
@@ -375,7 +409,10 @@ function initEventListeners() {
     elements.pinchButton.addEventListener('click', handlePinchHit);
   }
   if (elements.openOffenseButton) {
-    elements.openOffenseButton.addEventListener('click', () => openModal('offense'));
+    elements.openOffenseButton.addEventListener('click', toggleOffenseMenu);
+  }
+  if (elements.offensePinchMenuButton) {
+    elements.offensePinchMenuButton.addEventListener('click', () => openModal('offense'));
   }
   if (elements.openDefenseButton) {
     elements.openDefenseButton.addEventListener('click', toggleDefenseMenu);
@@ -409,6 +446,19 @@ function initEventListeners() {
       });
     }
   });
+  if (elements.offenseMenu) {
+    document.addEventListener('click', (event) => {
+      if (elements.offenseMenu.classList.contains('hidden')) {
+        return;
+      }
+      const clickedInsideMenu = elements.offenseMenu.contains(event.target);
+      const clickedToggle =
+        elements.openOffenseButton && elements.openOffenseButton.contains(event.target);
+      if (!clickedInsideMenu && !clickedToggle) {
+        hideOffenseMenu();
+      }
+    });
+  }
   if (elements.defenseMenu) {
     document.addEventListener('click', (event) => {
       if (elements.defenseMenu.classList.contains('hidden')) {
@@ -450,6 +500,8 @@ function initEventListeners() {
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+      hideOffenseMenu();
+      hideDefenseMenu();
       ['offense', 'defense', 'pitcher', 'stats'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
@@ -919,6 +971,7 @@ function updateStrategyControls(gameState, teams) {
     pinchButton,
     pinchCurrentBatter,
     openOffenseButton,
+    offensePinchMenuButton,
     openDefenseButton,
     openStatsButton,
     defenseSubMenuButton,
@@ -989,6 +1042,15 @@ function updateStrategyControls(gameState, teams) {
     }
   }
 
+  if (offensePinchMenuButton) {
+    offensePinchMenuButton.disabled = !canPinch || isGameOver;
+    if (isGameOver) {
+      offensePinchMenuButton.textContent = 'Game Over';
+    } else {
+      offensePinchMenuButton.textContent = '代打戦略';
+    }
+  }
+
   if (openOffenseButton) {
     openOffenseButton.disabled = !isActive || isGameOver;
     if (isGameOver) {
@@ -996,6 +1058,10 @@ function updateStrategyControls(gameState, teams) {
     } else {
       openOffenseButton.textContent = '攻撃戦略';
     }
+  }
+
+  if (!isActive || isGameOver) {
+    hideOffenseMenu();
   }
 
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
