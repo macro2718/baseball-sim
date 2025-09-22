@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from baseball_sim.config import GameResults, setup_project_environment
 from baseball_sim.data.loader import DataLoader
@@ -54,7 +54,7 @@ class WebGameSession:
             self.home_team, self.away_team = DataLoader.create_teams_from_data()
         return self.home_team, self.away_team
 
-    def start_new_game(self, reload_teams: bool = False) -> Dict[str, object]:
+    def start_new_game(self, reload_teams: bool = False) -> Dict[str, Any]:
         """Create a fresh :class:`GameState` and reset session bookkeeping."""
 
         self.ensure_teams(force_reload=reload_teams)
@@ -75,7 +75,7 @@ class WebGameSession:
         self._append_log("=== TOP of the 1 ===", variant="highlight")
         return self.build_state()
 
-    def stop_game(self) -> Dict[str, object]:
+    def stop_game(self) -> Dict[str, Any]:
         """Return to the title screen without discarding loaded teams."""
 
         self.game_state = None
@@ -84,14 +84,14 @@ class WebGameSession:
         self._notification = Notification(level="info", message="Game closed. Return to title screen.")
         return self.build_state()
 
-    def clear_log(self) -> Dict[str, object]:
+    def clear_log(self) -> Dict[str, Any]:
         """Remove all play log entries."""
 
         self._log.clear()
         self._notification = Notification(level="info", message="Play log cleared.")
         return self.build_state()
 
-    def reload_teams(self) -> Dict[str, object]:
+    def reload_teams(self) -> Dict[str, Any]:
         """Force reloading team data from disk without starting a game."""
 
         self.ensure_teams(force_reload=True)
@@ -105,7 +105,7 @@ class WebGameSession:
     # ------------------------------------------------------------------
     # Gameplay actions
     # ------------------------------------------------------------------
-    def execute_normal_play(self) -> Dict[str, object]:
+    def execute_normal_play(self) -> Dict[str, Any]:
         """Simulate a standard plate appearance."""
 
         if not self.game_state:
@@ -152,7 +152,7 @@ class WebGameSession:
 
         return self.build_state()
 
-    def execute_bunt(self) -> Dict[str, object]:
+    def execute_bunt(self) -> Dict[str, Any]:
         """Attempt a bunt for the current batter."""
 
         if not self.game_state:
@@ -212,7 +212,7 @@ class WebGameSession:
 
         return self.build_state()
 
-    def execute_pinch_hit(self, lineup_index: int, bench_index: int) -> Dict[str, object]:
+    def execute_pinch_hit(self, lineup_index: int, bench_index: int) -> Dict[str, Any]:
         """Replace the selected batter with a bench player."""
 
         if not self.game_state or not self.game_state.batting_team:
@@ -273,7 +273,7 @@ class WebGameSession:
     # ------------------------------------------------------------------
     # State serialization
     # ------------------------------------------------------------------
-    def build_state(self) -> Dict[str, object]:
+    def build_state(self) -> Dict[str, Any]:
         """Return a dictionary representing the entire UI state."""
 
         title = self._build_title_state()

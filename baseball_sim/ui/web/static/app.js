@@ -1,3 +1,76 @@
+// Constants and Configuration
+const CONFIG = {
+  maxOutsDisplay: 3,
+  api: {
+    endpoints: {
+      gameState: '/api/game/state',
+      gameStart: '/api/game/start',
+      gameRestart: '/api/game/restart',
+      gameStop: '/api/game/stop',
+      gameSwing: '/api/game/swing',
+      gameBunt: '/api/game/bunt',
+      pinchHit: '/api/strategy/pinch_hit',
+      defenseSubstitution: '/api/strategy/defense_substitution',
+      changePitcher: '/api/strategy/change_pitcher',
+      clearLog: '/api/log/clear',
+      reloadTeams: '/api/teams/reload',
+      health: '/api/health'
+    }
+  },
+  css: {
+    classes: {
+      positionToken: 'position-token',
+      selected: 'selected',
+      disabled: 'disabled',
+      invalid: 'invalid'
+    }
+  }
+};
+
+const FIELD_POSITIONS = [
+  { key: 'CF', label: 'CF', className: 'pos-cf' },
+  { key: 'LF', label: 'LF', className: 'pos-lf' },
+  { key: 'RF', label: 'RF', className: 'pos-rf' },
+  { key: '2B', label: '2B', className: 'pos-2b' },
+  { key: 'SS', label: 'SS', className: 'pos-ss' },
+  { key: '3B', label: '3B', className: 'pos-3b' },
+  { key: '1B', label: '1B', className: 'pos-1b' },
+  { key: 'P', label: 'P', className: 'pos-p' },
+  { key: 'C', label: 'C', className: 'pos-c' },
+  { key: 'DH', label: 'DH', className: 'pos-dh' },
+];
+
+const FIELD_POSITION_KEYS = new Set(FIELD_POSITIONS.map((slot) => slot.key));
+
+const BATTING_COLUMNS = [
+  { label: 'Player', key: 'name' },
+  { label: 'PA', key: 'pa' },
+  { label: 'AB', key: 'ab' },
+  { label: 'R', key: 'r' },
+  { label: 'H', key: 'h' },
+  { label: '2B', key: '2b' },
+  { label: '3B', key: '3b' },
+  { label: 'HR', key: 'hr' },
+  { label: 'RBI', key: 'rbi' },
+  { label: 'BB', key: 'bb' },
+  { label: 'SO', key: 'so' },
+  { label: 'AVG', key: 'avg' },
+];
+
+const PITCHING_COLUMNS = [
+  { label: 'Player', key: 'name' },
+  { label: 'IP', key: 'ip' },
+  { label: 'BF', key: 'batters_faced' },
+  { label: 'H', key: 'h' },
+  { label: 'R', key: 'r' },
+  { label: 'ER', key: 'er' },
+  { label: 'BB', key: 'bb' },
+  { label: 'SO', key: 'so' },
+  { label: 'HR', key: 'hr' },
+  { label: 'ERA', key: 'era' },
+];
+
+// DOM Elements cache
 const elements = {
   titleScreen: document.getElementById('title-screen'),
   gameScreen: document.getElementById('game-screen'),
@@ -53,21 +126,6 @@ const elements = {
   statsTitle: document.getElementById('stats-title'),
 };
 
-const FIELD_POSITIONS = [
-  { key: 'CF', label: 'CF', className: 'pos-cf' },
-  { key: 'LF', label: 'LF', className: 'pos-lf' },
-  { key: 'RF', label: 'RF', className: 'pos-rf' },
-  { key: '2B', label: '2B', className: 'pos-2b' },
-  { key: 'SS', label: 'SS', className: 'pos-ss' },
-  { key: '3B', label: '3B', className: 'pos-3b' },
-  { key: '1B', label: '1B', className: 'pos-1b' },
-  { key: 'P', label: 'P', className: 'pos-p' },
-  { key: 'C', label: 'C', className: 'pos-c' },
-  { key: 'DH', label: 'DH', className: 'pos-dh' },
-];
-
-const FIELD_POSITION_KEYS = new Set(FIELD_POSITIONS.map((slot) => slot.key));
-
 function normalizePositionKey(position) {
   if (!position) return null;
   const upper = String(position).toUpperCase();
@@ -105,32 +163,6 @@ function canBenchPlayerCoverPosition(benchPlayer, positionKey) {
   return eligiblePositions.includes(positionKey);
 }
 
-const BATTING_COLUMNS = [
-  { key: 'name', label: '選手' },
-  { key: 'ab', label: '打数' },
-  { key: 'single', label: '単打' },
-  { key: 'double', label: '二塁打' },
-  { key: 'triple', label: '三塁打' },
-  { key: 'hr', label: '本塁打' },
-  { key: 'runs', label: '得点' },
-  { key: 'rbi', label: '打点' },
-  { key: 'bb', label: '四球' },
-  { key: 'so', label: '三振' },
-  { key: 'avg', label: '打率' },
-];
-
-const PITCHING_COLUMNS = [
-  { key: 'name', label: '選手' },
-  { key: 'ip', label: '投球回' },
-  { key: 'h', label: '被安打' },
-  { key: 'r', label: '失点' },
-  { key: 'er', label: '自責点' },
-  { key: 'bb', label: '四球' },
-  { key: 'k', label: '奪三振' },
-  { key: 'era', label: '防御率' },
-  { key: 'whip', label: 'WHIP' },
-];
-
 const stateCache = {
   data: null,
   defenseSelection: { lineupIndex: null, benchIndex: null },
@@ -138,8 +170,6 @@ const stateCache = {
   currentBatterIndex: null,
   statsView: { team: 'away', type: 'batting' },
 };
-
-const MAX_OUTS_DISPLAY = 3;
 
 function escapeHtml(value) {
   if (value == null) {
@@ -219,9 +249,9 @@ function updateOutsIndicator(outs) {
   if (!elements.outsIndicator) return;
   const numericValue = Number(outs);
   const numeric = Number.isFinite(numericValue) ? numericValue : 0;
-  const clamped = Math.max(0, Math.min(Math.trunc(numeric), MAX_OUTS_DISPLAY));
+  const clamped = Math.max(0, Math.min(Math.trunc(numeric), CONFIG.maxOutsDisplay));
   const dots = [];
-  for (let i = 0; i < MAX_OUTS_DISPLAY; i += 1) {
+  for (let i = 0; i < CONFIG.maxOutsDisplay; i += 1) {
     const active = i < clamped;
     dots.push(`<span class="out-dot${active ? ' active' : ''}" aria-hidden="true"></span>`);
   }
