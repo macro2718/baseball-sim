@@ -386,13 +386,14 @@ button:disabled {
   position: relative;
   width: 280px;
   height: 280px;
-  margin: 16px auto 0;
-  background: radial-gradient(circle at 50% 92%, rgba(15, 23, 42, 0.35), rgba(2, 6, 23, 0.92));
+  margin: clamp(32px, 8vh, 64px) auto 0;
+  background: radial-gradient(circle at 50% 92%, rgba(15, 23, 42, 0.28), rgba(2, 6, 23, 0.92));
   border-radius: 28px;
-  border: 1px solid var(--border);
-  box-shadow: 0 28px 50px rgba(8, 47, 73, 0.55);
-  overflow: hidden;
+  box-shadow: 0 36px 72px rgba(8, 47, 73, 0.55);
+  overflow: visible;
+  isolation: isolate;
 }
+
 
 .field-layer {
   position: absolute;
@@ -402,20 +403,34 @@ button:disabled {
 .field-outfield {
   width: 360px;
   height: 360px;
-  top: -230px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 78%,
-    rgba(16, 185, 129, 0.92) 0%,
-    rgba(16, 185, 129, 0.92) 58%,
-    rgba(21, 128, 61, 0.88) 66%,
-    rgba(120, 53, 15, 0.85) 74%,
-    rgba(120, 53, 15, 0)
+    rgba(16, 185, 129, 0.96) 0%,
+    rgba(16, 185, 129, 0.96) 58%,
+    rgba(21, 128, 61, 0.92) 70%,
+    rgba(120, 53, 15, 0.88) 82%,
+    rgba(120, 53, 15, 0.45) 90%,
+    rgba(30, 41, 59, 0.22) 100%
   );
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.45);
+  box-shadow:
+    0 18px 36px rgba(15, 23, 42, 0.45),
+    0 0 0 20px rgba(120, 53, 15, 0.45),
+    0 0 0 48px rgba(15, 23, 42, 0.55);
   z-index: 0;
+}
+
+.field-outfield::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 2px solid rgba(248, 250, 252, 0.12);
+  box-shadow: 0 0 22px rgba(248, 250, 252, 0.18);
+  opacity: 0.35;
 }
 
 .field-infield-grass {
@@ -457,8 +472,8 @@ button:disabled {
 
 .foul-line {
   width: 4px;
-  height: 220px;
-  bottom: 20%;
+  height: 260px;
+  bottom: 18%;
   left: 50%;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(248, 250, 252, 0.2));
   transform-origin: bottom center;
@@ -1294,6 +1309,25 @@ button:disabled {
 
 .position-token.pos-color-outfield {
   color: var(--success);
+}
+
+@media (max-width: 600px) {
+  .bases {
+    margin: 32px auto 0;
+  }
+
+  .field-outfield {
+    width: 320px;
+    height: 320px;
+    box-shadow:
+      0 12px 24px rgba(15, 23, 42, 0.45),
+      0 0 0 10px rgba(120, 53, 15, 0.45),
+      0 0 0 20px rgba(15, 23, 42, 0.45);
+  }
+
+  .field-outfield::after {
+    inset: 10%;
+  }
 }
 
 @media (max-width: 960px) {
