@@ -136,6 +136,24 @@ class WebGameSession:
         variant = "success" if result in GameResults.POSITIVE_RESULTS else "danger"
         self._append_log(message, variant=variant)
 
+        # より詳細なプレイ結果の通知
+        if result in GameResults.POSITIVE_RESULTS:
+            if result == GameResults.HOME_RUN:
+                self._notification = Notification(level="success", message=f"🚀 {batter.name} hits a HOME RUN!")
+            elif result == GameResults.TRIPLE:
+                self._notification = Notification(level="success", message=f"⚡ {batter.name} hits a TRIPLE!")
+            elif result == GameResults.DOUBLE:
+                self._notification = Notification(level="success", message=f"💨 {batter.name} hits a DOUBLE!")
+            elif result == GameResults.SINGLE:
+                self._notification = Notification(level="success", message=f"✅ {batter.name} gets a hit!")
+            elif result == GameResults.WALK:
+                self._notification = Notification(level="info", message=f"🚶 {batter.name} draws a walk")
+        else:
+            if result == GameResults.STRIKEOUT:
+                self._notification = Notification(level="warning", message=f"⚾ {batter.name} strikes out")
+            else:
+                self._notification = Notification(level="info", message=f"{batter.name}: {result}")
+
         pitcher.decrease_stamina()
 
         inning_changed = (
@@ -189,7 +207,14 @@ class WebGameSession:
             return self.build_state()
 
         self._append_log(f"{batter.name} attempts a bunt against {pitcher.name}", variant="header")
-        self._append_log(result_message, variant="success")
+        
+        # バント結果の詳細通知
+        if "Cannot bunt" not in result_message and "バントはできません" not in result_message:
+            self._append_log(result_message, variant="success")
+            self._notification = Notification(level="success", message=f"🏃 {batter.name} executes a bunt!")
+        else:
+            self._append_log(result_message, variant="warning")
+            self._notification = Notification(level="warning", message=f"❌ {batter.name}'s bunt attempt fails")
 
         pitcher.decrease_stamina()
         self.game_state.batting_team.next_batter()
@@ -331,20 +356,45 @@ class WebGameSession:
         home_name = self.home_team.name if self.home_team else "Home"
         away_name = self.away_team.name if self.away_team else "Away"
 
-        self._append_log("Game Over", variant="info")
+        # 詳細なゲーム終了ログ
+        self._append_log("=" * 50, variant="highlight")
+        self._append_log("GAME OVER", variant="info")
+        self._append_log("=" * 50, variant="highlight")
         self._append_log(
             f"Final Score: {away_name} {away_score} - {home_name} {home_score}",
             variant="info",
         )
+        
+        # 勝敗判定とより詳細な結果
         if home_score > away_score:
-            self._append_log(f"{home_name} win!", variant="success")
+            winner_msg = f"🏆 {home_name} WINS!"
+            winner_detail = f"{home_name} defeats {away_name} by {home_score - away_score} run(s)"
+            self._append_log(winner_msg, variant="success")
+            self._append_log(winner_detail, variant="success")
+            notification_msg = f"Game finished. {home_name} wins {home_score}-{away_score}!"
         elif away_score > home_score:
-            self._append_log(f"{away_name} win!", variant="success")
+            winner_msg = f"🏆 {away_name} WINS!"
+            winner_detail = f"{away_name} defeats {home_name} by {away_score - home_score} run(s)"
+            self._append_log(winner_msg, variant="success")
+            self._append_log(winner_detail, variant="success")
+            notification_msg = f"Game finished. {away_name} wins {away_score}-{home_score}!"
         else:
-            self._append_log("Game ends in a tie.", variant="warning")
+            tie_msg = "Game ends in a tie."
+            self._append_log(tie_msg, variant="warning")
+            notification_msg = f"Game finished in a tie {home_score}-{away_score}."
+
+        # 試合時間情報（イニング数）
+        innings_played = self.game_state.inning
+        if not self.game_state.is_top_inning and innings_played >= 9:
+            innings_msg = f"Game completed in {innings_played} innings"
+        else:
+            innings_msg = f"Game ended in the {self.game_state.inning}{'st' if self.game_state.inning == 1 else 'nd' if self.game_state.inning == 2 else 'rd' if self.game_state.inning == 3 else 'th'} inning"
+        self._append_log(innings_msg, variant="info")
+        
+        self._append_log("=" * 50, variant="highlight")
 
         self._game_over_announced = True
-        self._notification = Notification(level="info", message="Game finished.")
+        self._notification = Notification(level="success", message=notification_msg)
 
     def _half_inning_banner(self) -> str:
         if not self.game_state:
@@ -616,6 +666,8 @@ class WebGameSession:
         homers = stats.get("HR", 0)
         hits = singles + doubles + triples + homers
         at_bats = stats.get("AB", 0)
+        plate_appearances = stats.get("PA", at_bats + stats.get("BB", 0))
+        
         if hasattr(player, "get_avg"):
             try:
                 avg_value = float(player.get_avg())
@@ -627,11 +679,13 @@ class WebGameSession:
 
         return {
             "name": getattr(player, "name", "-"),
+            "pa": plate_appearances,
             "ab": at_bats,
             "single": singles,
             "double": doubles,
             "triple": triples,
             "hr": homers,
+            "h": hits,
             "runs": stats.get("R", 0),
             "rbi": stats.get("RBI", 0),
             "bb": stats.get("BB", 0),
@@ -678,15 +732,19 @@ class WebGameSession:
             whip = "-.--"
 
         strikeouts = raw_stats.get("SO", raw_stats.get("K", 0))
+        batters_faced = raw_stats.get("BF", 0)
 
         return {
             "name": getattr(player, "name", "-"),
             "ip": ip_display,
+            "batters_faced": batters_faced,
             "h": raw_stats.get("H", 0),
             "r": raw_stats.get("R", 0),
             "er": raw_stats.get("ER", 0),
             "bb": raw_stats.get("BB", 0),
             "k": strikeouts,
+            "so": strikeouts,  # Compatibility for both 'k' and 'so' keys
+            "hr": raw_stats.get("HR", 0),
             "era": era,
             "whip": whip,
         }

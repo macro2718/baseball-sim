@@ -46,11 +46,11 @@ const BATTING_COLUMNS = [
   { label: 'Player', key: 'name' },
   { label: 'PA', key: 'pa' },
   { label: 'AB', key: 'ab' },
-  { label: 'R', key: 'r' },
-  { label: 'H', key: 'h' },
-  { label: '2B', key: '2b' },
-  { label: '3B', key: '3b' },
+  { label: '1B', key: 'single' },
+  { label: '2B', key: 'double' },
+  { label: '3B', key: 'triple' },
   { label: 'HR', key: 'hr' },
+  { label: 'R', key: 'runs' },
   { label: 'RBI', key: 'rbi' },
   { label: 'BB', key: 'bb' },
   { label: 'SO', key: 'so' },
@@ -60,14 +60,13 @@ const BATTING_COLUMNS = [
 const PITCHING_COLUMNS = [
   { label: 'Player', key: 'name' },
   { label: 'IP', key: 'ip' },
-  { label: 'BF', key: 'batters_faced' },
   { label: 'H', key: 'h' },
   { label: 'R', key: 'r' },
   { label: 'ER', key: 'er' },
   { label: 'BB', key: 'bb' },
   { label: 'SO', key: 'so' },
-  { label: 'HR', key: 'hr' },
   { label: 'ERA', key: 'era' },
+  { label: 'WHIP', key: 'whip' },
 ];
 
 // DOM Elements cache
