@@ -501,7 +501,9 @@ class WebGameSession:
                         "order": index + 1,
                         "name": player.name,
                         "position": self._display_position(player),
+                        "position_key": self._defensive_position_key(player),
                         "eligible": self._eligible_positions(player),
+                        "eligible_all": self._eligible_positions_raw(player),
                         "is_current_batter": is_offense and index == current_batter_index,
                     }
                 )
@@ -518,6 +520,7 @@ class WebGameSession:
                         "index": bench_index,
                         "name": player.name,
                         "eligible": self._eligible_positions(player),
+                        "eligible_all": self._eligible_positions_raw(player),
                     }
                 )
 
@@ -697,6 +700,19 @@ class WebGameSession:
         if hasattr(player, "get_display_eligible_positions"):
             return list(player.get_display_eligible_positions())
         return list(getattr(player, "eligible_positions", []) or [])
+
+    def _eligible_positions_raw(self, player) -> List[str]:
+        positions = getattr(player, "eligible_positions", []) or []
+        return [str(pos).upper() for pos in positions]
+
+    def _defensive_position_key(self, player) -> Optional[str]:
+        position = getattr(player, "current_position", None) or getattr(player, "position", None)
+        if not position:
+            return None
+        position_key = str(position).upper()
+        if position_key in {"SP", "RP"}:
+            return "P"
+        return position_key
 
     def _display_position(self, player) -> str:
         position = getattr(player, "current_position", None) or getattr(player, "position", "-")
