@@ -20,9 +20,19 @@ const elements = {
   defenseErrors: document.getElementById('defense-errors'),
   offenseRoster: document.querySelector('#offense-roster tbody'),
   defenseRoster: document.querySelector('#defense-roster tbody'),
+  offenseBench: document.getElementById('offense-bench'),
+  defenseBench: document.getElementById('defense-bench'),
   homePitchers: document.querySelector('#home-pitchers ul'),
   awayPitchers: document.querySelector('#away-pitchers ul'),
   baseState: document.getElementById('base-state'),
+  pinchTarget: document.getElementById('pinch-target'),
+  pinchPlayer: document.getElementById('pinch-player'),
+  pinchButton: document.getElementById('pinch-hit-button'),
+  defenseTarget: document.getElementById('defense-target'),
+  defensePlayer: document.getElementById('defense-player'),
+  defenseButton: document.getElementById('defense-sub-button'),
+  pitcherSelect: document.getElementById('pitcher-select'),
+  pitcherButton: document.getElementById('change-pitcher-button'),
 };
 
 const stateCache = {
@@ -56,6 +66,15 @@ function initEventListeners() {
   elements.clearLog.addEventListener('click', handleClearLog);
   elements.swingButton.addEventListener('click', handleSwing);
   elements.buntButton.addEventListener('click', handleBunt);
+  if (elements.pinchButton) {
+    elements.pinchButton.addEventListener('click', handlePinchHit);
+  }
+  if (elements.defenseButton) {
+    elements.defenseButton.addEventListener('click', handleDefenseSubstitution);
+  }
+  if (elements.pitcherButton) {
+    elements.pitcherButton.addEventListener('click', handlePitcherChange);
+  }
 }
 
 async function handleStart(reload) {
@@ -109,6 +128,85 @@ async function handleSwing() {
 async function handleBunt() {
   try {
     const payload = await apiRequest('/api/game/bunt', { method: 'POST' });
+    render(payload);
+  } catch (err) {
+    console.warn(err);
+  }
+}
+
+async function handlePinchHit() {
+  if (!elements.pinchTarget || !elements.pinchPlayer) return;
+  const lineupValue = elements.pinchTarget.value;
+  const benchValue = elements.pinchPlayer.value;
+  if (!lineupValue || !benchValue) {
+    showStatus('代打対象とベンチ選手を選択してください。', 'danger');
+    return;
+  }
+
+  const lineupIndex = Number(lineupValue);
+  const benchIndex = Number(benchValue);
+  if (Number.isNaN(lineupIndex) || Number.isNaN(benchIndex)) {
+    showStatus('選択内容を解釈できませんでした。', 'danger');
+    return;
+  }
+
+  try {
+    const payload = await apiRequest('/api/strategy/pinch_hit', {
+      method: 'POST',
+      body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
+    });
+    render(payload);
+  } catch (err) {
+    console.warn(err);
+  }
+}
+
+async function handleDefenseSubstitution() {
+  if (!elements.defenseTarget || !elements.defensePlayer) return;
+  const lineupValue = elements.defenseTarget.value;
+  const benchValue = elements.defensePlayer.value;
+  if (!lineupValue || !benchValue) {
+    showStatus('守備交代の対象と選手を選択してください。', 'danger');
+    return;
+  }
+
+  const lineupIndex = Number(lineupValue);
+  const benchIndex = Number(benchValue);
+  if (Number.isNaN(lineupIndex) || Number.isNaN(benchIndex)) {
+    showStatus('選択内容を解釈できませんでした。', 'danger');
+    return;
+  }
+
+  try {
+    const payload = await apiRequest('/api/strategy/defense_substitution', {
+      method: 'POST',
+      body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
+    });
+    render(payload);
+  } catch (err) {
+    console.warn(err);
+  }
+}
+
+async function handlePitcherChange() {
+  if (!elements.pitcherSelect) return;
+  const pitcherValue = elements.pitcherSelect.value;
+  if (!pitcherValue) {
+    showStatus('交代する投手を選択してください。', 'danger');
+    return;
+  }
+
+  const pitcherIndex = Number(pitcherValue);
+  if (Number.isNaN(pitcherIndex)) {
+    showStatus('選択内容を解釈できませんでした。', 'danger');
+    return;
+  }
+
+  try {
+    const payload = await apiRequest('/api/strategy/change_pitcher', {
+      method: 'POST',
+      body: JSON.stringify({ pitcher_index: pitcherIndex }),
+    });
     render(payload);
   } catch (err) {
     console.warn(err);
@@ -175,9 +273,14 @@ function renderGame(gameState, teams, log) {
     elements.actionWarning.textContent = '';
     elements.swingButton.disabled = true;
     elements.buntButton.disabled = true;
+    updateRosters(elements.offenseRoster, []);
+    updateRosters(elements.defenseRoster, []);
+    updateBench(elements.offenseBench, [], 'ゲーム開始後に表示されます');
+    updateBench(elements.defenseBench, [], 'ゲーム開始後に表示されます');
     updateLog(log || []);
     elements.defenseErrors.classList.add('hidden');
     elements.defenseErrors.textContent = '';
+    updateStrategyControls(gameState, teams);
     return;
   }
 
@@ -192,14 +295,13 @@ function renderGame(gameState, teams, log) {
   elements.matchupText.textContent = gameState.matchup || '';
   updateBases(gameState.bases || []);
 
-  updateRosters(
-    elements.offenseRoster,
-    gameState.offense ? teams[gameState.offense]?.lineup || [] : [],
-  );
-  updateRosters(
-    elements.defenseRoster,
-    gameState.defense ? teams[gameState.defense]?.lineup || [] : [],
-  );
+  const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
+  const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
+
+  updateRosters(elements.offenseRoster, offenseTeam?.lineup || []);
+  updateBench(elements.offenseBench, offenseTeam?.bench || []);
+  updateRosters(elements.defenseRoster, defenseTeam?.lineup || []);
+  updateBench(elements.defenseBench, defenseTeam?.bench || []);
 
   updatePitchers(elements.homePitchers, teams.home?.pitchers || []);
   updatePitchers(elements.awayPitchers, teams.away?.pitchers || []);
@@ -218,6 +320,8 @@ function renderGame(gameState, teams, log) {
     elements.defenseErrors.classList.add('hidden');
     elements.defenseErrors.textContent = '';
   }
+
+  updateStrategyControls(gameState, teams);
 }
 
 function updateScoreboard(gameState, teams) {
@@ -229,31 +333,37 @@ function updateScoreboard(gameState, teams) {
   }
 
   const innings = Math.max(
+    gameState.max_innings || 0,
     gameState.inning_scores.away.length,
     gameState.inning_scores.home.length,
+    9,
   );
+  const hits = gameState.hits || { home: 0, away: 0 };
+  const errors = gameState.errors || { home: 0, away: 0 };
 
-  let html = '<table><thead><tr><th>Team</th>';
+  let html = '<table class="score-table"><thead><tr><th class="team-col">Team</th>';
   for (let i = 0; i < innings; i += 1) {
     html += `<th>${i + 1}</th>`;
   }
-  html += '<th>R</th></tr></thead><tbody>';
+  html += '<th>R</th><th>H</th><th>E</th></tr></thead><tbody>';
 
-  const awayName = teams.away?.name || 'Away';
-  html += `<tr><td class="team-name">${awayName}</td>`;
-  for (let i = 0; i < innings; i += 1) {
-    const value = gameState.inning_scores.away[i];
-    html += `<td>${value ?? ''}</td>`;
-  }
-  html += `<td>${gameState.score.away}</td></tr>`;
+  const renderRow = (teamKey) => {
+    const teamName = teams[teamKey]?.name || (teamKey === 'home' ? 'Home' : 'Away');
+    const scores = gameState.inning_scores[teamKey] || [];
+    const totalRuns = gameState.score?.[teamKey] ?? 0;
+    const totalHits = hits?.[teamKey] ?? 0;
+    const totalErrors = errors?.[teamKey] ?? 0;
+    let row = `<tr><td class="team-name">${teamName}</td>`;
+    for (let i = 0; i < innings; i += 1) {
+      const value = scores[i];
+      row += `<td>${value ?? ''}</td>`;
+    }
+    row += `<td>${totalRuns}</td><td>${totalHits}</td><td>${totalErrors}</td></tr>`;
+    return row;
+  };
 
-  const homeName = teams.home?.name || 'Home';
-  html += `<tr><td class="team-name">${homeName}</td>`;
-  for (let i = 0; i < innings; i += 1) {
-    const value = gameState.inning_scores.home[i];
-    html += `<td>${value ?? ''}</td>`;
-  }
-  html += `<td>${gameState.score.home}</td></tr>`;
+  html += renderRow('away');
+  html += renderRow('home');
   html += '</tbody></table>';
 
   elements.scoreboard.innerHTML = html;
@@ -293,6 +403,31 @@ function updateRosters(tbody, players) {
   });
 }
 
+function updateBench(listEl, benchPlayers, emptyMessage = '利用可能なベンチ選手はいません') {
+  if (!listEl) return;
+  listEl.innerHTML = '';
+
+  if (!benchPlayers || benchPlayers.length === 0) {
+    const li = document.createElement('li');
+    li.classList.add('empty');
+    li.textContent = emptyMessage;
+    listEl.appendChild(li);
+    return;
+  }
+
+  benchPlayers.forEach((player) => {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = player.name;
+    const eligible = document.createElement('span');
+    const eligibleText = (player.eligible || []).join(', ');
+    eligible.textContent = eligibleText || '-';
+    li.appendChild(name);
+    li.appendChild(eligible);
+    listEl.appendChild(li);
+  });
+}
+
 function updatePitchers(listEl, pitchers) {
   if (!listEl) return;
   listEl.innerHTML = '';
@@ -321,6 +456,156 @@ function updateLog(logEntries) {
     elements.logContainer.appendChild(div);
   });
   elements.logContainer.scrollTop = elements.logContainer.scrollHeight;
+}
+
+function populateSelect(selectEl, options, placeholder) {
+  if (!selectEl) return;
+  const previousValue = selectEl.value;
+  selectEl.innerHTML = '';
+
+  const placeholderOption = document.createElement('option');
+  placeholderOption.value = '';
+  placeholderOption.textContent = placeholder;
+  placeholderOption.disabled = true;
+  placeholderOption.selected = true;
+  selectEl.appendChild(placeholderOption);
+
+  options.forEach((option) => {
+    const opt = document.createElement('option');
+    opt.value = `${option.value}`;
+    opt.textContent = option.label;
+    selectEl.appendChild(opt);
+  });
+
+  if (options.length) {
+    const exists = options.some((option) => `${option.value}` === previousValue);
+    if (exists) {
+      selectEl.value = previousValue;
+      placeholderOption.selected = false;
+    } else {
+      selectEl.value = '';
+    }
+  } else {
+    selectEl.value = '';
+  }
+}
+
+function updateStrategyControls(gameState, teams) {
+  const {
+    pinchTarget,
+    pinchPlayer,
+    pinchButton,
+    defenseTarget,
+    defensePlayer,
+    defenseButton,
+    pitcherSelect,
+    pitcherButton,
+  } = elements;
+
+  const isActive = Boolean(gameState.active);
+
+  const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
+  const offenseLineup = offenseTeam?.lineup || [];
+  const offenseBench = offenseTeam?.bench || [];
+
+  if (pinchTarget && pinchPlayer && pinchButton) {
+    const lineupPlaceholder = offenseLineup.length
+      ? '代打対象を選択'
+      : '出場中の選手がいません';
+    const benchPlaceholder = offenseBench.length
+      ? 'ベンチ選手を選択'
+      : '選択可能な選手がいません';
+
+    populateSelect(
+      pinchTarget,
+      offenseLineup.map((player) => ({
+        value: player.index,
+        label: `${player.order}. ${player.position || '-'} ${player.name}`,
+      })),
+      lineupPlaceholder,
+    );
+
+    populateSelect(
+      pinchPlayer,
+      offenseBench.map((player) => ({
+        value: player.index,
+        label: `${player.name} (${(player.eligible || []).join(', ') || '-'})`,
+      })),
+      benchPlaceholder,
+    );
+
+    const canPinch = isActive && offenseLineup.length > 0 && offenseBench.length > 0;
+    pinchButton.disabled = !canPinch;
+    pinchTarget.disabled = !canPinch;
+    pinchPlayer.disabled = !canPinch;
+    if (!canPinch) {
+      pinchTarget.value = '';
+      pinchPlayer.value = '';
+    }
+  }
+
+  const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
+  const defenseLineup = defenseTeam?.lineup || [];
+  const defenseBenchPlayers = defenseTeam?.bench || [];
+  const pitcherOptions = defenseTeam?.pitcher_options || [];
+
+  if (defenseTarget && defensePlayer && defenseButton) {
+    const lineupPlaceholder = defenseLineup.length
+      ? '守備交代する選手を選択'
+      : '守備につく選手がいません';
+    const benchPlaceholder = defenseBenchPlayers.length
+      ? 'ベンチ選手を選択'
+      : '選択可能な選手がいません';
+
+    populateSelect(
+      defenseTarget,
+      defenseLineup.map((player) => ({
+        value: player.index,
+        label: `${player.position || '-'} ${player.name}`,
+      })),
+      lineupPlaceholder,
+    );
+
+    populateSelect(
+      defensePlayer,
+      defenseBenchPlayers.map((player) => ({
+        value: player.index,
+        label: `${player.name} (${(player.eligible || []).join(', ') || '-'})`,
+      })),
+      benchPlaceholder,
+    );
+
+    const canSubDefense = isActive && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
+    defenseButton.disabled = !canSubDefense;
+    defenseTarget.disabled = !canSubDefense;
+    defensePlayer.disabled = !canSubDefense;
+    if (!canSubDefense) {
+      defenseTarget.value = '';
+      defensePlayer.value = '';
+    }
+  }
+
+  if (pitcherSelect && pitcherButton) {
+    const pitcherPlaceholder = pitcherOptions.length
+      ? '交代する投手を選択'
+      : '交代可能な投手がいません';
+
+    populateSelect(
+      pitcherSelect,
+      pitcherOptions.map((pitcher) => ({
+        value: pitcher.index,
+        label: `${pitcher.name} (${pitcher.pitcher_type || 'P'})`,
+      })),
+      pitcherPlaceholder,
+    );
+
+    const canChangePitcher = isActive && pitcherOptions.length > 0;
+    pitcherButton.disabled = !canChangePitcher;
+    pitcherSelect.disabled = !canChangePitcher;
+    if (!canChangePitcher) {
+      pitcherSelect.value = '';
+    }
+  }
 }
 
 function showStatus(message, level = 'danger') {

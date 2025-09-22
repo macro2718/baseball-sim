@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Tuple
 from baseball_sim.config import GameResults, setup_project_environment
 from baseball_sim.data.loader import DataLoader
 from baseball_sim.gameplay.game import GameState
+from baseball_sim.gameplay.substitutions import SubstitutionManager
 
 setup_project_environment()
 
@@ -210,6 +211,64 @@ class WebGameSession:
 
         return self.build_state()
 
+    def execute_pinch_hit(self, lineup_index: int, bench_index: int) -> Dict[str, object]:
+        """Replace the selected batter with a bench player."""
+
+        if not self.game_state or not self.game_state.batting_team:
+            raise GameSessionError("Game has not started yet.")
+
+        substitution_manager = SubstitutionManager(self.game_state.batting_team)
+        success, message = substitution_manager.execute_pinch_hit(bench_index, lineup_index)
+
+        self._notification = Notification(
+            level="success" if success else "danger",
+            message=message,
+        )
+        self._append_log(message, variant="highlight" if success else "danger")
+        return self.build_state()
+
+    def execute_defensive_substitution(
+        self, lineup_index: int, bench_index: int
+    ) -> Dict[str, object]:
+        """Swap a defensive player with a bench player."""
+
+        if not self.game_state or not self.game_state.fielding_team:
+            raise GameSessionError("Game has not started yet.")
+
+        substitution_manager = SubstitutionManager(self.game_state.fielding_team)
+        success, message = substitution_manager.execute_defensive_substitution(
+            bench_index, lineup_index
+        )
+
+        self._notification = Notification(
+            level="success" if success else "danger",
+            message=message,
+        )
+        variant = "highlight" if success else "danger"
+        self._append_log(message, variant=variant)
+        if success:
+            self._refresh_defense_status()
+        return self.build_state()
+
+    def execute_pitcher_change(self, pitcher_index: int) -> Dict[str, object]:
+        """Bring in a new pitcher for the fielding team."""
+
+        if not self.game_state or not self.game_state.fielding_team:
+            raise GameSessionError("Game has not started yet.")
+
+        substitution_manager = SubstitutionManager(self.game_state.fielding_team)
+        success, message = substitution_manager.execute_pitcher_change(pitcher_index)
+
+        self._notification = Notification(
+            level="success" if success else "danger",
+            message=message,
+        )
+        variant = "highlight" if success else "danger"
+        self._append_log(message, variant=variant)
+        if success:
+            self._refresh_defense_status()
+        return self.build_state()
+
     # ------------------------------------------------------------------
     # State serialization
     # ------------------------------------------------------------------
@@ -254,6 +313,13 @@ class WebGameSession:
         self._log.append({"text": message, "variant": variant})
         if len(self._log) > self.MAX_LOG_ENTRIES:
             del self._log[:-self.MAX_LOG_ENTRIES]
+
+    def _refresh_defense_status(self) -> None:
+        if not self.game_state:
+            return
+        evaluate = getattr(self.game_state, "_evaluate_defensive_alignment", None)
+        if callable(evaluate):
+            evaluate()
 
     def _record_game_over(self) -> None:
         if self._game_over_announced or not self.game_state:
@@ -337,8 +403,11 @@ class WebGameSession:
                 "game_over": False,
                 "defensive_errors": [],
                 "score": {"home": 0, "away": 0},
+                "hits": {"home": 0, "away": 0},
+                "errors": {"home": 0, "away": 0},
                 "inning_scores": {"home": [], "away": []},
                 "situation": "Waiting for a new game.",
+                "max_innings": 9,
             }
 
         batting_team = self.game_state.batting_team
@@ -377,6 +446,8 @@ class WebGameSession:
             "home": list(inning_scores[1]),
         }
 
+        max_innings = max(len(scoreboard["away"]), len(scoreboard["home"]), 9)
+
         situation = self._format_situation()
 
         return {
@@ -394,6 +465,11 @@ class WebGameSession:
             "current_batter": current_batter,
             "current_pitcher": current_pitcher,
             "score": {"home": self.game_state.home_score, "away": self.game_state.away_score},
+            "hits": {
+                "home": self._count_hits(self.home_team),
+                "away": self._count_hits(self.away_team),
+            },
+            "errors": {"home": 0, "away": 0},
             "inning_scores": scoreboard,
             "actions": {
                 "swing": allowed and not self.game_state.game_ended,
@@ -404,6 +480,7 @@ class WebGameSession:
             "game_over": self.game_state.game_ended,
             "situation": situation,
             "matchup": self._format_matchup(current_batter, current_pitcher),
+            "max_innings": max_innings,
         }
 
     def _build_teams_state(self) -> Dict[str, Optional[Dict[str, object]]]:
@@ -419,6 +496,7 @@ class WebGameSession:
             for index, player in enumerate(team.lineup):
                 lineup.append(
                     {
+                        "index": index,
                         "order": index + 1,
                         "name": player.name,
                         "position": self._display_position(player),
@@ -427,13 +505,20 @@ class WebGameSession:
                     }
                 )
 
-            bench = [
-                {
-                    "name": player.name,
-                    "eligible": self._eligible_positions(player),
-                }
-                for player in team.bench
-            ]
+            available_bench = (
+                team.get_available_bench_players()
+                if hasattr(team, "get_available_bench_players")
+                else list(team.bench)
+            )
+            bench = []
+            for bench_index, player in enumerate(available_bench):
+                bench.append(
+                    {
+                        "index": bench_index,
+                        "name": player.name,
+                        "eligible": self._eligible_positions(player),
+                    }
+                )
 
             pitchers = []
             seen_ids = set()
@@ -446,11 +531,27 @@ class WebGameSession:
                     continue
                 pitchers.append(self._serialize_pitcher(pitcher, is_current=False))
 
+            available_pitchers = (
+                team.get_available_pitchers()
+                if hasattr(team, "get_available_pitchers")
+                else []
+            )
+            pitcher_options = []
+            for pitcher_index, pitcher in enumerate(available_pitchers):
+                pitcher_options.append(
+                    {
+                        "index": pitcher_index,
+                        "name": pitcher.name,
+                        "pitcher_type": getattr(pitcher, "pitcher_type", "P"),
+                    }
+                )
+
             teams[key] = {
                 "name": team.name,
                 "lineup": lineup,
                 "bench": bench,
                 "pitchers": pitchers,
+                "pitcher_options": pitcher_options,
             }
 
         return teams
@@ -500,3 +601,17 @@ class WebGameSession:
         if not batter or not pitcher:
             return None
         return f"{batter['name']} vs {pitcher['name']}"
+
+    @staticmethod
+    def _count_hits(team) -> int:
+        if not team:
+            return 0
+        total = 0
+        for player in getattr(team, "lineup", []):
+            stats = getattr(player, "stats", {}) or {}
+            singles = stats.get("1B", 0)
+            doubles = stats.get("2B", 0)
+            triples = stats.get("3B", 0)
+            homers = stats.get("HR", 0)
+            total += singles + doubles + triples + homers
+        return int(total)
