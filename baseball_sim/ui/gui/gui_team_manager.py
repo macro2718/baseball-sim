@@ -92,12 +92,6 @@ class TeamManager:
         else:
             return None
     
-    def reset_lineups(self):
-        """すべてのラインナップをリセット"""
-        for manager in self._lineup_managers.values():
-            if hasattr(manager, '_reset_positions'):
-                manager._reset_positions()
-
     def reset_teams(self):
         """チーム情報をクリアして再読み込み可能にする"""
         self.home_team = None

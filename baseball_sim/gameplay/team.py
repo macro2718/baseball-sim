@@ -240,16 +240,6 @@ class Team:
                 formation[position] = player
         return formation
     
-    def display_lineup(self):
-        """現在のラインナップを表示"""
-        print(f"\n=== {self.name} Lineup ===")
-        for i, player in enumerate(self.lineup, 1):
-            print(f"{i}. {player.name} ({player.current_position})")
-        
-        missing = self.get_missing_positions()
-        if missing:
-            print(f"\nMissing positions: {', '.join(missing)}")
-    
     def validate_lineup(self):
         """ラインナップの妥当性をチェック"""
         errors = []
@@ -283,39 +273,13 @@ class Team:
         for player in self.lineup:
             player.current_position = None
             self.bench.append(player)
-        
+
         self.lineup.clear()
         self.defensive_positions = {pos: None for pos in self.required_positions}
         self.current_batter_index = 0
-        
+
         # 退場リストもリセット（新しい試合の場合）
         self.ejected_players.clear()
-    
-    def display_ejected_players(self):
-        """退場した選手のリストを表示"""
-        if self.ejected_players:
-            print(f"\n=== {self.name} 退場選手 ===")
-            for i, player in enumerate(self.ejected_players, 1):
-                primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-                print(f"{i}. {player.name} ({primary_pos})")
-        else:
-            print(f"\n{self.name}: 退場選手なし")
-    
-    def game_summary(self):
-        """試合終了時のサマリー表示"""
-        print(f"\n=== {self.name} 試合サマリー ===")
-        print(f"最終ラインナップ:")
-        for i, player in enumerate(self.lineup, 1):
-            print(f"  {i}. {player.name} ({player.current_position})")
-        
-        print(f"現在の投手: {self.current_pitcher.name if self.current_pitcher else 'なし'}")
-        
-        if self.ejected_players:
-            print(f"退場選手 ({len(self.ejected_players)}人):")
-            for player in self.ejected_players:
-                print(f"  - {player.name}")
-        else:
-            print("退場選手: なし")
     
     def substitute_player(self, lineup_index, substitute_player):
         """守備交代（代走・守備固めなど）- 選手オブジェクト版"""

@@ -1,7 +1,7 @@
 """
 Substitution Manager
 選手交代・ポジション変更の統一管理モジュール
-GUIとターミナルモードの両方で使用される選手交代機能を提供
+GUI向けの選手交代機能を提供
 """
 
 import itertools
@@ -12,8 +12,10 @@ from baseball_sim.gameplay.lineup import LineupManager
 
 class SubstitutionManager:
     """
-    選手交代を統一管理するクラス
-    GUIとターミナルの両方のモードから使用される
+    選手交代を統一管理するクラス。
+
+    旧ターミナルモードの削除後もGUIから一貫して利用できるよう、
+    チームとラインナップ操作をまとめて提供する。
     """
     
     def __init__(self, team):
