@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
+from typing import Optional, Sequence
 
 from baseball_sim.config import GameResults, UIConstants, setup_project_environment
 from baseball_sim.infrastructure.logging_utils import logger
@@ -636,6 +637,13 @@ class BaseballGUI:
         if 'offense_roster_frame' in self.screen_elements:
             self.screen_elements['offense_roster_frame'].config(text=f"Offense: {batting_team.name}")
         
+        offense_current_index = None
+        if getattr(batting_team, 'lineup', None):
+            try:
+                offense_current_index = batting_team.current_batter_index % len(batting_team.lineup)
+            except Exception:
+                offense_current_index = None
+
         for i, text_widget in enumerate(self.offense_players):
             if i < len(batting_team.lineup):
                 player = batting_team.lineup[i]
@@ -645,11 +653,11 @@ class BaseballGUI:
                 eligible_positions = player.get_display_eligible_positions() if hasattr(player, 'get_display_eligible_positions') else [primary_pos]
                 
                 # ローラインを部分着色で描画
-                is_current_batter = (i == batting_team.current_batter_index)
+                is_current_batter = offense_current_index is not None and i == offense_current_index
                 self._render_roster_line(
                     text_widget,
                     line_index=i + 1,
-                    star=is_current_batter,
+                    markers=["★"] if is_current_batter else None,
                     current_pos=current_pos,
                     player=player,
                     eligible_positions=eligible_positions,
@@ -662,6 +670,13 @@ class BaseballGUI:
         if 'defense_roster_frame' in self.screen_elements:
             self.screen_elements['defense_roster_frame'].config(text=f"Defense: {fielding_team.name}")
         
+        defense_next_batter_index = None
+        if getattr(fielding_team, 'lineup', None):
+            try:
+                defense_next_batter_index = fielding_team.current_batter_index % len(fielding_team.lineup)
+            except Exception:
+                defense_next_batter_index = None
+
         for i, text_widget in enumerate(self.defense_players):
             if i < len(fielding_team.lineup):
                 player = fielding_team.lineup[i]
@@ -671,11 +686,15 @@ class BaseballGUI:
                 eligible_positions = player.get_display_eligible_positions() if hasattr(player, 'get_display_eligible_positions') else [primary_pos]
                 
                 # ローラインを部分着色で描画
-                is_current_pitcher = (player == fielding_team.current_pitcher)
+                markers = []
+                if player == fielding_team.current_pitcher:
+                    markers.append("★")
+                if defense_next_batter_index is not None and i == defense_next_batter_index:
+                    markers.append("☆")
                 self._render_roster_line(
                     text_widget,
                     line_index=i + 1,
-                    star=is_current_pitcher,
+                    markers=markers or None,
                     current_pos=current_pos,
                     player=player,
                     eligible_positions=eligible_positions,
@@ -733,10 +752,10 @@ class BaseballGUI:
         self,
         text_widget,
         line_index: int,
-        star: bool,
         current_pos: str,
         player,
         eligible_positions,
+        markers: Optional[Sequence[str]] = None,
         show_index: bool = True,
     ):
         """1行分のロスター表示を、ポジション語のみ色付きで描画する"""
@@ -754,11 +773,14 @@ class BaseballGUI:
             return tag_name
 
         # 先頭: 星印と番号（番号は必要に応じて非表示）
-        prefix = ""
-        if star:
-            prefix += "★ "
+        prefix_parts = []
+        if markers:
+            prefix_parts.extend([marker for marker in markers if marker])
         if show_index:
-            prefix += f"{line_index}. "
+            prefix_parts.append(f"{line_index}.")
+        prefix = " ".join(prefix_parts)
+        if prefix:
+            prefix += " "
         text_widget.insert(tk.END, prefix)
 
         # 現在の守備位置（色付き）
@@ -1349,7 +1371,7 @@ class BaseballGUI:
                     self._render_roster_line(
                         widget,
                         line_index=idx + 1,
-                        star=False,
+                        markers=None,
                         current_pos=current_pos,
                         player=player,
                         eligible_positions=eligible_positions,
@@ -1371,7 +1393,7 @@ class BaseballGUI:
                     self._render_roster_line(
                         widget,
                         line_index=idx + 1,
-                        star=False,
+                        markers=None,
                         current_pos=current_pos,
                         player=player,
                         eligible_positions=eligible_positions,
