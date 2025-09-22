@@ -21,9 +21,9 @@ def simulate_games(num_games=10, output_file=None, progress_callback=None, messa
         output_file = os.path.join(output_dir, f"simulation_results_{timestamp}.txt")
 
     if message_callback:
-        message_callback(f"結果は {output_file} に保存されます。")
+        message_callback(f"Results will be saved to {output_file}.")
     else:
-        print(f"結果は {output_file} に保存されます。")
+        print(f"Results will be saved to {output_file}.")
     
     # 結果を保存するデータ構造を初期化
     results = {
@@ -47,10 +47,10 @@ def simulate_games(num_games=10, output_file=None, progress_callback=None, messa
     
     for game_num in range(1, num_games + 1):
         if message_callback:
-            message_callback(f"シミュレーション中... 試合 {game_num}/{num_games}")
+            message_callback(f"In Simulation... Game {game_num}/{num_games}")
         else:
-            print(f"シミュレーション中... 試合 {game_num}/{num_games}")
-        
+            print(f"In Simulation... Game {game_num}/{num_games}")
+
         # 試合前にチームと選手の状態をリセット
         reset_team_and_players(home_team, away_team)
         
@@ -69,14 +69,14 @@ def simulate_games(num_games=10, output_file=None, progress_callback=None, messa
         if progress_callback:
             progress_callback(game_num, num_games)
         if message_callback:
-            message_callback(f"試合 {game_num}/{num_games} が完了しました。")
+            message_callback(f"Game {game_num}/{num_games} complete.")
     
     # 結果をファイルに出力
     output_results(results, output_file)
 
     results["output_file"] = output_file
 
-    completion_message = f"シミュレーション完了。結果は {output_file} に保存されました。"
+    completion_message = f"Simulation complete. Results will be saved to {output_file}."
     if message_callback:
         message_callback(completion_message)
     else:

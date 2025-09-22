@@ -17,8 +17,8 @@ class StartupWindow:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Baseball Simulation - モード選択")
-        self.root.geometry("400x260")
+        self.root.title("Baseball Simulation - Select Mode")
+        self.root.geometry("800x520")
         self.root.resizable(False, False)
 
         self.selected_mode = None
@@ -33,36 +33,37 @@ class StartupWindow:
 
         title_label = ttk.Label(
             main_frame,
-            text="ベースボールシミュレーターへようこそ",
-            font=("Helvetica", 14, "bold"),
+            text="Welcome to the Baseball Simulator",
+            font=("Helvetica", 25, "bold"),
             anchor="center"
         )
-        title_label.pack(pady=(0, 10))
+        title_label.pack(pady=(0, 20))
 
         description = ttk.Label(
             main_frame,
-            text="起動するモードを選択してください。",
+            text="Please select a mode to start.",
+            font=("Helvetica", 16),
             anchor="center"
         )
-        description.pack(pady=(0, 20))
+        description.pack(pady=(0, 40))
 
         gui_button = ttk.Button(
             main_frame,
-            text="GUIモード (チーム編成＆試合)",
+            text="GUI Mode (Team Management & Games)",
             command=lambda: self._select_mode("gui")
         )
-        gui_button.pack(fill="x", pady=5)
+        gui_button.pack(fill="x", pady=15)
 
         simulation_button = ttk.Button(
             main_frame,
-            text="シミュレーションモード (自動試合)",
+            text="Simulation Mode (Automated Games)",
             command=lambda: self._select_mode("simulation")
         )
         simulation_button.pack(fill="x", pady=5)
 
         exit_button = ttk.Button(
             main_frame,
-            text="終了",
+            text="Exit",
             command=self._on_close
         )
         exit_button.pack(fill="x", pady=(20, 0))
@@ -91,8 +92,8 @@ class SimulationWindow:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Baseball Simulation - シミュレーション")
-        self.root.geometry("640x520")
+        self.root.title("Baseball Simulation - Simulation Mode")
+        self.root.geometry("960x780")
 
         self.progress_queue = queue.Queue()
         self.simulation_thread = None
@@ -102,8 +103,8 @@ class SimulationWindow:
 
         self.num_games_var = tk.StringVar(value="10")
         self.output_file_var = tk.StringVar()
-        self.progress_label_var = tk.StringVar(value="0 / 0 試合")
-        self.status_var = tk.StringVar(value="シミュレーション待機中")
+        self.progress_label_var = tk.StringVar(value="0 / 0 games")
+        self.status_var = tk.StringVar(value="Waiting for simulation to start...")
 
         self._build_widgets()
 
@@ -119,14 +120,14 @@ class SimulationWindow:
         main_frame = ttk.Frame(self.root, padding=20)
         main_frame.pack(fill="both", expand=True)
 
-        settings_frame = ttk.LabelFrame(main_frame, text="シミュレーション設定", padding=15)
+        settings_frame = ttk.LabelFrame(main_frame, text="Simulation Settings", padding=15)
         settings_frame.pack(fill="x")
 
-        ttk.Label(settings_frame, text="試合数:").grid(row=0, column=0, sticky="w")
+        ttk.Label(settings_frame, text="Number of Games:").grid(row=0, column=0, sticky="w")
         self.games_entry = ttk.Entry(settings_frame, textvariable=self.num_games_var, width=10)
         self.games_entry.grid(row=0, column=1, sticky="w", padx=(5, 0))
 
-        ttk.Label(settings_frame, text="出力ファイル名:\n(空欄の場合は自動生成)").grid(
+        ttk.Label(settings_frame, text="Output File Name:\n(Leave blank for auto-generate)").grid(
             row=1, column=0, sticky="nw", pady=(10, 0)
         )
         self.output_entry = ttk.Entry(settings_frame, textvariable=self.output_file_var)
@@ -137,13 +138,13 @@ class SimulationWindow:
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(fill="x", pady=(15, 0))
 
-        self.start_button = ttk.Button(button_frame, text="シミュレーション開始", command=self._start_simulation)
+        self.start_button = ttk.Button(button_frame, text="Start Simulation", command=self._start_simulation)
         self.start_button.pack(side="left")
 
-        self.close_button = ttk.Button(button_frame, text="閉じる", command=self._on_close)
+        self.close_button = ttk.Button(button_frame, text="Close", command=self._on_close)
         self.close_button.pack(side="right")
 
-        progress_frame = ttk.LabelFrame(main_frame, text="進捗", padding=15)
+        progress_frame = ttk.LabelFrame(main_frame, text="Progress", padding=15)
         progress_frame.pack(fill="x", pady=(15, 0))
 
         self.progress_bar = ttk.Progressbar(progress_frame, maximum=1, value=0)
@@ -155,7 +156,7 @@ class SimulationWindow:
         status_label = ttk.Label(main_frame, textvariable=self.status_var, foreground="#333333")
         status_label.pack(fill="x", pady=(15, 0))
 
-        log_frame = ttk.LabelFrame(main_frame, text="進行ログ", padding=10)
+        log_frame = ttk.LabelFrame(main_frame, text="Progress Log", padding=10)
         log_frame.pack(fill="both", expand=True, pady=(15, 0))
 
         self.log_text = tk.Text(log_frame, height=12, state="disabled", wrap="word")
@@ -175,7 +176,7 @@ class SimulationWindow:
             if num_games <= 0:
                 raise ValueError
         except ValueError:
-            messagebox.showerror("入力エラー", "試合数には1以上の整数を入力してください。")
+            messagebox.showerror("Input error", "Please enter an integer greater than or equal to 1 for the number of games.")
             return
 
         output_file = self.output_file_var.get().strip() or None
@@ -183,9 +184,9 @@ class SimulationWindow:
         self.total_games = num_games
         self.progress_bar.config(maximum=num_games)
         self.progress_bar["value"] = 0
-        self.progress_label_var.set(f"0 / {num_games} 試合")
-        self.status_var.set("シミュレーション準備中...")
-        self._append_log(f"{num_games}試合のシミュレーションを開始します。")
+        self.progress_label_var.set(f"0 / {num_games} games")
+        self.status_var.set("Preparing for simulation...")
+        self._append_log(f"Starting simulation for {num_games} games.")
 
         self.games_entry.config(state=tk.DISABLED)
         self.output_entry.config(state=tk.DISABLED)
@@ -232,7 +233,7 @@ class SimulationWindow:
                     _, current, total = item
                     self.progress_bar.config(maximum=max(total, 1))
                     self.progress_bar["value"] = current
-                    self.progress_label_var.set(f"{current} / {total} 試合")
+                    self.progress_label_var.set(f"{current} / {total} games")
                 elif event_type == "message":
                     _, message = item
                     self.status_var.set(message)
@@ -264,15 +265,15 @@ class SimulationWindow:
 
         output_path = results.get("output_file") if isinstance(results, dict) else None
         if output_path:
-            completion_message = f"シミュレーション完了: {output_path}"
+            completion_message = f"Simulation complete: {output_path}"
         else:
-            completion_message = "シミュレーションが完了しました。"
+            completion_message = "Simulation complete."
 
         if self.status_var.get() != completion_message:
             self.status_var.set(completion_message)
             self._append_log(completion_message)
 
-        messagebox.showinfo("完了", completion_message)
+        messagebox.showinfo("Complete", completion_message)
 
     def _on_simulation_error(self, error_message: str) -> None:
         """エラー発生時の処理"""
@@ -283,9 +284,9 @@ class SimulationWindow:
         self.start_button.config(state=tk.NORMAL)
         self.close_button.config(state=tk.NORMAL)
 
-        self.status_var.set(f"エラー: {error_message}")
-        self._append_log(f"エラー: {error_message}")
-        messagebox.showerror("エラー", error_message)
+        self.status_var.set(f"Error: {error_message}")
+        self._append_log(f"Error: {error_message}")
+        messagebox.showerror("Error", error_message)
 
     def _append_log(self, message: str) -> None:
         """ログエリアにメッセージを追加"""
@@ -297,7 +298,7 @@ class SimulationWindow:
     def _on_close(self) -> None:
         """ウィンドウを閉じる"""
         if self.is_running:
-            messagebox.showwarning("シミュレーション中", "シミュレーション終了までお待ちください。")
+            messagebox.showwarning("Simulation in Progress", "Please wait until the simulation is complete.")
             return
 
         self.root.destroy()
