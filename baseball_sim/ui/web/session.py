@@ -67,12 +67,20 @@ class WebGameSession:
         self._log.clear()
         self._game_over_announced = False
         self._action_block_reason = None
+        
+        # GUI版に近いより詳細なゲーム開始ログ
         self._notification = Notification(
             level="info",
-            message=f"Game start: {self.away_team.name} at {self.home_team.name}",
+            message=f"New game started: {self.away_team.name} @ {self.home_team.name}",
         )
-        self._append_log(self._notification.message, variant="info")
-        self._append_log("=== TOP of the 1 ===", variant="highlight")
+        self._append_log("=" * 60, variant="highlight")
+        self._append_log("🏟️  NEW GAME STARTED  🏟️", variant="success")
+        self._append_log("=" * 60, variant="highlight")
+        self._append_log(f"⚾ {self.away_team.name} (Away) @ {self.home_team.name} (Home)", variant="info")
+        self._append_log(f"📅 Starting at inning 1", variant="info")
+        self._append_log("=" * 60, variant="highlight")
+        self._append_log("=== 🔼 TOP of the 1st ===", variant="highlight")
+        self._append_log(f"🏃 {self.away_team.name} batting", variant="info")
         return self.build_state()
 
     def stop_game(self) -> Dict[str, Any]:
@@ -163,7 +171,12 @@ class WebGameSession:
         if not inning_changed:
             self.game_state.batting_team.next_batter()
         else:
-            self._append_log(self._half_inning_banner(), variant="highlight")
+            # イニング切り替え時は詳細なバナーを分割して表示
+            banner = self._half_inning_banner()
+            for line in banner.split('\n'):
+                if line.strip():
+                    variant = "highlight" if line.startswith("===") or line.startswith("=") else "info"
+                    self._append_log(line, variant=variant)
 
         if self.game_state.game_ended:
             self._record_game_over()
@@ -224,7 +237,12 @@ class WebGameSession:
             or prev_half != self.game_state.is_top_inning
         )
         if inning_changed:
-            self._append_log(self._half_inning_banner(), variant="highlight")
+            # イニング切り替え時は詳細なバナーを分割して表示
+            banner = self._half_inning_banner()
+            for line in banner.split('\n'):
+                if line.strip():
+                    variant = "highlight" if line.startswith("===") or line.startswith("=") else "info"
+                    self._append_log(line, variant=variant)
 
         if self.game_state.game_ended:
             self._record_game_over()
@@ -399,8 +417,38 @@ class WebGameSession:
     def _half_inning_banner(self) -> str:
         if not self.game_state:
             return ""
+        
         half = "TOP" if self.game_state.is_top_inning else "BOTTOM"
-        return f"=== {half} of the {self.game_state.inning} ==="
+        inning_ordinal = self._get_inning_ordinal(self.game_state.inning)
+        
+        # より詳細なイニング切り替えバナー
+        batting_team = self.away_team.name if self.game_state.is_top_inning else self.home_team.name
+        emoji = "🔼" if self.game_state.is_top_inning else "🔽"
+        
+        # イニング開始の詳細ログ
+        banner_lines = []
+        banner_lines.append("=" * 40)
+        banner_lines.append(f"=== {emoji} {half} of the {inning_ordinal} ===")
+        banner_lines.append(f"🏃 {batting_team} batting")
+        if self.game_state.inning >= 9 and not self.game_state.is_top_inning:
+            home_score = getattr(self.game_state, 'home_score', 0)
+            away_score = getattr(self.game_state, 'away_score', 0)
+            if home_score > away_score:
+                banner_lines.append("⚡ Walk-off opportunity!")
+        banner_lines.append("=" * 40)
+        
+        return "\n".join(banner_lines)
+
+    def _get_inning_ordinal(self, inning: int) -> str:
+        """Convert inning number to ordinal (1st, 2nd, 3rd, 4th, etc.)"""
+        if inning == 1:
+            return "1st"
+        elif inning == 2:
+            return "2nd"
+        elif inning == 3:
+            return "3rd"
+        else:
+            return f"{inning}th"
 
     def _build_title_state(self) -> Dict[str, object]:
         home_status = self._team_status(self.home_team)
