@@ -911,11 +911,16 @@ class RunnerEngine:
 
     # ---- フライアウト ----
     def apply_flyout(self, batter) -> int:
-        """フライアウト時の進塁・得点処理（得点数を返す）。
+        """フライアウト時の進塁・得点処理（得点数を返す）。"""
 
-        前提: 呼び出し元で投手のIPを1/3加算、打者ABを加算し、最後に打者アウトを付与する。
-        ここでは犠牲フライの判定と走者のタッチアップ処理を行う。
-        """
+        fly_ball_roll = random.random()
+        if fly_ball_roll < 0.13:
+            return self._handle_infield_flyout(batter)
+        return self._handle_outfield_flyout(batter)
+
+    def _handle_outfield_flyout(self, batter) -> int:
+        """外野フライ時のタッチアップ処理と得点計算。"""
+
         runs = 0
         if self.game_state.outs < 2:
             bases = self.game_state.bases
@@ -998,3 +1003,31 @@ class RunnerEngine:
                             return runs
 
         return runs
+
+    def _handle_infield_flyout(self, batter) -> int:
+        """内野フライ時の処理。基本的には走者は進塁せず、稀にダブルプレーが発生する。"""
+
+        if self.game_state.outs >= OUTS_PER_INNING:
+            return 0
+
+        bases = self.game_state.bases
+        outs_available = max(0, OUTS_PER_INNING - (self.game_state.outs + 1))
+        if outs_available <= 0:
+            return 0
+
+        lead_runner_index = None
+        for base_index in range(2, -1, -1):
+            if bases[base_index] is not None:
+                lead_runner_index = base_index
+                break
+
+        if lead_runner_index is None:
+            return 0
+
+        double_play_probabilities = {2: 0.02, 1: 0.04, 0: 0.05}
+        double_play_probability = double_play_probabilities.get(lead_runner_index, 0.0)
+        if random.random() < double_play_probability:
+            clear_base(bases, lead_runner_index)
+            self.game_state.add_out()
+
+        return 0
