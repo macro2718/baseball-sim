@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baseball Simulation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <h1>Baseball Simulation</h1>
+        <p class="subtitle">ブラウザで遊べる野球シミュレーター</p>
+      </header>
+
+      <main class="app-main">
+        <div id="status-message" class="status-message" role="status"></div>
+
+        <section id="title-screen" class="screen">
+          <div class="title-card">
+            <h2>チーム状況</h2>
+            <div class="team-status-grid">
+              <div class="team-card" id="away-team-card">
+                <h3 class="team-name" data-team="away">Away</h3>
+                <p class="team-message" data-team="away"></p>
+                <ul class="team-errors" data-team="away"></ul>
+              </div>
+              <div class="team-card" id="home-team-card">
+                <h3 class="team-name" data-team="home">Home</h3>
+                <p class="team-message" data-team="home"></p>
+                <ul class="team-errors" data-team="home"></ul>
+              </div>
+            </div>
+            <p class="title-hint" id="title-hint"></p>
+            <div class="title-actions">
+              <button id="start-game" class="primary">ゲーム開始</button>
+              <button id="reload-teams">データ再読込</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="game-screen" class="screen hidden">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <button id="restart-game">新しい試合</button>
+              <button id="return-title">タイトルへ</button>
+              <button id="clear-log">ログをクリア</button>
+            </div>
+            <div class="toolbar-right">
+              <span id="action-warning" class="action-warning"></span>
+            </div>
+          </div>
+
+          <div class="game-layout">
+            <div class="field-column">
+              <div class="scoreboard" id="scoreboard"></div>
+
+              <div class="situation-panel">
+                <div class="inning-chip" id="half-indicator"></div>
+                <div class="situation-text">
+                  <p id="situation-text">状況</p>
+                  <p id="matchup-text" class="matchup"></p>
+                </div>
+                <div class="outs-chip" id="outs-indicator"></div>
+              </div>
+
+              <div class="bases" id="base-state">
+                <div class="base base3" data-base="2"><span></span></div>
+                <div class="base base2" data-base="1"><span></span></div>
+                <div class="base base1" data-base="0"><span></span></div>
+                <div class="home-plate"></div>
+              </div>
+
+              <div class="roster-panel">
+                <div class="roster" id="offense-roster">
+                  <h3>攻撃</h3>
+                  <table>
+                    <thead>
+                      <tr><th>#</th><th>Pos</th><th>選手</th><th>Eligible</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div class="roster" id="defense-roster">
+                  <h3>守備</h3>
+                  <table>
+                    <thead>
+                      <tr><th>#</th><th>Pos</th><th>選手</th><th>Eligible</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="pitchers-panel">
+                <div class="pitcher-list" id="home-pitchers">
+                  <h3>Home Pitchers</h3>
+                  <ul></ul>
+                </div>
+                <div class="pitcher-list" id="away-pitchers">
+                  <h3>Away Pitchers</h3>
+                  <ul></ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-column">
+              <div class="controls-card">
+                <h3>打撃操作</h3>
+                <button id="swing-button" class="primary">通常打撃</button>
+                <button id="bunt-button">バント</button>
+              </div>
+
+              <div class="defense-alert" id="defense-errors"></div>
+
+              <div class="log-panel">
+                <h3>試合ログ</h3>
+                <div class="log-entries" id="log-entries"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <small>&copy; 2024 Baseball Simulation</small>
+      </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  </body>
+</html>
