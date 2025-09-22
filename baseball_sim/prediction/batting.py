@@ -4,8 +4,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-import joblib
-import torch
+try:  # pragma: no cover - optional dependency
+    import joblib  # type: ignore
+except ImportError:  # pragma: no cover - graceful degradation
+    joblib = None  # type: ignore
+
+try:  # pragma: no cover - optional dependency
+    import torch  # type: ignore
+except ImportError:  # pragma: no cover - graceful degradation
+    torch = None  # type: ignore
 
 from prediction_models.prediction import Net
 
@@ -41,10 +48,15 @@ class BattingModelLoader:
 
     def _load_linear_model(self) -> BattingModel:
         model_path = self._path_manager.get_batting_model_path()
-        if not self._path_manager.file_exists(model_path):
-            self._logger.warning(
-                f"Linear batting model not found at {model_path}, using default prediction"
-            )
+        if not self._path_manager.file_exists(model_path) or joblib is None:
+            if joblib is None:
+                self._logger.warning(
+                    "joblib is not installed; using default linear prediction model"
+                )
+            else:
+                self._logger.warning(
+                    f"Linear batting model not found at {model_path}, using default prediction"
+                )
             return BattingModel(estimator=None, model_type="linear")
 
         model_info = joblib.load(model_path)
@@ -53,6 +65,12 @@ class BattingModelLoader:
         return BattingModel(estimator=estimator, model_type="linear")
 
     def _load_nn_model(self) -> BattingModel:
+        if torch is None:
+            self._logger.warning(
+                "PyTorch is not installed; falling back to linear prediction model"
+            )
+            return self._load_linear_model()
+
         model_path = self._path_manager.get_nn_model_path()
         if not self._path_manager.file_exists(model_path):
             self._logger.warning(
