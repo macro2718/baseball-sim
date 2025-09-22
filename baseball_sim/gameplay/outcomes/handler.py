@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Callable, Dict
 
+from baseball_sim.gameplay.statistics import StatsCalculator
 from baseball_sim.gameplay.utils import RunnerEngine
 
 
@@ -35,8 +36,8 @@ class AtBatOutcomeHandler:
         pitcher = self._game_state.fielding_team.current_pitcher
         pitcher.pitching_stats["IP"] += 1 / 3
         batter.stats["AB"] += 1
-        batter.stats["SO"] += 1
-        pitcher.pitching_stats["SO"] += 1
+        StatsCalculator.record_strikeout(batter.stats)
+        StatsCalculator.record_strikeout(pitcher.pitching_stats)
         self._game_state.add_out()
         return "Strike out"
 

@@ -108,7 +108,7 @@ class StatsManager:
             player.stats.get("R", 0),   # 得点
             player.stats.get("RBI", 0), # 打点
             player.stats.get("BB", 0),  # 四球
-            player.stats.get("K", 0),   # 三振
+            player.stats.get("SO", player.stats.get("K", 0)),   # 三振（SO優先、互換性確保）
             avg                         # 打率
         ]
         

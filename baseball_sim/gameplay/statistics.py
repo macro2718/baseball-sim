@@ -57,18 +57,26 @@ class StatsCalculator:
     def calculate_hr_per_9(home_runs, innings_pitched):
         """HR/9計算（統一処理）"""
         return (home_runs * 9) / innings_pitched if innings_pitched > 0 else 0.00
-    
+
+    @staticmethod
+    def record_strikeout(stats):
+        """記録上の三振数を更新し、SOと旧来のKキーを同期させる"""
+        current = stats.get("SO", stats.get("K", 0)) + 1
+        stats["SO"] = current
+        stats["K"] = current
+        return current
+
     @staticmethod
     def update_player_stats(player, outcome, runs_scored=0, rbis=0):
         """プレイヤー統計更新（統一処理）"""
         stats = player.stats
         stats['AB'] = stats.get('AB', 0) + 1
-        
+
         if outcome in ['single', 'double', 'triple', 'home_run']:
             outcome_key = {'single': '1B', 'double': '2B', 'triple': '3B', 'home_run': 'HR'}[outcome]
             stats[outcome_key] = stats.get(outcome_key, 0) + 1
         elif outcome == 'strikeout':
-            stats['K'] = stats.get('K', 0) + 1
+            StatsCalculator.record_strikeout(stats)
         elif outcome == 'walk':
             stats['BB'] = stats.get('BB', 0) + 1
             stats['AB'] = stats.get('AB') - 1  # 四球は打数に含まれない

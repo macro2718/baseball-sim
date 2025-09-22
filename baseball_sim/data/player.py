@@ -30,6 +30,7 @@ class Player:
             StatColumns.HOME_RUNS: 0,
             StatColumns.WALKS: 0,
             StatColumns.STRIKEOUTS: 0,
+            "K": 0,  # 旧来のキー名との互換性確保
             StatColumns.RUNS_BATTED_IN: 0
         }
 
