@@ -340,15 +340,15 @@ a:focus-visible {
   color: var(--danger);
 }
 
-.insight-card[data-insight='base-pressure'] .insight-value[data-intensity='high'] {
+.insight-card[data-insight='one-run-probability'] .insight-value[data-intensity='high'] {
   color: var(--warning);
 }
 
-.insight-card[data-insight='base-pressure'] .insight-value[data-intensity='medium'] {
+.insight-card[data-insight='one-run-probability'] .insight-value[data-intensity='medium'] {
   color: var(--accent-muted);
 }
 
-.insight-card[data-insight='base-pressure'] .insight-value[data-intensity='low'] {
+.insight-card[data-insight='one-run-probability'] .insight-value[data-intensity='low'] {
   color: var(--text-muted);
 }
 

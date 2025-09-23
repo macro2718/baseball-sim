@@ -34,14 +34,14 @@
           </div>
 
           <div class="header-insights" id="insight-grid">
-            <article class="insight-card" data-insight="run-rate">
+            <article class="insight-card" data-insight="inning-run-expectancy">
               <header class="insight-header">
-                <p class="insight-label">ランペース</p>
-                <span class="insight-icon" aria-hidden="true">⏱️</span>
+                <p class="insight-label">追加得点期待値</p>
+                <span class="insight-icon" aria-hidden="true">📊</span>
               </header>
-              <div class="insight-value" id="insight-run-rate">--</div>
-              <p class="insight-caption">1イニングあたりの総得点期待値</p>
-              <p class="insight-meta" id="insight-innings-sample">イニングサンプル: 0</p>
+              <div class="insight-value" id="insight-inning-run-expectancy">--</div>
+              <p class="insight-caption">このイニングで見込める平均追加得点</p>
+              <p class="insight-meta" id="insight-inning-context">アウト: -- / 走者: --</p>
               <div class="insight-trace" aria-hidden="true">
                 <span style="--h: 34%; --i: 0"></span>
                 <span style="--h: 46%; --i: 1"></span>
@@ -54,14 +54,14 @@
               </div>
             </article>
 
-            <article class="insight-card" data-insight="base-pressure">
+            <article class="insight-card" data-insight="one-run-probability">
               <header class="insight-header">
-                <p class="insight-label">ベースプレッシャー</p>
-                <span class="insight-icon" aria-hidden="true">🧮</span>
+                <p class="insight-label">1点追加確率</p>
+                <span class="insight-icon" aria-hidden="true">🎯</span>
               </header>
-              <div class="insight-value" id="insight-base-pressure">--</div>
-              <p class="insight-caption">埋まっている塁の割合</p>
-              <p class="insight-meta" id="insight-base-count">0 / 3</p>
+              <div class="insight-value" id="insight-one-run-probability">--</div>
+              <p class="insight-caption">このイニングで少なくとも1点を奪う確率</p>
+              <p class="insight-meta" id="insight-one-run-context">走者指数: --</p>
               <div class="insight-trace" aria-hidden="true">
                 <span style="--h: 18%; --i: 0"></span>
                 <span style="--h: 32%; --i: 1"></span>
@@ -74,19 +74,20 @@
               </div>
             </article>
 
-            <article class="insight-card" data-insight="momentum">
+            <article class="insight-card" data-insight="win-probability">
               <header class="insight-header">
-                <p class="insight-label">ゲームモメンタム</p>
-                <span class="insight-icon" aria-hidden="true">📈</span>
+                <p class="insight-label">勝利確率</p>
+                <span class="insight-icon" aria-hidden="true">🏆</span>
               </header>
-              <div class="insight-value" id="insight-run-diff" data-trend="neutral">--</div>
-              <p class="insight-caption">ホーム - ビジターの得点差</p>
-              <div class="insight-meter" aria-label="ゲーム進行度">
+              <div class="insight-value" id="insight-win-probability" data-trend="neutral">--</div>
+              <p class="insight-caption">ホームチームが勝利する仮想確率</p>
+              <div class="insight-meter" aria-label="勝利確率">
                 <div class="insight-meter-track">
-                  <span class="insight-meter-fill" id="insight-progress-fill" style="width: 0%"></span>
+                  <span class="insight-meter-fill" id="insight-probability-fill" style="width: 0%"></span>
                 </div>
-                <span class="insight-meter-label" id="insight-progress-label">0%</span>
+                <span class="insight-meter-label" id="insight-probability-label">--</span>
               </div>
+              <p class="insight-meta" id="insight-win-context">得点差: ±0</p>
               <div class="insight-trace" aria-hidden="true">
                 <span style="--h: 56%; --i: 0"></span>
                 <span style="--h: 62%; --i: 1"></span>
