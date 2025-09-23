@@ -361,9 +361,10 @@
   justify-content: center;
   transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   z-index: 6;
+  outline: none;
 }
 
-.base span {
+.base .base-indicator {
   transform: rotate(-45deg);
   font-weight: 800;
   font-size: clamp(12px, calc(var(--field-size) * 0.07 * var(--diamond-scale)), 28px);
@@ -375,10 +376,79 @@
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.92), rgba(37, 99, 235, 0.9));
   border-color: rgba(191, 219, 254, 0.95);
   box-shadow: 0 0 18px rgba(59, 130, 246, 0.55);
+  cursor: pointer;
 }
 
-.base.occupied span {
+.base.occupied .base-indicator {
   color: rgba(248, 250, 252, 0.98);
+}
+
+.base:focus-visible {
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.6), 0 12px 22px rgba(15, 23, 42, 0.45);
+}
+
+.base .runner-chip {
+  position: absolute;
+  bottom: 118%;
+  left: 50%;
+  transform: translate(-50%, 18px);
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(7, 12, 26, 0.95), rgba(25, 31, 58, 0.82));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.55);
+  min-width: clamp(150px, calc(var(--field-size) * 0.34), 220px);
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(226, 232, 240, 0.96);
+  font-family: var(--font-heading);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 12;
+}
+
+.base .runner-chip::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(165deg, rgba(7, 12, 26, 0.95), rgba(25, 31, 58, 0.82));
+  border-left: 1px solid rgba(148, 163, 184, 0.35);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 12px 22px rgba(2, 6, 23, 0.5);
+  pointer-events: none;
+}
+
+.base .runner-chip .runner-name {
+  font-size: clamp(13px, calc(var(--field-size) * 0.04), 16px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-strong);
+}
+
+.base .runner-chip .runner-speed {
+  font-family: var(--font-mono);
+  font-size: clamp(11px, calc(var(--field-size) * 0.03), 13px);
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.base .runner-chip.active {
+  display: flex;
+}
+
+.base.occupied:hover .runner-chip.active,
+.base.occupied:focus-within .runner-chip.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
 }
 
 .base-first {
