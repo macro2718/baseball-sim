@@ -1,0 +1,65 @@
+/* Responsive overrides */
+@media (max-width: 600px) {
+  .bases {
+    margin: 32px auto 0;
+  }
+
+  .field-outfield {
+    width: 320px;
+    height: 320px;
+    box-shadow:
+      0 12px 24px rgba(15, 23, 42, 0.45),
+      0 0 0 10px rgba(120, 53, 15, 0.45),
+      0 0 0 20px rgba(15, 23, 42, 0.45);
+  }
+
+  .field-outfield::after {
+    inset: 10%;
+  }
+}
+
+@media (max-width: 960px) {
+  .game-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .header-topline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-tags {
+    justify-content: flex-start;
+  }
+
+  .header-insights {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar-left,
+  .toolbar-right {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  .modal {
+    padding: 16px;
+  }
+
+  .modal-card {
+    max-height: calc(100vh - 32px);
+  }
+
+  .defense-modal-body {
+    grid-template-columns: 1fr;
+  }
+}
