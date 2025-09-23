@@ -9,10 +9,60 @@
   <body>
     <div class="app-shell">
       <header class="app-header">
-        <h1>Baseball Simulation</h1>
-        <p class="subtitle">ブラウザで遊べる野球シミュレーター</p>
-        <div class="developer-hint">
-          <small>💡 開発者向け: <kbd>Tab</kbd>キーでログパネルを表示/非表示</small>
+        <div class="header-overlay" aria-hidden="true"></div>
+        <div class="header-content">
+          <div class="header-topline">
+            <div class="title-group">
+              <h1>Baseball Simulation</h1>
+              <p class="subtitle">ブラウザで遊べるデータドリブン野球シミュレーター</p>
+            </div>
+            <div class="header-tags" aria-hidden="true">
+              <span class="header-tag">DATA DRIVEN</span>
+              <span class="header-tag">SIM LAB</span>
+              <span class="header-tag">REALTIME OPS</span>
+            </div>
+          </div>
+
+          <div class="header-insights" id="insight-grid">
+            <article class="insight-card" data-insight="run-rate">
+              <header class="insight-header">
+                <p class="insight-label">ランペース</p>
+                <span class="insight-icon" aria-hidden="true">⏱️</span>
+              </header>
+              <div class="insight-value" id="insight-run-rate">--</div>
+              <p class="insight-caption">1イニングあたりの総得点期待値</p>
+              <p class="insight-meta" id="insight-innings-sample">イニングサンプル: 0</p>
+            </article>
+
+            <article class="insight-card" data-insight="base-pressure">
+              <header class="insight-header">
+                <p class="insight-label">ベースプレッシャー</p>
+                <span class="insight-icon" aria-hidden="true">🧮</span>
+              </header>
+              <div class="insight-value" id="insight-base-pressure">--</div>
+              <p class="insight-caption">埋まっている塁の割合</p>
+              <p class="insight-meta" id="insight-base-count">0 / 3</p>
+            </article>
+
+            <article class="insight-card" data-insight="momentum">
+              <header class="insight-header">
+                <p class="insight-label">ゲームモメンタム</p>
+                <span class="insight-icon" aria-hidden="true">📈</span>
+              </header>
+              <div class="insight-value" id="insight-run-diff" data-trend="neutral">--</div>
+              <p class="insight-caption">ホーム - ビジターの得点差</p>
+              <div class="insight-meter" aria-label="ゲーム進行度">
+                <div class="insight-meter-track">
+                  <span class="insight-meter-fill" id="insight-progress-fill" style="width: 0%"></span>
+                </div>
+                <span class="insight-meter-label" id="insight-progress-label">0%</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="developer-hint">
+            <small>💡 開発者向け: <kbd>Tab</kbd>キーでログパネルを表示/非表示</small>
+          </div>
         </div>
       </header>
 
