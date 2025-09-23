@@ -346,6 +346,8 @@ function updatePitchers(listEl, pitchers) {
   if (!listEl) return;
   listEl.innerHTML = '';
 
+  const section = listEl.closest('.pitcher-section');
+
   const visiblePitchers = Array.isArray(pitchers)
     ? pitchers.filter((pitcher) => {
         if (!pitcher) return false;
@@ -356,16 +358,40 @@ function updatePitchers(listEl, pitchers) {
       })
     : [];
 
+  const hasPitchers = visiblePitchers.length > 0;
+
+  if (section) {
+    if (hasPitchers) {
+      section.classList.remove('hidden');
+      section.setAttribute('aria-hidden', 'false');
+    } else {
+      section.classList.add('hidden');
+      section.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  if (!hasPitchers) {
+    return;
+  }
+
   visiblePitchers.forEach((pitcher) => {
     const li = document.createElement('li');
     if (pitcher.is_current) {
       li.classList.add('current');
     }
-    const stamina = pitcher.stamina != null ? `${pitcher.stamina}` : '-';
-    li.innerHTML = `
-      <span>${pitcher.name} (${pitcher.pitcher_type})</span>
-      <span>${stamina}</span>
-    `;
+
+    const nameSpan = document.createElement('span');
+    const typeRaw = pitcher.pitcher_type != null ? String(pitcher.pitcher_type) : 'P';
+    const typeLabel = typeRaw.trim() || 'P';
+    const nameLabel = pitcher.name != null ? String(pitcher.name).trim() : '';
+    nameSpan.textContent = `${nameLabel || '-'} (${typeLabel})`;
+
+    const staminaSpan = document.createElement('span');
+    const staminaValue = pitcher.stamina != null ? `${pitcher.stamina}` : '-';
+    staminaSpan.textContent = staminaValue;
+
+    li.appendChild(nameSpan);
+    li.appendChild(staminaSpan);
     listEl.appendChild(li);
   });
 }
@@ -1371,6 +1397,8 @@ export function renderGame(gameState, teams, log) {
     updateRosters(elements.defenseRoster, []);
     updateBench(elements.offenseBench, []);
     updateBench(elements.defenseBenchList, []);
+    updatePitchers(elements.offensePitchers, []);
+    updatePitchers(elements.defensePitchers, []);
     updateMatchupPanel(gameState || {}, teams || {});
     updateLog(log || []);
     elements.defenseErrors.classList.add('hidden');
@@ -1399,8 +1427,8 @@ export function renderGame(gameState, teams, log) {
 
   updateMatchupPanel(gameState, teams);
 
-  updatePitchers(elements.homePitchers, teams.home?.pitchers || []);
-  updatePitchers(elements.awayPitchers, teams.away?.pitchers || []);
+  updatePitchers(elements.offensePitchers, offenseTeam?.pitchers || []);
+  updatePitchers(elements.defensePitchers, defenseTeam?.pitchers || []);
 
   updateLog(log || []);
 
