@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from typing import Dict, List, Optional, Protocol, Tuple, TYPE_CHECKING
 
 from baseball_sim.gameplay.statistics import StatsCalculator
@@ -227,6 +229,8 @@ class SessionStateBuilder:
                 summary = self._lineup_batter_summary(player)
                 bats = getattr(player, "bats", None)
                 bats_display = str(bats).upper() if bats else None
+                fielding_raw = getattr(player, "fielding_skill", None)
+                fielding_value = self._coerce_float(fielding_raw)
                 lineup.append(
                     {
                         "index": index,
@@ -239,6 +243,8 @@ class SessionStateBuilder:
                         "pitcher_type": getattr(player, "pitcher_type", None),
                         "bats": bats_display,
                         "is_current_batter": is_offense and index == current_batter_index,
+                        "fielding_rating": self._format_rating(fielding_raw),
+                        "fielding_value": fielding_value,
                         "avg": summary["avg"],
                         "hr": summary["hr"],
                         "rbi": summary["rbi"],
@@ -255,6 +261,8 @@ class SessionStateBuilder:
                 summary = self._lineup_batter_summary(player)
                 bats = getattr(player, "bats", None)
                 bats_display = str(bats).upper() if bats else None
+                fielding_raw = getattr(player, "fielding_skill", None)
+                fielding_value = self._coerce_float(fielding_raw)
                 bench.append(
                     {
                         "index": bench_index,
@@ -265,6 +273,8 @@ class SessionStateBuilder:
                         "eligible_all": self._eligible_positions_raw(player),
                         "pitcher_type": getattr(player, "pitcher_type", None),
                         "bats": bats_display,
+                        "fielding_rating": self._format_rating(fielding_raw),
+                        "fielding_value": fielding_value,
                         "avg": summary["avg"],
                         "hr": summary["hr"],
                         "rbi": summary["rbi"],
@@ -273,6 +283,8 @@ class SessionStateBuilder:
 
             retired: List[Dict[str, object]] = []
             for player in getattr(team, "ejected_players", []) or []:
+                fielding_raw = getattr(player, "fielding_skill", None)
+                fielding_value = self._coerce_float(fielding_raw)
                 retired.append(
                     {
                         "name": getattr(player, "name", "-"),
@@ -281,6 +293,8 @@ class SessionStateBuilder:
                         "eligible": self._eligible_positions(player),
                         "eligible_all": self._eligible_positions_raw(player),
                         "pitcher_type": getattr(player, "pitcher_type", None),
+                        "fielding_rating": self._format_rating(fielding_raw),
+                        "fielding_value": fielding_value,
                     }
                 )
 
@@ -614,9 +628,23 @@ class SessionStateBuilder:
             numeric = float(value)
         except (TypeError, ValueError):
             return "-"
+        if math.isnan(numeric):
+            return "-"
         if numeric.is_integer():
             return str(int(numeric))
         return f"{numeric:.1f}"
+
+    @staticmethod
+    def _coerce_float(value) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+        if math.isnan(numeric):
+            return None
+        return numeric
 
     @staticmethod
     def _is_pitcher(player) -> bool:

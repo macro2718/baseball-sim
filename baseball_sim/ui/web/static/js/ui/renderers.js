@@ -4,6 +4,8 @@ import {
   PITCHING_COLUMNS,
   ABILITY_BATTING_COLUMNS,
   ABILITY_PITCHING_COLUMNS,
+  FIELD_POSITIONS,
+  FIELD_POSITION_KEYS,
 } from '../config.js';
 import { elements } from '../dom.js';
 import {
@@ -12,6 +14,7 @@ import {
   getBenchPlayer,
   getLineupPositionKey,
   canBenchPlayerCoverPosition,
+  normalizePositionKey,
 } from '../state.js';
 import {
   escapeHtml,
@@ -46,6 +49,125 @@ function hasAbilityData(team) {
   const battingCount = Array.isArray(batting) ? batting.length : 0;
   const pitchingCount = Array.isArray(pitching) ? pitching.length : 0;
   return battingCount > 0 || pitchingCount > 0;
+}
+
+const FIELD_ALIGNMENT_SLOTS = FIELD_POSITIONS.filter((slot) => slot.key !== 'DH');
+
+function parseFieldingValue(raw) {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === 'number') {
+    return Number.isFinite(raw) ? raw : null;
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const numeric = Number.parseFloat(trimmed);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  return null;
+}
+
+function getFieldingTier(value) {
+  if (!Number.isFinite(value)) {
+    return 'unknown';
+  }
+  if (value >= 85) return 'elite';
+  if (value >= 70) return 'strong';
+  if (value >= 55) return 'average';
+  return 'developing';
+}
+
+function getFieldingMetrics(player) {
+  if (!player) {
+    return { label: '-', value: null };
+  }
+  const direct = parseFieldingValue(player.fielding_value);
+  const fromSkill = parseFieldingValue(player.fielding_skill);
+  const fromRating = parseFieldingValue(player.fielding_rating);
+  const numeric = direct ?? fromSkill ?? fromRating;
+  let label = typeof player.fielding_rating === 'string' ? player.fielding_rating.trim() : '';
+  if (!label || label === '-') {
+    if (Number.isFinite(numeric)) {
+      label = Number.isInteger(numeric) ? String(Math.trunc(numeric)) : numeric.toFixed(1);
+    } else {
+      label = '-';
+    }
+  }
+  return { label, value: numeric };
+}
+
+function updateDefenseAlignment(gameState, teams) {
+  const container = elements.defenseAlignment;
+  if (!container) return;
+
+  container.innerHTML = '';
+  container.classList.add('hidden');
+  container.setAttribute('aria-hidden', 'true');
+  container.setAttribute('aria-label', '守備配置');
+  delete container.dataset.team;
+
+  if (!gameState || !gameState.active) {
+    return;
+  }
+
+  const defenseKey = gameState.defense;
+  const defenseTeam = defenseKey && teams ? teams[defenseKey] : null;
+  if (!defenseTeam) {
+    return;
+  }
+
+  const lineup = Array.isArray(defenseTeam.lineup) ? defenseTeam.lineup : [];
+  const assignments = new Map();
+
+  lineup.forEach((player) => {
+    if (!player) return;
+    const key = normalizePositionKey(player.position_key || player.position);
+    if (!key || key === 'DH') return;
+    if (!FIELD_POSITION_KEYS.has(key)) return;
+    if (assignments.has(key)) return;
+    assignments.set(key, player);
+  });
+
+  let rendered = 0;
+
+  FIELD_ALIGNMENT_SLOTS.forEach((slot) => {
+    const player = assignments.get(slot.key);
+    if (!player) return;
+
+    const slotEl = document.createElement('div');
+    slotEl.className = `alignment-slot ${slot.className}`;
+    slotEl.dataset.position = slot.key;
+
+    const { label, value } = getFieldingMetrics(player);
+    const tier = getFieldingTier(value);
+    if (tier) {
+      slotEl.dataset.tier = tier;
+    }
+
+    const ratingText = label && label !== '-' ? `守備 ${label}` : '守備 -';
+
+    slotEl.innerHTML = `
+      <div class="player-chip">
+        <span class="pos-tag">${slot.label}</span>
+        <div class="player-info">
+          <span class="player-name">${escapeHtml(player.name ?? '-')}</span>
+          <span class="player-rating">${escapeHtml(ratingText)}</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(slotEl);
+    rendered += 1;
+  });
+
+  if (rendered > 0) {
+    container.classList.remove('hidden');
+    container.setAttribute('aria-hidden', 'false');
+    const teamName = defenseTeam.name || '';
+    container.setAttribute('aria-label', teamName ? `守備配置 (${teamName})` : '守備配置');
+    if (teamName) {
+      container.dataset.team = teamName;
+    }
+  }
 }
 
 export function updateOutsIndicator(outs) {
@@ -887,6 +1009,7 @@ function updateStrategyControls(gameState, teams) {
 
 export function renderGame(gameState, teams, log) {
   updateAnalyticsPanel(gameState);
+  updateDefenseAlignment(gameState, teams);
   const isActiveGame = Boolean(gameState && gameState.active);
   setInsightsVisibility(isActiveGame);
 

@@ -37,6 +37,7 @@ export const elements = {
   homePitchers: document.querySelector('#home-pitchers ul'),
   awayPitchers: document.querySelector('#away-pitchers ul'),
   baseState: document.getElementById('base-state'),
+  defenseAlignment: document.getElementById('defense-alignment'),
   pinchPlayer: document.getElementById('pinch-player'),
   pinchButton: document.getElementById('pinch-hit-button'),
   pinchCurrentCard: document.getElementById('pinch-current-card'),
