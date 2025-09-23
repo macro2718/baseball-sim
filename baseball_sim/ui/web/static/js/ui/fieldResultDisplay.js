@@ -35,7 +35,7 @@ const LABEL_OVERRIDES = Object.freeze({
   bunt_single: 'Bunt Single',
 });
 
-const DISPLAY_DURATION = 2400;
+const DISPLAY_DURATION = 1000;
 const FADE_DURATION = 650;
 
 let hideTimeoutId = null;

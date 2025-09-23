@@ -562,10 +562,10 @@
   position: absolute;
   top: 44%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.92);
-  min-width: clamp(180px, 32vw, 360px);
-  padding: clamp(14px, 2.8vw, 28px) clamp(22px, 4.2vw, 40px);
-  border-radius: clamp(18px, 3vw, 36px);
+  transform: translate(-50%, -50%) scale(0.82);
+  min-width: clamp(140px, 24vw, 280px);
+  padding: clamp(10px, 2vw, 20px) clamp(16px, 3.2vw, 28px);
+  border-radius: clamp(14px, 2.2vw, 28px);
   text-align: center;
   pointer-events: none;
   z-index: 12;
@@ -588,29 +588,29 @@
 
 .field-result-display.is-visible {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(0.7);
 }
 
 .field-result-display.is-fading-out {
   opacity: 0;
-  transform: translate(-50%, -50%) scale(1.08);
+  transform: translate(-50%, -50%) scale(0.98);
 }
 
 .field-result-text {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(6px, 1.4vw, 12px);
+  gap: clamp(4px, 1vw, 10px);
 }
 
 .field-result-label {
-  font-size: clamp(28px, 5vw, 54px);
+  font-size: clamp(22px, 3.8vw, 40px);
   font-weight: 800;
   letter-spacing: 0.16em;
 }
 
 .field-result-runs {
-  font-size: clamp(16px, 2.6vw, 24px);
+  font-size: clamp(13px, 2vw, 20px);
   font-weight: 600;
   letter-spacing: 0.32em;
   text-transform: uppercase;
