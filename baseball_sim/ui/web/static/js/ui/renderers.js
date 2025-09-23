@@ -197,6 +197,357 @@ const FIELD_ALIGNMENT_SLOTS = FIELD_POSITIONS.filter((slot) => slot.key !== 'DH'
 
 const BASE_LABELS = ['一塁', '二塁', '三塁'];
 
+const HOME_START_INDEX = -1;
+const HOME_BASE_INDEX = 3;
+const RUNNER_SPEED_PX_PER_MS = 0.55;
+const RUNNER_MIN_DURATION = 320;
+const RUNNER_MAX_DURATION = 900;
+const RUNNER_SEGMENT_DELAY = 120;
+const HOME_HOLD_DURATION = 420;
+
+let runnerAnimationToken = 0;
+
+function normalizeRunnerName(name) {
+  if (typeof name !== 'string') {
+    return '';
+  }
+  return name.trim();
+}
+
+function cloneBaseInfo(info) {
+  if (!info || typeof info !== 'object') {
+    return null;
+  }
+  const clone = { occupied: Boolean(info.occupied) };
+  if (typeof info.runner === 'string') {
+    const trimmed = info.runner.trim();
+    if (trimmed) {
+      clone.runner = trimmed;
+    }
+  }
+  if (info.speed !== undefined) clone.speed = info.speed;
+  if (info.speed_display !== undefined) clone.speed_display = info.speed_display;
+  if (info.runner_speed !== undefined) clone.runner_speed = info.runner_speed;
+  return clone;
+}
+
+function buildDisplayInfo(info, fallbackName) {
+  const clone = cloneBaseInfo(info) || {};
+  clone.occupied = true;
+  const normalizedName = normalizeRunnerName(clone.runner) || normalizeRunnerName(fallbackName);
+  if (normalizedName) {
+    clone.runner = normalizedName;
+  } else if (typeof clone.runner === 'string') {
+    clone.runner = clone.runner.trim();
+  }
+  return clone;
+}
+
+function createRunnerDescriptor(info, index) {
+  if (!info || !info.occupied) {
+    return null;
+  }
+  const descriptor = {
+    info: cloneBaseInfo(info),
+    baseIndex: index,
+  };
+  const name = normalizeRunnerName(info.runner);
+  descriptor.name = name;
+  const keyParts = [];
+  if (name) {
+    keyParts.push(name);
+  }
+  const speedDisplay =
+    typeof info.speed_display === 'string' ? info.speed_display.trim() : '';
+  if (speedDisplay) {
+    keyParts.push(`spd:${speedDisplay}`);
+  }
+  const speedRaw = info.speed ?? info.runner_speed;
+  if (speedRaw !== undefined && speedRaw !== null && speedRaw !== '') {
+    keyParts.push(`sp:${speedRaw}`);
+  }
+  descriptor.key = keyParts.length ? keyParts.join('|') : `base-${index}`;
+  return descriptor;
+}
+
+function extractRunnerDescriptors(bases) {
+  if (!Array.isArray(bases)) {
+    return [];
+  }
+  return bases
+    .map((info, index) => createRunnerDescriptor(info, index))
+    .filter((descriptor) => descriptor && descriptor.info);
+}
+
+function createSegments(start, end) {
+  const segments = [];
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+    return segments;
+  }
+  for (let current = start; current < end; current += 1) {
+    segments.push({ from: current, to: current + 1 });
+  }
+  return segments;
+}
+
+function calculateRunsScored(prevScore, nextScore, offenseKey) {
+  if (!offenseKey) {
+    return 0;
+  }
+  if (!prevScore || !nextScore) {
+    return 0;
+  }
+  const prevValue = Number(prevScore[offenseKey]);
+  const nextValue = Number(nextScore[offenseKey]);
+  if (!Number.isFinite(prevValue) || !Number.isFinite(nextValue)) {
+    return 0;
+  }
+  const diff = nextValue - prevValue;
+  return diff > 0 ? diff : 0;
+}
+
+function createRunnerAnimationPlan({
+  previousBases,
+  nextBases,
+  previousBatter,
+  prevScore,
+  nextScore,
+  offense,
+}) {
+  const previousRunners = extractRunnerDescriptors(previousBases);
+  const nextRunners = extractRunnerDescriptors(nextBases);
+
+  const remainingNext = [...nextRunners];
+  const unmatchedPrev = [];
+  const movements = [];
+
+  previousRunners.forEach((prevRunner) => {
+    let matchIndex = -1;
+    if (prevRunner.name) {
+      matchIndex = remainingNext.findIndex((candidate) => candidate.name === prevRunner.name);
+    }
+    if (matchIndex === -1) {
+      matchIndex = remainingNext.findIndex((candidate) => candidate.key === prevRunner.key);
+    }
+    if (matchIndex !== -1) {
+      const nextRunner = remainingNext.splice(matchIndex, 1)[0];
+      const diff = nextRunner.baseIndex - prevRunner.baseIndex;
+      if (diff > 0) {
+        const segments = createSegments(prevRunner.baseIndex, nextRunner.baseIndex);
+        if (segments.length) {
+          movements.push({
+            runnerName: nextRunner.name || prevRunner.name || '',
+            displayInfo: buildDisplayInfo(
+              nextRunner.info || prevRunner.info,
+              nextRunner.name || prevRunner.name,
+            ),
+            finalInfo: cloneBaseInfo(nextRunner.info),
+            sourceInfo: cloneBaseInfo(prevRunner.info),
+            segments,
+          });
+        }
+      }
+    } else {
+      unmatchedPrev.push(prevRunner);
+    }
+  });
+
+  remainingNext.forEach((runner) => {
+    const segments = createSegments(HOME_START_INDEX, runner.baseIndex);
+    if (segments.length) {
+      movements.push({
+        runnerName: runner.name || '',
+        displayInfo: buildDisplayInfo(runner.info, runner.name),
+        finalInfo: cloneBaseInfo(runner.info),
+        sourceInfo: null,
+        segments,
+      });
+    }
+  });
+
+  let runsScored = calculateRunsScored(prevScore, nextScore, offense);
+
+  unmatchedPrev
+    .sort((a, b) => b.baseIndex - a.baseIndex)
+    .forEach((runner) => {
+      if (runsScored <= 0) {
+        return;
+      }
+      const segments = createSegments(runner.baseIndex, HOME_BASE_INDEX);
+      if (segments.length) {
+        movements.push({
+          runnerName: runner.name || '',
+          displayInfo: buildDisplayInfo(runner.info, runner.name),
+          finalInfo: null,
+          sourceInfo: cloneBaseInfo(runner.info),
+          segments,
+        });
+        runsScored -= 1;
+      }
+    });
+
+  if (runsScored > 0 && previousBatter) {
+    const batterName = normalizeRunnerName(previousBatter.name);
+    if (batterName) {
+      const segments = createSegments(HOME_START_INDEX, HOME_BASE_INDEX);
+      if (segments.length) {
+        movements.push({
+          runnerName: batterName,
+          displayInfo: buildDisplayInfo(
+            {
+              occupied: true,
+              runner: batterName,
+              speed: previousBatter.speed ?? previousBatter.runner_speed ?? null,
+              speed_display: previousBatter.speed_display ?? null,
+              runner_speed: previousBatter.runner_speed ?? previousBatter.speed ?? null,
+            },
+            batterName,
+          ),
+          finalInfo: null,
+          sourceInfo: null,
+          segments,
+        });
+      }
+    }
+  }
+
+  const arrivalSet = new Set();
+  const startBases = new Set();
+
+  movements.forEach((movement) => {
+    if (!movement.displayInfo) {
+      movement.displayInfo = buildDisplayInfo(movement.finalInfo, movement.runnerName);
+    }
+    movement.segments.forEach((segment, index) => {
+      if (segment.from >= 0 && segment.from <= 2) {
+        startBases.add(segment.from);
+      }
+      if (index === movement.segments.length - 1) {
+        const destination = segment.to;
+        if (destination >= 0 && destination <= 2) {
+          arrivalSet.add(destination);
+        }
+      }
+    });
+  });
+
+  return { movements, arrivalSet, startBases };
+}
+
+function wait(duration) {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, duration);
+  });
+}
+
+async function playRunnerAnimations(movements, context) {
+  await Promise.all(movements.map((movement) => playRunnerMovement(movement, context)));
+}
+
+async function playRunnerMovement(movement, context) {
+  for (let i = 0; i < movement.segments.length; i += 1) {
+    if (!context.isCurrent()) {
+      return;
+    }
+    const segment = movement.segments[i];
+    const isFinalSegment = i === movement.segments.length - 1;
+    await playRunnerSegment(segment, movement, context, isFinalSegment);
+    if (!context.isCurrent()) {
+      return;
+    }
+    if (!isFinalSegment && context.segmentDelay > 0) {
+      await wait(context.segmentDelay);
+    }
+  }
+}
+
+async function playRunnerSegment(segment, movement, context, isFinalSegment) {
+  const { layer, getPoint, applyBaseDisplay, homeHighlight, isCurrent, speed, homeHoldDuration } =
+    context;
+  if (!layer) {
+    return;
+  }
+
+  const fromPoint = getPoint(segment.from);
+  const toPoint = getPoint(segment.to);
+  if (!fromPoint || !toPoint) {
+    return;
+  }
+
+  if (segment.from >= 0 && segment.from <= 2) {
+    applyBaseDisplay(segment.from, null);
+  }
+
+  const dx = toPoint.x - fromPoint.x;
+  const dy = toPoint.y - fromPoint.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance <= 0) {
+    if (segment.to >= 0 && segment.to <= 2) {
+      const infoToApply =
+        isFinalSegment && movement.finalInfo ? movement.finalInfo : movement.displayInfo;
+      applyBaseDisplay(segment.to, infoToApply);
+    } else if (segment.to === HOME_BASE_INDEX) {
+      homeHighlight.enter(movement.displayInfo);
+      await wait(homeHoldDuration);
+      if (isCurrent()) {
+        homeHighlight.leave();
+      }
+    }
+    return;
+  }
+
+  const angle = Math.atan2(dy, dx);
+  const duration = Math.max(
+    RUNNER_MIN_DURATION,
+    Math.min(distance / Math.max(speed, 1e-6), RUNNER_MAX_DURATION),
+  );
+
+  const segmentEl = document.createElement('div');
+  segmentEl.className = 'runner-path';
+  segmentEl.style.left = `${fromPoint.x}px`;
+  segmentEl.style.top = `${fromPoint.y}px`;
+  layer.appendChild(segmentEl);
+
+  const keyframes = [
+    {
+      transform: `translate(-50%, -50%) rotate(${angle}rad) translateX(0px)`,
+      opacity: 1,
+    },
+    {
+      transform: `translate(-50%, -50%) rotate(${angle}rad) translateX(${distance}px)`,
+      opacity: 0.4,
+    },
+  ];
+
+  const animation = segmentEl.animate(keyframes, {
+    duration,
+    easing: 'ease-in-out',
+  });
+
+  try {
+    await animation.finished;
+  } catch (error) {
+    // Ignore cancellation
+  }
+  segmentEl.remove();
+
+  if (!isCurrent()) {
+    return;
+  }
+
+  if (segment.to >= 0 && segment.to <= 2) {
+    const infoToApply =
+      isFinalSegment && movement.finalInfo ? movement.finalInfo : movement.displayInfo;
+    applyBaseDisplay(segment.to, infoToApply);
+  } else if (segment.to === HOME_BASE_INDEX) {
+    homeHighlight.enter(movement.displayInfo);
+    await wait(homeHoldDuration);
+    if (isCurrent()) {
+      homeHighlight.leave();
+    }
+  }
+}
+
 function formatRunnerSpeed(info) {
   if (!info) return null;
   const display = typeof info.speed_display === 'string' ? info.speed_display.trim() : '';
@@ -431,16 +782,77 @@ export function updateOutsIndicator(outs) {
   elements.outsIndicator.dataset.outs = String(clamped);
 }
 
-function updateBases(bases) {
+function updateBases(nextBases, options = {}) {
   if (!elements.baseState) return;
-  const baseElements = elements.baseState.querySelectorAll('.base');
+
+  const field = elements.baseState;
+  const baseElements = Array.from(field.querySelectorAll('.base'));
+  const baseMap = new Map();
   baseElements.forEach((el) => {
     const baseIndex = Number(el.dataset.base);
-    const info = (Array.isArray(bases) ? bases[baseIndex] : null) || {};
-    const hasRunnerName = typeof info.runner === 'string' && info.runner.trim() !== '';
-    const isOccupied = Boolean(info.occupied);
-    const showRunnerChip = isOccupied && hasRunnerName;
+    if (Number.isFinite(baseIndex)) {
+      baseMap.set(baseIndex, el);
+    }
+  });
+
+  const runnerLayer = elements.runnerAnimationLayer || null;
+  const homePlate = field.querySelector('.home-plate');
+
+  runnerAnimationToken += 1;
+  const animationToken = runnerAnimationToken;
+
+  if (runnerLayer) {
+    runnerLayer.innerHTML = '';
+  }
+
+  const homeHighlight = (() => {
+    let activeCount = 0;
+    return {
+      enter(info) {
+        if (!homePlate) return;
+        activeCount += 1;
+        homePlate.classList.add('occupied');
+        homePlate.classList.add('runner-arrival');
+        if (info && typeof info.runner === 'string' && info.runner.trim() !== '') {
+          homePlate.dataset.runner = info.runner.trim();
+        } else {
+          homePlate.removeAttribute('data-runner');
+        }
+      },
+      leave() {
+        if (!homePlate) return;
+        if (activeCount > 0) {
+          activeCount -= 1;
+        }
+        if (activeCount <= 0) {
+          homePlate.classList.remove('runner-arrival');
+          homePlate.classList.remove('occupied');
+          homePlate.removeAttribute('data-runner');
+          activeCount = 0;
+        }
+      },
+      reset() {
+        if (!homePlate) return;
+        activeCount = 0;
+        homePlate.classList.remove('runner-arrival');
+        homePlate.classList.remove('occupied');
+        homePlate.removeAttribute('data-runner');
+      },
+    };
+  })();
+
+  homeHighlight.reset();
+
+  const applyBaseDisplay = (baseIndex, info) => {
+    const el = baseMap.get(baseIndex);
+    if (!el) return;
+
+    const baseInfo = info && typeof info === 'object' ? info : null;
+    const isOccupied = Boolean(baseInfo?.occupied);
+    const hasRunnerName =
+      isOccupied && typeof baseInfo?.runner === 'string' && baseInfo.runner.trim() !== '';
     el.classList.toggle('occupied', isOccupied);
+
     if (isOccupied) {
       if (el.tabIndex !== 0) {
         el.tabIndex = 0;
@@ -448,17 +860,19 @@ function updateBases(bases) {
     } else if (el.tabIndex !== -1) {
       el.tabIndex = -1;
     }
+
     const indicator = el.querySelector('.base-indicator');
     if (indicator) {
       indicator.textContent = isOccupied ? '●' : '';
     }
+
     const runnerChip = el.querySelector('.runner-chip');
     if (runnerChip) {
       const nameEl = runnerChip.querySelector('.runner-name');
       const speedEl = runnerChip.querySelector('.runner-speed');
-      if (showRunnerChip && nameEl && speedEl) {
-        const speedText = formatRunnerSpeed(info);
-        nameEl.textContent = info.runner;
+      if (hasRunnerName && nameEl && speedEl) {
+        nameEl.textContent = baseInfo.runner;
+        const speedText = formatRunnerSpeed(baseInfo);
         speedEl.textContent = speedText ? `スピード ${speedText}` : 'スピード -';
         runnerChip.classList.add('active');
         runnerChip.setAttribute('aria-hidden', 'false');
@@ -474,15 +888,125 @@ function updateBases(bases) {
     let ariaLabel = `${baseLabel}: 走者なし`;
     if (isOccupied) {
       if (hasRunnerName) {
-        const speedText = formatRunnerSpeed(info);
-        ariaLabel = `${baseLabel}: ${info.runner}${speedText ? `（スピード ${speedText}）` : ''}`;
+        const speedText = formatRunnerSpeed(baseInfo);
+        ariaLabel = `${baseLabel}: ${baseInfo.runner}${speedText ? `（スピード ${speedText}）` : ''}`;
       } else {
         ariaLabel = `${baseLabel}: 走者あり`;
       }
     }
     el.setAttribute('aria-label', ariaLabel);
     el.removeAttribute('title');
+  };
+
+  const sanitizedBases = Array.isArray(nextBases) ? nextBases : [];
+  const finalBaseInfos = new Map();
+  baseMap.forEach((_, index) => {
+    finalBaseInfos.set(index, sanitizedBases[index] || null);
   });
+
+  const previousBases = Array.isArray(options.previousBases) ? options.previousBases : null;
+  const sequenceChanged = Boolean(options.sequenceChanged);
+
+  const canAttemptAnimation =
+    sequenceChanged &&
+    previousBases &&
+    baseMap.size > 0 &&
+    previousBases.length === baseMap.size &&
+    runnerLayer;
+
+  if (!canAttemptAnimation || !homePlate) {
+    finalBaseInfos.forEach((info, index) => {
+      applyBaseDisplay(index, info);
+    });
+    return;
+  }
+
+  const plan = createRunnerAnimationPlan({
+    previousBases,
+    nextBases: sanitizedBases,
+    previousBatter: options.previousBatter || null,
+    prevScore: options.previousScore || null,
+    nextScore: options.currentScore || null,
+    offense: options.previousOffense || null,
+  });
+
+  if (!plan.movements.length) {
+    finalBaseInfos.forEach((info, index) => {
+      applyBaseDisplay(index, info);
+    });
+    return;
+  }
+
+  const layerRect = runnerLayer.getBoundingClientRect();
+  if (!layerRect || layerRect.width <= 0 || layerRect.height <= 0) {
+    finalBaseInfos.forEach((info, index) => {
+      applyBaseDisplay(index, info);
+    });
+    return;
+  }
+
+  const homeRect = homePlate.getBoundingClientRect();
+  const homePoint = homeRect
+    ? {
+        x: homeRect.left + homeRect.width / 2 - layerRect.left,
+        y: homeRect.top + homeRect.height / 2 - layerRect.top,
+      }
+    : null;
+
+  const basePointCache = new Map();
+  const getPoint = (position) => {
+    if (position === HOME_START_INDEX || position === HOME_BASE_INDEX) {
+      return homePoint;
+    }
+    if (basePointCache.has(position)) {
+      return basePointCache.get(position);
+    }
+    const baseEl = baseMap.get(position);
+    if (!baseEl) {
+      return null;
+    }
+    const rect = baseEl.getBoundingClientRect();
+    const point = {
+      x: rect.left + rect.width / 2 - layerRect.left,
+      y: rect.top + rect.height / 2 - layerRect.top,
+    };
+    basePointCache.set(position, point);
+    return point;
+  };
+
+  finalBaseInfos.forEach((info, index) => {
+    if (plan.startBases.has(index) || plan.arrivalSet.has(index)) {
+      applyBaseDisplay(index, null);
+    } else {
+      applyBaseDisplay(index, info);
+    }
+  });
+
+  const animationContext = {
+    layer: runnerLayer,
+    getPoint,
+    applyBaseDisplay,
+    homeHighlight,
+    isCurrent: () => animationToken === runnerAnimationToken,
+    speed: RUNNER_SPEED_PX_PER_MS,
+    segmentDelay: RUNNER_SEGMENT_DELAY,
+    homeHoldDuration: HOME_HOLD_DURATION,
+  };
+
+  playRunnerAnimations(plan.movements, animationContext)
+    .catch(() => undefined)
+    .finally(() => {
+      if (animationToken !== runnerAnimationToken) {
+        return;
+      }
+      plan.arrivalSet.forEach((index) => {
+        applyBaseDisplay(index, finalBaseInfos.get(index) || null);
+      });
+      homeHighlight.reset();
+      if (runnerLayer) {
+        runnerLayer.innerHTML = '';
+      }
+    });
 }
 
 function updateLog(logEntries) {
@@ -1647,7 +2171,19 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   elements.halfIndicator.textContent = `${gameState.half_label} ${gameState.inning}`;
   updateOutsIndicator(gameState.outs);
   elements.matchupText.textContent = gameState.matchup || '';
-  updateBases(gameState.bases || []);
+
+  const currentSequence = Number(gameState.last_play?.sequence ?? 0);
+  const previousSequence = Number(previousGameState?.last_play?.sequence ?? 0);
+  const sequenceChanged = currentSequence !== previousSequence;
+
+  updateBases(gameState.bases || [], {
+    previousBases: previousGameState?.bases || null,
+    previousBatter: previousGameState?.current_batter || null,
+    previousScore: previousGameState?.score || null,
+    currentScore: gameState.score || null,
+    previousOffense: previousGameState?.offense || null,
+    sequenceChanged,
+  });
   triggerPlayAnimation(gameState.last_play || null, { isActive: true });
   updateFieldResultDisplay(gameState, previousGameState || null);
 
