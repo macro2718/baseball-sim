@@ -9,6 +9,20 @@
     height: 420px;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.45);
   }
+
+  .defense-alignment .player-chip {
+    min-width: 108px;
+    max-width: 140px;
+    padding: 10px 12px;
+  }
+
+  .defense-alignment .player-name {
+    font-size: 13px;
+  }
+
+  .defense-alignment .player-rating {
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 960px) {
