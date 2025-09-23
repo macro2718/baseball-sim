@@ -198,8 +198,16 @@ class GameState:
 
         return True, ""
 
-    def add_out(self):
-        """アウトカウントを増やし、必要に応じて攻守交代"""
+    def add_out(self, credit_pitcher: bool = True):
+        """アウトカウントを増やし、投手のIPも自動で更新する"""
+
+        if credit_pitcher:
+            pitching_stats = getattr(
+                getattr(self.fielding_team, "current_pitcher", None), "pitching_stats", None
+            )
+            if isinstance(pitching_stats, dict):
+                pitching_stats["IP"] = pitching_stats.get("IP", 0) + (1 / 3)
+
         inning_complete = self._half_state.register_out()
         if inning_complete:
             self.switch_sides()
