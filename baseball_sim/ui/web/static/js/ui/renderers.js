@@ -218,6 +218,57 @@ function updateDefenseAlignment(gameState, teams) {
   }
 }
 
+function updateBatterAlignment(gameState, teams) {
+  const container = elements.batterAlignment;
+  if (!container) return;
+
+  // Reset/hide by default
+  container.innerHTML = '';
+  container.classList.add('hidden');
+  container.setAttribute('aria-hidden', 'true');
+
+  if (!gameState || !gameState.active) {
+    return;
+  }
+
+  const offenseKey = gameState.offense;
+  const offenseTeam = offenseKey && teams ? teams[offenseKey] : null;
+  const lineup = Array.isArray(offenseTeam?.lineup) ? offenseTeam.lineup : [];
+  const batter = lineup.find((p) => p && p.is_current_batter) || gameState.current_batter || null;
+  if (!batter) return;
+
+  // Determine handedness: "R" -> righty (stands left of plate from viewer), "L" -> lefty (right of plate)
+  const batsRaw = (batter.bats || '').toString().trim().toUpperCase();
+  let handedClass = 'righty';
+  if (batsRaw === 'L') handedClass = 'lefty';
+  else if (batsRaw === 'S' || batsRaw === 'B') {
+    // For switch hitters, bias to opposite of pitcher throws if available, else default righty
+    const defenseKey = gameState.defense;
+    const defenseTeam = defenseKey && teams ? teams[defenseKey] : null;
+    const currentPitcher = (defenseTeam?.pitchers || []).find((p) => p && p.is_current) || null;
+    const throws = (currentPitcher?.throws || '').toString().trim().toUpperCase();
+    if (throws === 'R') handedClass = 'lefty';
+    else if (throws === 'L') handedClass = 'righty';
+  }
+
+  const batsLabel = formatBatsLabel(batter.bats) || '--';
+  const nameLabel = escapeHtml(batter.name ?? '-');
+
+  const slot = document.createElement('div');
+  slot.className = `batter-slot ${handedClass}`;
+  slot.innerHTML = `
+    <div class="batter-chip">
+      <span class="batter-pos">BAT</span>
+      <span class="batter-name">${nameLabel}</span>
+      <span class="batter-bats" aria-label="打席">${escapeHtml(batsLabel)}</span>
+    </div>
+  `;
+  container.appendChild(slot);
+
+  container.classList.remove('hidden');
+  container.setAttribute('aria-hidden', 'false');
+}
+
 export function updateOutsIndicator(outs) {
   if (!elements.outsIndicator) return;
   const numericValue = Number(outs);
@@ -1382,6 +1433,7 @@ function updateStrategyControls(gameState, teams) {
 export function renderGame(gameState, teams, log) {
   updateAnalyticsPanel(gameState);
   updateDefenseAlignment(gameState, teams);
+  updateBatterAlignment(gameState, teams);
   const isActiveGame = Boolean(gameState && gameState.active);
   setInsightsVisibility(isActiveGame);
 
@@ -1393,6 +1445,12 @@ export function renderGame(gameState, teams, log) {
     elements.actionWarning.textContent = '';
     elements.swingButton.disabled = true;
     elements.buntButton.disabled = true;
+    // Ensure batter overlay is hidden when inactive
+    if (elements.batterAlignment) {
+      elements.batterAlignment.innerHTML = '';
+      elements.batterAlignment.classList.add('hidden');
+      elements.batterAlignment.setAttribute('aria-hidden', 'true');
+    }
     updateRosters(elements.offenseRoster, []);
     updateRosters(elements.defenseRoster, []);
     updateBench(elements.offenseBench, []);

@@ -169,6 +169,12 @@
                 <div class="field-layer foul-line foul-line-right" aria-hidden="true"></div>
                 <div class="field-layer pitcher-mound" aria-hidden="true"></div>
                 <div class="home-plate" aria-hidden="true"></div>
+                <!-- Batter overlay: shows current batter near home plate -->
+                <div
+                  class="batter-alignment hidden"
+                  id="batter-alignment"
+                  aria-hidden="true"
+                ></div>
                 <div class="base base-third" data-base="2" tabindex="-1">
                   <span class="base-indicator" aria-hidden="true"></span>
                   <div class="runner-chip" data-role="runner-info" aria-hidden="true">
@@ -285,7 +291,7 @@
                   </section>
                   <section class="matchup-card" id="upcoming-batters-panel">
                     <header class="matchup-card-header">
-                      <h3>次の打者</h3>
+                      <h3>現在の打者</h3>
                     </header>
                     <ol class="matchup-batter-list" id="upcoming-batters-list"></ol>
                     <p class="matchup-empty" id="upcoming-batters-empty">打者情報がありません。</p>
