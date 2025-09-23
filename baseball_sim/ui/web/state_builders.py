@@ -177,7 +177,14 @@ class SessionStateBuilder:
                 "half_label": "TOP" if game_state.is_top_inning else "BOTTOM",
                 "outs": game_state.outs,
                 "bases": [
-                    {"occupied": runner is not None, "runner": getattr(runner, "name", None)}
+                    {
+                        "occupied": runner is not None,
+                        "runner": getattr(runner, "name", None),
+                        "speed": getattr(runner, "speed", None),
+                        "speed_display": self._format_speed(getattr(runner, "speed", None))
+                        if runner
+                        else None,
+                    }
                     for runner in game_state.bases
                 ],
                 "offense": offense,

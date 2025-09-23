@@ -53,6 +53,22 @@ function hasAbilityData(team) {
 
 const FIELD_ALIGNMENT_SLOTS = FIELD_POSITIONS.filter((slot) => slot.key !== 'DH');
 
+const BASE_LABELS = ['一塁', '二塁', '三塁'];
+
+function formatRunnerSpeed(info) {
+  if (!info) return null;
+  const display = typeof info.speed_display === 'string' ? info.speed_display.trim() : '';
+  if (display && display !== '-') {
+    return display;
+  }
+  const raw = info.speed ?? info.runner_speed;
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric)) {
+    return `${numeric.toFixed(2)}秒`;
+  }
+  return null;
+}
+
 function parseFieldingValue(raw) {
   if (raw === null || raw === undefined) return null;
   if (typeof raw === 'number') {
@@ -128,6 +144,27 @@ function updateDefenseAlignment(gameState, teams) {
     assignments.set(key, player);
   });
 
+  if (!assignments.has('P')) {
+    const pitcherFromTeam = Array.isArray(defenseTeam.pitchers)
+      ? defenseTeam.pitchers.find((pitcher) => pitcher && pitcher.is_current)
+      : null;
+    const pitcherFromGame = gameState && gameState.current_pitcher ? gameState.current_pitcher : null;
+    const currentPitcher = pitcherFromTeam || pitcherFromGame;
+    if (currentPitcher) {
+      const pitcherTypeRaw = currentPitcher.pitcher_type || currentPitcher.position || 'P';
+      const pitcherType = typeof pitcherTypeRaw === 'string' ? pitcherTypeRaw.toUpperCase() : 'P';
+      const staminaValue = currentPitcher.stamina ?? currentPitcher.current_stamina;
+      assignments.set('P', {
+        name: currentPitcher.name || '-',
+        position: 'P',
+        position_key: 'P',
+        pitcher_type: pitcherType,
+        stamina: staminaValue,
+        current_stamina: staminaValue,
+      });
+    }
+  }
+
   let rendered = 0;
 
   FIELD_ALIGNMENT_SLOTS.forEach((slot) => {
@@ -144,7 +181,18 @@ function updateDefenseAlignment(gameState, teams) {
       slotEl.dataset.tier = tier;
     }
 
-    const ratingText = label && label !== '-' ? `守備 ${label}` : '守備 -';
+    let ratingText = label && label !== '-' ? `守備 ${label}` : '守備 -';
+    if (slot.key === 'P') {
+      const typeRaw = player.pitcher_type || player.position || 'P';
+      const typeLabel = typeof typeRaw === 'string' ? typeRaw.toUpperCase() : 'P';
+      const staminaRaw = player.stamina ?? player.current_stamina;
+      const staminaNumeric = Number(staminaRaw);
+      const staminaText = Number.isFinite(staminaNumeric) ? staminaNumeric.toFixed(1) : null;
+      ratingText = `タイプ ${typeLabel}`;
+      if (staminaText) {
+        ratingText += `｜体力 ${staminaText}`;
+      }
+    }
 
     slotEl.innerHTML = `
       <div class="player-chip">
@@ -195,14 +243,52 @@ function updateBases(bases) {
   const baseElements = elements.baseState.querySelectorAll('.base');
   baseElements.forEach((el) => {
     const baseIndex = Number(el.dataset.base);
-    const info = bases[baseIndex] || {};
-    const occupied = Boolean(info.occupied);
-    el.classList.toggle('occupied', occupied);
-    const span = el.querySelector('span');
-    if (span) {
-      span.textContent = occupied ? '●' : '';
+    const info = (Array.isArray(bases) ? bases[baseIndex] : null) || {};
+    const hasRunnerName = typeof info.runner === 'string' && info.runner.trim() !== '';
+    const isOccupied = Boolean(info.occupied);
+    const showRunnerChip = isOccupied && hasRunnerName;
+    el.classList.toggle('occupied', isOccupied);
+    if (isOccupied) {
+      if (el.tabIndex !== 0) {
+        el.tabIndex = 0;
+      }
+    } else if (el.tabIndex !== -1) {
+      el.tabIndex = -1;
     }
-    el.title = info.runner || '';
+    const indicator = el.querySelector('.base-indicator');
+    if (indicator) {
+      indicator.textContent = isOccupied ? '●' : '';
+    }
+    const runnerChip = el.querySelector('.runner-chip');
+    if (runnerChip) {
+      const nameEl = runnerChip.querySelector('.runner-name');
+      const speedEl = runnerChip.querySelector('.runner-speed');
+      if (showRunnerChip && nameEl && speedEl) {
+        const speedText = formatRunnerSpeed(info);
+        nameEl.textContent = info.runner;
+        speedEl.textContent = speedText ? `スピード ${speedText}` : 'スピード -';
+        runnerChip.classList.add('active');
+        runnerChip.setAttribute('aria-hidden', 'false');
+      } else {
+        if (nameEl) nameEl.textContent = '';
+        if (speedEl) speedEl.textContent = '';
+        runnerChip.classList.remove('active');
+        runnerChip.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    const baseLabel = BASE_LABELS[baseIndex] || '塁';
+    let ariaLabel = `${baseLabel}: 走者なし`;
+    if (isOccupied) {
+      if (hasRunnerName) {
+        const speedText = formatRunnerSpeed(info);
+        ariaLabel = `${baseLabel}: ${info.runner}${speedText ? `（スピード ${speedText}）` : ''}`;
+      } else {
+        ariaLabel = `${baseLabel}: 走者あり`;
+      }
+    }
+    el.setAttribute('aria-label', ariaLabel);
+    el.removeAttribute('title');
   });
 }
 
