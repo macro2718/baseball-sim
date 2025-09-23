@@ -726,28 +726,35 @@ function updateScoreboard(gameState, teams) {
 }
 
 function updateAnalyticsPanel(gameState) {
-  if (!elements.insightRunRate) return;
+  if (!elements.insightInningRunExpectancy) return;
 
   const resetInsights = () => {
-    setInsightText(elements.insightRunRate, '--');
-    setInsightText(elements.insightInningsSample, 'イニングサンプル: 0');
-    if (elements.insightBasePressure) {
-      setInsightText(elements.insightBasePressure, '--');
-      elements.insightBasePressure.removeAttribute('data-intensity');
+    setInsightText(elements.insightInningRunExpectancy, '--');
+    if (elements.insightInningContext) {
+      setInsightText(elements.insightInningContext, 'アウト: -- / 走者: --');
     }
-    setInsightText(elements.insightBaseCount, '0 / 3');
-    if (elements.insightRunDiff) {
-      setInsightText(elements.insightRunDiff, '--');
-      elements.insightRunDiff.dataset.trend = 'neutral';
+    if (elements.insightOneRunProbability) {
+      setInsightText(elements.insightOneRunProbability, '--');
+      elements.insightOneRunProbability.removeAttribute('data-intensity');
     }
-    if (elements.insightProgressFill) {
-      elements.insightProgressFill.style.width = '0%';
+    if (elements.insightOneRunContext) {
+      setInsightText(elements.insightOneRunContext, '走者指数: --');
     }
-    if (elements.insightProgressLabel) {
-      elements.insightProgressLabel.textContent = '0%';
+    if (elements.insightWinProbability) {
+      setInsightText(elements.insightWinProbability, '--');
+      elements.insightWinProbability.dataset.trend = 'neutral';
     }
-    if (elements.insightMeter) {
-      elements.insightMeter.setAttribute('aria-label', 'ゲーム進行度 0%');
+    if (elements.insightWinContext) {
+      setInsightText(elements.insightWinContext, '得点差: ±0');
+    }
+    if (elements.insightProbabilityFill) {
+      elements.insightProbabilityFill.style.width = '0%';
+    }
+    if (elements.insightProbabilityLabel) {
+      elements.insightProbabilityLabel.textContent = '--';
+    }
+    if (elements.insightProbabilityMeter) {
+      elements.insightProbabilityMeter.setAttribute('aria-label', '勝利確率 --');
     }
   };
 
@@ -756,48 +763,56 @@ function updateAnalyticsPanel(gameState) {
     return;
   }
 
-  const score = gameState.score || {};
-  const homeRuns = numberOrZero(score.home);
-  const awayRuns = numberOrZero(score.away);
-  const totalRuns = homeRuns + awayRuns;
-
-  const inningsHome = Array.isArray(gameState.inning_scores?.home)
-    ? gameState.inning_scores.home.length
-    : 0;
-  const inningsAway = Array.isArray(gameState.inning_scores?.away)
-    ? gameState.inning_scores.away.length
-    : 0;
-  const inningsSample = Math.max(inningsHome, inningsAway, 1);
-  const runRate = totalRuns / inningsSample;
-
-  setInsightText(elements.insightRunRate, runRate.toFixed(2));
-  setInsightText(elements.insightInningsSample, `イニングサンプル: ${inningsSample}`);
-
   const bases = Array.isArray(gameState.bases) ? gameState.bases : [];
   const occupiedBases = bases.reduce(
     (count, base) => (base && base.occupied ? count + 1 : count),
     0,
   );
-  const basePressure = Math.round((occupiedBases / 3) * 100);
-  if (elements.insightBasePressure) {
-    setInsightText(elements.insightBasePressure, `${basePressure}%`);
+  const outs = Math.min(Math.max(numberOrZero(gameState.outs), 0), 3);
+  const baseWeights = [0.55, 0.7, 0.9];
+  const baseThreatScore = bases.reduce((scoreAcc, base, index) => {
+    if (base && base.occupied) {
+      return scoreAcc + (baseWeights[index] ?? 0.45);
+    }
+    return scoreAcc;
+  }, 0);
+  const remainingOutsFactor = Math.max(0, (3 - outs) / 3);
+  const inningRunExpectancy = Math.max(0, 0.15 + baseThreatScore + remainingOutsFactor * 0.8);
+
+  setInsightText(elements.insightInningRunExpectancy, inningRunExpectancy.toFixed(2));
+  if (elements.insightInningContext) {
+    setInsightText(
+      elements.insightInningContext,
+      `アウト: ${outs} / 3 ・走者: ${occupiedBases}`,
+    );
+  }
+
+  if (elements.insightOneRunProbability) {
+    const scoringPressure = Math.max(
+      0,
+      Math.min(1, 0.1 + baseThreatScore / 2.4 + remainingOutsFactor * 0.6),
+    );
+    const probabilityPercent = Math.round(scoringPressure * 100);
+    setInsightText(elements.insightOneRunProbability, `${probabilityPercent}%`);
     let intensity = 'low';
-    if (basePressure >= 67) {
+    if (scoringPressure >= 0.67) {
       intensity = 'high';
-    } else if (basePressure >= 34) {
+    } else if (scoringPressure >= 0.34) {
       intensity = 'medium';
     }
-    elements.insightBasePressure.dataset.intensity = intensity;
+    elements.insightOneRunProbability.dataset.intensity = intensity;
+    if (elements.insightOneRunContext) {
+      setInsightText(
+        elements.insightOneRunContext,
+        `走者指数: ${baseThreatScore.toFixed(2)}`,
+      );
+    }
   }
-  setInsightText(elements.insightBaseCount, `${occupiedBases} / 3`);
 
-  if (elements.insightRunDiff) {
-    const runDiff = homeRuns - awayRuns;
-    const formattedDiff = runDiff > 0 ? `+${runDiff}` : runDiff < 0 ? `${runDiff}` : '±0';
-    setInsightText(elements.insightRunDiff, formattedDiff);
-    elements.insightRunDiff.dataset.trend =
-      runDiff > 0 ? 'positive' : runDiff < 0 ? 'negative' : 'neutral';
-  }
+  const score = gameState.score || {};
+  const homeRuns = numberOrZero(score.home);
+  const awayRuns = numberOrZero(score.away);
+  const runDiff = homeRuns - awayRuns;
 
   const maxInnings = Math.max(numberOrZero(gameState.max_innings), 1);
   const inningNumber = Math.max(numberOrZero(gameState.inning), 1);
@@ -819,20 +834,57 @@ function updateAnalyticsPanel(gameState) {
   }
 
   const rawProgress = ((inningNumber - 1) + halfFraction) / maxInnings;
-  const clampedProgress = gameState.game_over ? 1 : Math.min(Math.max(rawProgress, 0), 1);
-  const progressPercentRaw = Math.round(Math.max(rawProgress, 0) * 100);
-  const fillPercent = Math.round(clampedProgress * 100);
+  const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
+  const leverage = Math.max(0.25, 1 - Math.abs(0.5 - clampedProgress) * 1.2);
 
-  if (elements.insightProgressFill) {
-    elements.insightProgressFill.style.width = `${Math.min(Math.max(fillPercent, 0), 100)}%`;
+  let winProbability;
+  if (gameState.game_over) {
+    if (homeRuns > awayRuns) {
+      winProbability = 1;
+    } else if (homeRuns < awayRuns) {
+      winProbability = 0;
+    } else {
+      winProbability = 0.5;
+    }
+  } else {
+    const runDiffImpact = Math.max(-3, Math.min(3, runDiff)) * 0.09 * leverage;
+    const offenseAdjustment = gameState.offense === 'home' ? 0.03 : -0.03;
+    winProbability = 0.5 + runDiffImpact + offenseAdjustment;
   }
-  if (elements.insightProgressLabel) {
-    elements.insightProgressLabel.textContent = gameState.game_over ? '試合終了' : `${progressPercentRaw}%`;
+  winProbability = Math.min(Math.max(winProbability, 0), 1);
+
+  if (elements.insightWinProbability) {
+    const winPercent = Math.round(winProbability * 100);
+    setInsightText(elements.insightWinProbability, `${winPercent}%`);
+    let trend = 'neutral';
+    if (winProbability >= 0.55) {
+      trend = 'positive';
+    } else if (winProbability <= 0.45) {
+      trend = 'negative';
+    }
+    elements.insightWinProbability.dataset.trend = trend;
   }
-  if (elements.insightMeter) {
-    elements.insightMeter.setAttribute(
+  if (elements.insightWinContext) {
+    const formattedDiff = runDiff > 0 ? `+${runDiff}` : runDiff < 0 ? `${runDiff}` : '±0';
+    setInsightText(
+      elements.insightWinContext,
+      `得点差: ${formattedDiff} ・進行度: ${Math.round(clampedProgress * 100)}%`,
+    );
+  }
+
+  const winPercentLabel = Math.round(winProbability * 100);
+  if (elements.insightProbabilityFill) {
+    elements.insightProbabilityFill.style.width = `${winPercentLabel}%`;
+  }
+  if (elements.insightProbabilityLabel) {
+    elements.insightProbabilityLabel.textContent = gameState.game_over
+      ? `最終値 ${winPercentLabel}%`
+      : `推定 ${winPercentLabel}%`;
+  }
+  if (elements.insightProbabilityMeter) {
+    elements.insightProbabilityMeter.setAttribute(
       'aria-label',
-      `ゲーム進行度 ${gameState.game_over ? '100%' : `${progressPercentRaw}%`}`,
+      `勝利確率 ${winPercentLabel}%`,
     );
   }
 }
