@@ -20,7 +20,7 @@ const CATEGORY_SETTINGS = {
   groundout: {
     className: 'play-ball--groundout',
     distanceFactor: 0.42,
-    angleRange: [38, 142],
+    angleRange: [45, 145],
     finalOpacity: 0.35,
     jitter: 0.08,
   },
@@ -41,24 +41,27 @@ const CATEGORY_SETTINGS = {
   single: {
     className: 'play-ball--single',
     distanceFactor: 0.68,
-    angleRange: [36, 144],
+    angleRange: [45, 135],
     finalOpacity: 0.32,
     jitter: 0.12,
   },
   extraBase: {
     className: 'play-ball--extra-base',
     distanceFactor: 0.98,
-    angleRange: [32, 148],
+    angleRange: [40, 140],
     finalOpacity: 0.26,
     jitter: 0.15,
   },
   homeRun: {
     className: 'play-ball--home-run',
-    distanceFactor: 1.05,
-    angleRange: [28, 152],
+    // Boost carry for home runs and allow deeper endpoints
+    distanceFactor: 3,
+    angleRange: [45, 135],
     finalOpacity: 0.18,
-    jitter: 0.18,
+    jitter: 0.02,
     spark: true,
+    // Let HR balls approach the layer edge a bit closer
+    marginFactor: 0.01,
   },
 };
 
