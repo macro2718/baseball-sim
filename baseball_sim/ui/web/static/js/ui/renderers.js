@@ -162,6 +162,170 @@ function updatePitchers(listEl, pitchers) {
   });
 }
 
+function clampStaminaPercent(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(numeric)));
+}
+
+function formatStaminaLabel(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return '--';
+  }
+  return `${Math.round(numeric)}%`;
+}
+
+function updateCurrentPitcherCard(cardEl, pitcher) {
+  if (!cardEl) return;
+  if (!pitcher) {
+    cardEl.innerHTML = '<p class="pitcher-card-empty">現在の投手情報が取得できません。</p>';
+    return;
+  }
+
+  const staminaPercent = clampStaminaPercent(pitcher.stamina);
+  const staminaLabel = formatStaminaLabel(pitcher.stamina);
+  const typeRaw = pitcher.pitcher_type ?? 'P';
+  const nameRaw = pitcher.name ?? '-';
+  const throwsRaw = pitcher.throws ? String(pitcher.throws) : '';
+  const typeLabel = escapeHtml(typeRaw);
+  const nameLabel = escapeHtml(nameRaw);
+  const throwsLabel = throwsRaw ? escapeHtml(throwsRaw) : '';
+  const throwsBlock = throwsLabel
+    ? `
+        <div class="pitcher-meta-block">
+          <span class="pitcher-meta-label">投球腕</span>
+          <span class="pitcher-meta-value">${throwsLabel}</span>
+        </div>
+      `
+    : '';
+
+  cardEl.innerHTML = `
+    <div class="current-pitcher-header">
+      <span class="card-label">現在の投手</span>
+      <span class="pitcher-role-badge">${typeLabel}</span>
+    </div>
+    <div class="current-pitcher-body">
+      <h4 class="pitcher-name">${nameLabel}</h4>
+      <div class="pitcher-meta">
+        <div class="pitcher-meta-block">
+          <span class="pitcher-meta-label">スタミナ</span>
+          <div class="stamina-meter" role="presentation">
+            <span class="stamina-fill" style="width: ${staminaPercent}%"></span>
+          </div>
+          <span class="pitcher-meta-value stamina-value">${staminaLabel}</span>
+        </div>
+        <div class="pitcher-meta-block">
+          <span class="pitcher-meta-label">タイプ</span>
+          <span class="pitcher-meta-value">${typeLabel}</span>
+        </div>
+        ${throwsBlock}
+      </div>
+    </div>
+  `;
+}
+
+function highlightPitcherCards(gridEl, selectedValue) {
+  if (!gridEl) return;
+  const normalized = selectedValue != null ? String(selectedValue) : '';
+  const cards = gridEl.querySelectorAll('.pitcher-card');
+  cards.forEach((card) => {
+    const value = card.dataset.value || '';
+    const isSelected = normalized !== '' && value === normalized;
+    if (isSelected) {
+      card.classList.add('selected');
+      card.setAttribute('aria-pressed', 'true');
+    } else {
+      card.classList.remove('selected');
+      card.setAttribute('aria-pressed', 'false');
+    }
+  });
+}
+
+function updatePitcherOptionGrid(gridEl, options, selectEl, helperEl) {
+  if (!gridEl) return;
+
+  gridEl.innerHTML = '';
+  const hasOptions = Array.isArray(options) && options.length > 0;
+  const selectionDisabled = !selectEl || Boolean(selectEl.disabled);
+
+  if (!hasOptions) {
+    const emptyMessage = document.createElement('p');
+    emptyMessage.className = 'pitcher-card-empty';
+    emptyMessage.textContent = '交代可能な投手がいません。';
+    gridEl.appendChild(emptyMessage);
+    highlightPitcherCards(gridEl, '');
+    if (helperEl) {
+      helperEl.textContent = '現在ブルペンで準備できる投手がいません。';
+    }
+    return;
+  }
+
+  options.forEach((pitcher) => {
+    const optionValue = pitcher.index != null ? String(pitcher.index) : '';
+    const staminaPercent = clampStaminaPercent(pitcher.stamina);
+    const staminaLabel = formatStaminaLabel(pitcher.stamina);
+    const typeRaw = pitcher.pitcher_type ?? 'P';
+    const nameRaw = pitcher.name ?? '-';
+    const throwsRaw = pitcher.throws ? String(pitcher.throws) : '';
+    const typeLabel = escapeHtml(typeRaw);
+    const nameLabel = escapeHtml(nameRaw);
+    const throwsLabel = throwsRaw ? escapeHtml(throwsRaw) : '';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pitcher-card';
+    button.dataset.value = optionValue;
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('role', 'listitem');
+    button.title = `${nameRaw} (${typeRaw}${throwsRaw ? `/${throwsRaw}` : ''})`;
+    button.innerHTML = `
+      <div class="pitcher-card-top">
+        <span class="pitcher-role-badge">${typeLabel}</span>
+        ${throwsLabel ? `<span class="pitcher-throws-badge" aria-label="投球腕">${throwsLabel}</span>` : ''}
+      </div>
+      <h4 class="pitcher-card-name">${nameLabel}</h4>
+      <div class="pitcher-card-bottom">
+        <div class="stamina-meter" role="presentation">
+          <span class="stamina-fill" style="width: ${staminaPercent}%"></span>
+        </div>
+        <span class="stamina-value">${staminaLabel}</span>
+      </div>
+    `;
+
+    button.addEventListener('click', () => {
+      if (!selectEl) return;
+      selectEl.value = optionValue;
+      const changeEvent = new Event('change', { bubbles: true });
+      selectEl.dispatchEvent(changeEvent);
+      highlightPitcherCards(gridEl, optionValue);
+    });
+
+    if (selectionDisabled) {
+      button.disabled = true;
+    }
+
+    gridEl.appendChild(button);
+  });
+
+  if (selectEl && !selectEl.dataset.pitcherCardListener) {
+    selectEl.addEventListener('change', () => {
+      highlightPitcherCards(gridEl, selectEl.value);
+    });
+    selectEl.dataset.pitcherCardListener = 'true';
+  }
+
+  highlightPitcherCards(gridEl, selectEl ? selectEl.value : '');
+
+  if (helperEl) {
+    helperEl.textContent = selectionDisabled
+      ? '現在は投手交代ができません。'
+      : 'カードを選択するとここに反映されます。';
+  }
+}
+
 function populateSelect(selectEl, options, placeholder) {
   if (!selectEl) return;
   const previousValue = selectEl.value;
@@ -378,6 +542,9 @@ function updateStrategyControls(gameState, teams) {
     openAbilitiesButton,
     defenseSubMenuButton,
     pitcherMenuButton,
+    currentPitcherCard,
+    pitcherOptionGrid,
+    pitcherSelectHelper,
     pitcherSelect,
     pitcherButton,
   } = elements;
@@ -460,6 +627,11 @@ function updateStrategyControls(gameState, teams) {
   const defenseBenchPlayers = defenseTeam?.bench || [];
   const pitcherOptions = defenseTeam?.pitcher_options || [];
 
+  const currentPitcher =
+    (defenseTeam?.pitchers || []).find((pitcher) => pitcher && pitcher.is_current) || null;
+
+  updateCurrentPitcherCard(currentPitcherCard, currentPitcher);
+
   resetDefenseSelectionsIfUnavailable(defenseLineup, defenseBenchPlayers);
 
   const canDefenseSub =
@@ -502,14 +674,20 @@ function updateStrategyControls(gameState, teams) {
     if (!canChangePitcher || isGameOver) {
       pitcherSelect.value = '';
     }
+
+    updatePitcherOptionGrid(pitcherOptionGrid, pitcherOptions, pitcherSelect, pitcherSelectHelper);
+
     pitcherButton.textContent = isGameOver ? 'Game Over' : '投手交代';
 
     if (pitcherMenuButton) {
       pitcherMenuButton.disabled = !canChangePitcher || isGameOver;
       pitcherMenuButton.textContent = isGameOver ? 'Game Over' : '投手交代';
     }
-  } else if (pitcherMenuButton) {
-    pitcherMenuButton.disabled = true;
+  } else {
+    updatePitcherOptionGrid(pitcherOptionGrid, pitcherOptions, null, pitcherSelectHelper);
+    if (pitcherMenuButton) {
+      pitcherMenuButton.disabled = true;
+    }
   }
 
   if (openStatsButton) {

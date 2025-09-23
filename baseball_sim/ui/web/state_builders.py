@@ -295,6 +295,8 @@ class SessionStateBuilder:
                         "index": pitcher_index,
                         "name": pitcher.name,
                         "pitcher_type": getattr(pitcher, "pitcher_type", "P"),
+                        "stamina": round(getattr(pitcher, "current_stamina", 0), 1),
+                        "throws": getattr(pitcher, "throws", None),
                     }
                 )
 
@@ -619,6 +621,7 @@ class SessionStateBuilder:
             "name": pitcher.name,
             "stamina": round(getattr(pitcher, "current_stamina", 0), 1),
             "pitcher_type": getattr(pitcher, "pitcher_type", "P"),
+            "throws": getattr(pitcher, "throws", None),
             "is_current": is_current,
         }
 
