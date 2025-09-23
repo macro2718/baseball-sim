@@ -143,181 +143,148 @@
   color: var(--text-muted);
 }
 
-.defense-field {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-template-rows: repeat(5, minmax(70px, auto));
+.defense-lineup {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  padding: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
-.defense-field button.position-slot {
+.defense-lineup .empty-message,
+.defense-bench .empty-message {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 13px;
+}
+
+.defense-lineup-row {
   background: rgba(18, 28, 52, 0.85);
   border: 1px solid rgba(125, 211, 252, 0.28);
   border-radius: 16px;
-  padding: 12px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: auto 96px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: center;
+}
+
+.defense-lineup-row .lineup-order {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  justify-self: center;
+}
+
+.defense-lineup-row .defense-action-button {
+  width: 100%;
+}
+
+.defense-lineup-row .lineup-player-button {
+  justify-self: start;
+}
+
+.defense-lineup-row .lineup-meta {
+  grid-column: 2 / span 2;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-  color: var(--text);
-  transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
 }
 
-.defense-field button.position-slot .position-label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-
-.defense-field button.position-slot strong {
-  font-size: 15px;
-}
-
-.defense-field button.position-slot span {
+.defense-lineup-row .lineup-meta .eligible-label {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.defense-field button.position-slot:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: rgba(96, 165, 250, 0.45);
+.defense-lineup-row .lineup-meta .eligible-positions {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.defense-field button.position-slot.selected {
+.defense-lineup-row.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.35);
-  background: rgba(96, 165, 250, 0.14);
 }
 
-.defense-field button.position-slot:disabled {
+.defense-action-button {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: border 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.defense-action-button .position-token {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.defense-action-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.defense-action-button.selected {
+  border-color: var(--highlight);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.35);
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.defense-action-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
-.defense-field .pos-cf { grid-column: 3; grid-row: 1; }
-.defense-field .pos-lf { grid-column: 2; grid-row: 2; }
-.defense-field .pos-rf { grid-column: 4; grid-row: 2; }
-.defense-field .pos-2b { grid-column: 3; grid-row: 2; }
-.defense-field .pos-ss { grid-column: 3; grid-row: 3; }
-.defense-field .pos-3b { grid-column: 2; grid-row: 3; }
-.defense-field .pos-1b { grid-column: 4; grid-row: 3; }
-.defense-field .pos-p { grid-column: 3; grid-row: 4; }
-.defense-field .pos-c { grid-column: 3; grid-row: 5; }
-.defense-field .pos-dh { grid-column: 5; grid-row: 3; }
-
-.defense-extras {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.defense-action-button.ineligible {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.12);
 }
 
-.defense-extras .extras-title {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 0;
+.defense-action-button .ineligible-hint {
+  font-size: 12px;
+  color: var(--danger);
 }
 
 .defense-bench {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 360px;
+  max-height: 420px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
-.defense-bench .empty-message,
-.defense-extras .empty-message {
-  color: var(--text-muted);
-  font-style: italic;
-  font-size: 13px;
-}
-
-.defense-bench button.bench-card,
-.defense-extras button.bench-card {
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 14px;
-  padding: 12px;
-  display: flex;
+.bench-player-button {
+  width: 100%;
+  text-align: left;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  color: var(--text);
-  text-align: left;
-  transition: border 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
-.defense-bench button.bench-card:hover:not(:disabled),
-.defense-extras button.bench-card:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: rgba(59, 130, 246, 0.45);
+.bench-player-button strong {
+  font-weight: 600;
+  font-size: 15px;
 }
 
-.defense-bench button.bench-card.selected,
-.defense-extras button.bench-card.selected {
-  border-color: var(--highlight);
-  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.35);
-  background: rgba(59, 130, 246, 0.18);
-}
-
-.defense-bench button.bench-card:disabled,
-.defense-extras button.bench-card:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.defense-bench button.bench-card.ineligible,
-.defense-extras button.bench-card.ineligible {
-  border-color: rgba(239, 68, 68, 0.6);
-  background: rgba(239, 68, 68, 0.12);
-}
-
-.defense-retired {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.defense-retired .retired-card {
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px dashed rgba(148, 163, 184, 0.35);
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--text-muted);
-}
-
-.defense-retired .retired-card strong {
-  color: var(--text);
-}
-
-.defense-retired .retired-card .retired-status {
-  font-size: 12px;
-  color: var(--danger);
-}
-
-.bench-card .eligible-label {
+.bench-player-button .eligible-label {
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.bench-card .eligible-positions {
+.bench-player-button .eligible-positions {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.bench-card .ineligible-hint {
-  font-size: 12px;
-  color: var(--danger);
 }
 
 .selection-info {

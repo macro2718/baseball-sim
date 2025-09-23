@@ -1,4 +1,3 @@
-import { FIELD_POSITIONS } from '../config.js';
 import { elements } from '../dom.js';
 import {
   stateCache,
@@ -6,12 +5,11 @@ import {
   canBenchPlayerCoverPosition,
   updateDefenseContext,
   resetDefenseSelection,
-  isKnownFieldPosition,
   getDefensePlanInvalidAssignments,
 } from '../state.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
 
-const DEFAULT_INFO = '出場中またはベンチの選手を2人選択すると入れ替えできます。';
+const DEFAULT_INFO = '出場選手のポジションや選手名、ベンチ選手をクリックして入れ替えを指示できます。';
 
 function buildPlanSignature(team) {
   if (!team) return null;
@@ -81,12 +79,12 @@ function clearDefensePanels() {
   if (elements.defenseField) {
     elements.defenseField.innerHTML = '';
   }
+  if (elements.defenseBench) {
+    elements.defenseBench.innerHTML = '';
+  }
   if (elements.defenseExtras) {
     elements.defenseExtras.classList.add('hidden');
     elements.defenseExtras.innerHTML = '';
-  }
-  if (elements.defenseBench) {
-    elements.defenseBench.innerHTML = '';
   }
   if (elements.defenseRetired) {
     elements.defenseRetired.classList.add('hidden');
@@ -167,118 +165,64 @@ function getCurrentGameState(gameState) {
   return stateCache.data?.game || {};
 }
 
-function renderRetiredList(container, retiredPlayers) {
-  if (!container) return;
-  container.innerHTML = '';
-  if (!retiredPlayers.length) {
-    container.classList.add('hidden');
-    return;
-  }
-
-  container.classList.remove('hidden');
-  const title = document.createElement('p');
-  title.className = 'extras-title';
-  title.textContent = 'リタイア選手';
-  container.appendChild(title);
-
-  retiredPlayers.forEach((player) => {
-    const card = document.createElement('div');
-    card.className = 'retired-card';
-    const retiredToken = renderPositionToken(player?.position || '-', player?.pitcher_type);
-    const eligibleHtml = renderPositionList(player?.eligible || [], player?.pitcher_type);
-    card.innerHTML = `
-      <strong>${escapeHtml(player?.name ?? '-')}</strong>
-      <span class="retired-status">${retiredToken ? `${retiredToken} 退場` : '退場'}</span>
-      <span class="eligible-label">適性</span>
-      <span class="eligible-positions">${eligibleHtml}</span>
-    `;
-    container.appendChild(card);
-  });
-}
-
 function renderDefensePlanView(plan, gameState) {
   const lineup = plan?.lineup || [];
   const benchPlayers = plan?.bench || [];
-  const retiredPlayers = plan?.retired || [];
   const activeGame = Boolean(gameState?.active);
   const canInteract = activeGame && stateCache.defenseContext.canSub;
 
   if (elements.defenseField) {
     elements.defenseField.innerHTML = '';
-    const assigned = new Map();
-    const extras = [];
+    if (!lineup.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty-message';
+      empty.textContent = '出場中の選手情報がありません。';
+      elements.defenseField.appendChild(empty);
+    } else {
+      lineup.forEach((player, index) => {
+        if (!player) return;
+        const row = document.createElement('div');
+        row.className = 'defense-lineup-row';
+        row.dataset.index = String(index);
+        row.dataset.lineupIndex = String(index);
 
-    lineup.forEach((player) => {
-      if (!player) return;
-      const key = normalizePositionKey(player.position_key || player.position);
-      if (key && isKnownFieldPosition(key) && !assigned.has(key)) {
-        assigned.set(key, player);
-      } else {
-        extras.push(player);
-      }
-    });
+        const order = document.createElement('span');
+        order.className = 'lineup-order';
+        order.textContent = `${player.order ?? index + 1}.`;
 
-    FIELD_POSITIONS.forEach((slot) => {
-      const player = assigned.get(slot.key);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = `position-slot ${slot.className}`;
-      button.dataset.position = slot.key;
-      button.dataset.role = 'lineup';
-      if (player) {
-        button.dataset.index = String(player.index);
-        button.dataset.lineupIndex = String(player.index);
-        const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
-        button.innerHTML = `
-          ${renderPositionToken(slot.label, null, 'position-label')}
-          <strong>${escapeHtml(player.name ?? '-')}</strong>
-          <span class="eligible-positions">${eligibleHtml}</span>
-        `;
-        button.disabled = !canInteract;
-      } else {
-        button.dataset.index = '';
-        button.dataset.lineupIndex = '';
-        const emptyEligible = renderPositionList([], null);
-        button.innerHTML = `
-          ${renderPositionToken(slot.label, null, 'position-label')}
-          <strong>空席</strong>
-          <span class="eligible-positions">${emptyEligible}</span>
-        `;
-        button.disabled = true;
-      }
-      elements.defenseField.appendChild(button);
-    });
+        const positionButton = document.createElement('button');
+        positionButton.type = 'button';
+        positionButton.className = 'defense-action-button lineup-position-button';
+        positionButton.dataset.role = 'lineup';
+        positionButton.dataset.kind = 'position';
+        positionButton.dataset.index = String(index);
+        const displayPosition = player.position || player.position_key || '-';
+        const positionToken = renderPositionToken(displayPosition, player.pitcher_type, 'position-token');
+        positionButton.innerHTML = positionToken || escapeHtml(displayPosition);
+        positionButton.disabled = !canInteract;
 
-    if (elements.defenseExtras) {
-      if (extras.length) {
-        elements.defenseExtras.classList.remove('hidden');
-        elements.defenseExtras.innerHTML = '';
-        const title = document.createElement('p');
-        title.className = 'extras-title';
-        title.textContent = '配置外の選手';
-        elements.defenseExtras.appendChild(title);
-        extras.forEach((player) => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'bench-card';
-          button.dataset.role = 'lineup';
-          button.dataset.index = String(player.index);
-          button.dataset.lineupIndex = String(player.index);
-          const currentPosition = player.position && player.position !== '-' ? player.position : '-';
-          const currentPositionHtml = renderPositionToken(currentPosition, player.pitcher_type);
-          const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
-          button.innerHTML = `
-            <strong>${escapeHtml(player.name ?? '-')}</strong>
-            <span class="eligible-label">現在: ${currentPositionHtml}</span>
-            <span class="eligible-positions">適性: ${eligibleHtml}</span>
-          `;
-          button.disabled = !canInteract;
-          elements.defenseExtras.appendChild(button);
-        });
-      } else {
-        elements.defenseExtras.classList.add('hidden');
-        elements.defenseExtras.innerHTML = '';
-      }
+        const playerButton = document.createElement('button');
+        playerButton.type = 'button';
+        playerButton.className = 'defense-action-button lineup-player-button';
+        playerButton.dataset.role = 'lineup';
+        playerButton.dataset.kind = 'player';
+        playerButton.dataset.index = String(index);
+        playerButton.innerHTML = `<span>${escapeHtml(player.name ?? '-')}</span>`;
+        playerButton.disabled = !canInteract;
+
+        const meta = document.createElement('div');
+        meta.className = 'lineup-meta';
+        const label = document.createElement('span');
+        label.className = 'eligible-label';
+        label.textContent = '守備適性';
+        const eligible = document.createElement('span');
+        eligible.className = 'eligible-positions';
+        eligible.innerHTML = renderPositionList(player.eligible || [], player.pitcher_type);
+        meta.append(label, eligible);
+
+        row.append(order, positionButton, playerButton, meta);
+        elements.defenseField.appendChild(row);
+      });
     }
   }
 
@@ -291,10 +235,12 @@ function renderDefensePlanView(plan, gameState) {
       elements.defenseBench.appendChild(empty);
     } else {
       benchPlayers.forEach((player) => {
+        if (!player) return;
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'bench-card';
+        button.className = 'defense-action-button bench-player-button';
         button.dataset.role = 'bench';
+        button.dataset.kind = 'player';
         button.dataset.index = String(player.index);
         button.dataset.benchIndex = String(player.index);
         const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
@@ -309,8 +255,14 @@ function renderDefensePlanView(plan, gameState) {
     }
   }
 
+  if (elements.defenseExtras) {
+    elements.defenseExtras.classList.add('hidden');
+    elements.defenseExtras.innerHTML = '';
+  }
+
   if (elements.defenseRetired) {
-    renderRetiredList(elements.defenseRetired, retiredPlayers);
+    elements.defenseRetired.classList.add('hidden');
+    elements.defenseRetired.innerHTML = '';
   }
 }
 
@@ -436,6 +388,30 @@ function swapBenchWithLineup(plan, lineupIndex, benchIndex) {
   };
 }
 
+function normalizeDefenseSelection(selection) {
+  if (!selection) return null;
+  const { role, kind } = selection;
+  const index = Number(selection.index);
+  if (!Number.isInteger(index) || index < 0) {
+    return null;
+  }
+
+  if (kind === 'position') {
+    return { type: 'lineup_position', lineupIndex: index };
+  }
+
+  if (kind === 'player') {
+    if (role === 'lineup') {
+      return { type: 'lineup_player', lineupIndex: index };
+    }
+    if (role === 'bench') {
+      return { type: 'bench_player', benchIndex: index };
+    }
+  }
+
+  return null;
+}
+
 function applyDefenseSwap(first, second) {
   if (!stateCache.defenseContext.canSub) {
     return { success: false, message: '守備交代は現在行えません。', variant: 'danger' };
@@ -449,18 +425,50 @@ function applyDefenseSwap(first, second) {
     return { success: false, message: null };
   }
 
-  if (first.type === second.type && first.index === second.index) {
+  const firstSelection = normalizeDefenseSelection(first);
+  const secondSelection = normalizeDefenseSelection(second);
+
+  if (!firstSelection || !secondSelection) {
+    return {
+      success: false,
+      message: '選択した組み合わせでは入れ替えできません。',
+      variant: 'danger',
+    };
+  }
+
+  const firstLineupIndex = Number.isInteger(firstSelection.lineupIndex)
+    ? firstSelection.lineupIndex
+    : null;
+  const secondLineupIndex = Number.isInteger(secondSelection.lineupIndex)
+    ? secondSelection.lineupIndex
+    : null;
+
+  if (
+    firstLineupIndex !== null &&
+    secondLineupIndex !== null &&
+    firstLineupIndex === secondLineupIndex
+  ) {
     return { success: false, message: null };
   }
 
-  if (first.type === 'lineup' && second.type === 'lineup') {
-    return swapLineupPositions(plan, first.index, second.index);
+  if (firstSelection.type === 'bench_player' && secondSelection.type === 'bench_player') {
+    return {
+      success: false,
+      message: 'ベンチ同士の入れ替えは行えません。',
+      variant: 'warning',
+    };
   }
 
-  if ((first.type === 'lineup' && second.type === 'bench') || (first.type === 'bench' && second.type === 'lineup')) {
-    const lineupIndex = first.type === 'lineup' ? first.index : second.index;
-    const benchIndex = first.type === 'bench' ? first.index : second.index;
-    return swapBenchWithLineup(plan, lineupIndex, benchIndex);
+  if (firstLineupIndex !== null && secondLineupIndex !== null) {
+    return swapLineupPositions(plan, firstLineupIndex, secondLineupIndex);
+  }
+
+  if (firstSelection.type === 'bench_player' && secondLineupIndex !== null) {
+    return swapBenchWithLineup(plan, secondLineupIndex, firstSelection.benchIndex);
+  }
+
+  if (secondSelection.type === 'bench_player' && firstLineupIndex !== null) {
+    return swapBenchWithLineup(plan, firstLineupIndex, secondSelection.benchIndex);
   }
 
   return {
@@ -486,85 +494,148 @@ export function renderDefensePanel(defenseTeam, gameState) {
 }
 
 export function updateDefenseBenchAvailability() {
-  if (!elements.defenseBench) return;
-
   const plan = stateCache.defensePlan;
   const selection = stateCache.defenseSelection.first;
   const canSubBase = stateCache.defenseContext.canSub;
-  const hasLineupSelection = selection && selection.type === 'lineup';
-  const lineupPlayer = hasLineupSelection ? getPlanLineupPlayer(selection.index) : null;
+
+  const lineupSelectionIndex =
+    selection && selection.role === 'lineup' ? Number(selection.index) : null;
+  const lineupPlayer =
+    plan && Number.isInteger(lineupSelectionIndex) ? plan.lineup[lineupSelectionIndex] : null;
   const lineupPositionKey = lineupPlayer
     ? normalizePositionKey(lineupPlayer.position_key || lineupPlayer.position)
     : null;
-  const positionLabel = lineupPlayer ? lineupPlayer.position || lineupPositionKey || '' : '';
+  const lineupPositionLabel = lineupPlayer ? lineupPlayer.position || lineupPositionKey || '' : '';
 
-  elements.defenseBench.querySelectorAll('[data-role="bench"]').forEach((button) => {
-    const value = button.dataset.index ?? button.dataset.benchIndex;
-    const benchIndex = Number(value);
-    const benchPlayer = plan && Number.isInteger(benchIndex) ? plan.bench[benchIndex] : null;
+  const benchSelectionIndex =
+    selection && selection.role === 'bench' && selection.kind === 'player'
+      ? Number(selection.index)
+      : null;
+  const benchSelectionPlayer =
+    plan && Number.isInteger(benchSelectionIndex) ? plan.bench[benchSelectionIndex] : null;
 
-    const enable = canSubBase && Boolean(benchPlayer);
-    const markIneligible =
-      enable &&
-      hasLineupSelection &&
-      lineupPositionKey &&
-      !canBenchPlayerCoverPosition(benchPlayer, lineupPositionKey);
+  if (elements.defenseBench) {
+    elements.defenseBench
+      .querySelectorAll('[data-role="bench"][data-kind="player"]')
+      .forEach((button) => {
+        const value = button.dataset.index ?? button.dataset.benchIndex;
+        const benchIndex = Number(value);
+        const benchPlayer =
+          plan && Number.isInteger(benchIndex) ? plan.bench[benchIndex] : null;
 
-    button.disabled = !enable;
-    button.classList.toggle('ineligible', markIneligible);
+        const enable = canSubBase && Boolean(benchPlayer);
+        let markIneligible = false;
+        let title = '';
 
-    let hint = button.querySelector('.ineligible-hint');
-    if (markIneligible) {
-      if (!hint) {
-        hint = document.createElement('span');
-        hint.className = 'ineligible-hint';
-        button.appendChild(hint);
-      }
-      hint.textContent = '守備不可';
-      hint.classList.remove('hidden');
-      button.title = positionLabel
-        ? `${benchPlayer.name} は ${positionLabel} を守れません。`
-        : `${benchPlayer.name} はこの守備位置を守れません。`;
-    } else if (hint) {
-      hint.textContent = '';
-      hint.classList.add('hidden');
-      button.title = '';
-    } else {
-      button.title = '';
-    }
-  });
+        if (
+          enable &&
+          lineupPlayer &&
+          lineupPositionKey &&
+          benchPlayer &&
+          !canBenchPlayerCoverPosition(benchPlayer, lineupPositionKey)
+        ) {
+          markIneligible = true;
+          title = lineupPositionLabel
+            ? `${benchPlayer.name} は ${lineupPositionLabel} を守れません。`
+            : `${benchPlayer.name} はこの守備位置を守れません。`;
+        }
+
+        button.disabled = !enable;
+        button.classList.toggle('ineligible', markIneligible);
+        button.title = title;
+      });
+  }
+
+  if (elements.defenseField) {
+    elements.defenseField
+      .querySelectorAll('[data-role="lineup"][data-kind="position"]')
+      .forEach((button) => {
+        const value = button.dataset.index ?? button.dataset.lineupIndex;
+        const lineupIndex = Number(value);
+        const rowPlayer =
+          plan && Number.isInteger(lineupIndex) ? plan.lineup[lineupIndex] : null;
+        const posKey = rowPlayer
+          ? normalizePositionKey(rowPlayer.position_key || rowPlayer.position)
+          : null;
+        const posLabel = rowPlayer ? rowPlayer.position || posKey || '' : '';
+
+        let markIneligible = false;
+        let title = '';
+
+        if (benchSelectionPlayer && posKey && !canBenchPlayerCoverPosition(benchSelectionPlayer, posKey)) {
+          markIneligible = true;
+          title = posLabel
+            ? `${benchSelectionPlayer.name} は ${posLabel} を守れません。`
+            : `${benchSelectionPlayer.name} はこの守備位置を守れません。`;
+        }
+
+        button.classList.toggle('ineligible', markIneligible);
+        button.title = title;
+      });
+  }
 }
 
 export function applyDefenseSelectionHighlights() {
   const selection = stateCache.defenseSelection.first;
-  const lineupTarget = selection && selection.type === 'lineup' ? selection.index : null;
-  const benchTarget = selection && selection.type === 'bench' ? selection.index : null;
+  const lineupIndex =
+    selection && selection.role === 'lineup' ? Number(selection.index) : null;
+  const benchIndex =
+    selection && selection.role === 'bench' && selection.kind === 'player'
+      ? Number(selection.index)
+      : null;
 
   if (elements.defenseField) {
-    elements.defenseField.querySelectorAll('[data-role="lineup"]').forEach((button) => {
-      const value = button.dataset.index ?? button.dataset.lineupIndex;
-      const index = Number(value);
-      const isSelected = Number.isInteger(index) && index === lineupTarget;
-      button.classList.toggle('selected', isSelected);
-    });
-  }
+    elements.defenseField
+      .querySelectorAll('[data-role="lineup"][data-kind="position"]')
+      .forEach((button) => {
+        const value = button.dataset.index ?? button.dataset.lineupIndex;
+        const index = Number(value);
+        const isSelected =
+          selection &&
+          selection.role === 'lineup' &&
+          selection.kind === 'position' &&
+          Number.isInteger(index) &&
+          index === lineupIndex;
+        button.classList.toggle('selected', isSelected);
+      });
 
-  if (elements.defenseExtras) {
-    elements.defenseExtras.querySelectorAll('[data-role="lineup"]').forEach((button) => {
-      const value = button.dataset.index ?? button.dataset.lineupIndex;
+    elements.defenseField
+      .querySelectorAll('[data-role="lineup"][data-kind="player"]')
+      .forEach((button) => {
+        const value = button.dataset.index ?? button.dataset.lineupIndex;
+        const index = Number(value);
+        const isSelected =
+          selection &&
+          selection.role === 'lineup' &&
+          selection.kind === 'player' &&
+          Number.isInteger(index) &&
+          index === lineupIndex;
+        button.classList.toggle('selected', isSelected);
+      });
+
+    elements.defenseField.querySelectorAll('.defense-lineup-row').forEach((row) => {
+      const value = row.dataset.index ?? row.dataset.lineupIndex;
       const index = Number(value);
-      const isSelected = Number.isInteger(index) && index === lineupTarget;
-      button.classList.toggle('selected', isSelected);
+      const highlight =
+        selection && selection.role === 'lineup' && Number.isInteger(index) && index === lineupIndex;
+      row.classList.toggle('selected', highlight);
     });
   }
 
   if (elements.defenseBench) {
-    elements.defenseBench.querySelectorAll('[data-role="bench"]').forEach((button) => {
-      const value = button.dataset.index ?? button.dataset.benchIndex;
-      const index = Number(value);
-      const isSelected = Number.isInteger(index) && index === benchTarget;
-      button.classList.toggle('selected', isSelected);
-    });
+    elements.defenseBench
+      .querySelectorAll('[data-role="bench"][data-kind="player"]')
+      .forEach((button) => {
+        const value = button.dataset.index ?? button.dataset.benchIndex;
+        const index = Number(value);
+        const isSelected =
+          selection &&
+          selection.role === 'bench' &&
+          selection.kind === 'player' &&
+          Number.isInteger(index) &&
+          index === benchIndex;
+        button.classList.toggle('selected', isSelected);
+      });
   }
 }
 
@@ -594,15 +665,27 @@ export function updateDefenseSelectionInfo() {
     variantClass = 'warning';
   } else if (!plan || !(plan.lineup || []).length) {
     message = '守備情報がありません。';
-  } else if (selection?.type === 'lineup') {
-    const player = getPlanLineupPlayer(selection.index);
+  } else if (selection?.role === 'lineup') {
+    const index = Number(selection.index);
+    const player = Number.isInteger(index) ? getPlanLineupPlayer(index) : null;
+    const positionKey = player
+      ? normalizePositionKey(player.position_key || player.position)
+      : null;
+    const positionLabel = player ? player.position || positionKey || '-' : '-';
+    if (selection.kind === 'position') {
+      message = player
+        ? `${player.name} の守備位置（${positionLabel}）と入れ替える対象を選択してください。`
+        : '守備位置を入れ替える対象を選択してください。';
+    } else {
+      message = player
+        ? `${player.name} と入れ替える選手または守備位置を選択してください。`
+        : '守備交代を行う守備位置を選択してください。';
+    }
+  } else if (selection?.role === 'bench') {
+    const index = Number(selection.index);
+    const player = Number.isInteger(index) ? getPlanBenchPlayer(index) : null;
     message = player
-      ? `${player.name} と入れ替える選手を選択してください。`
-      : '守備交代を行う守備位置を選択してください。';
-  } else if (selection?.type === 'bench') {
-    const player = getPlanBenchPlayer(selection.index);
-    message = player
-      ? `${player.name} を投入する守備位置を選択してください。`
+      ? `${player.name} を投入する守備位置や入れ替える選手を選択してください。`
       : '守備交代を行う守備位置を選択してください。';
   } else if (operationsCount > 0) {
     message = `未適用の守備交代案が ${operationsCount} 件あります。適用ボタンで確定してください。`;
@@ -635,18 +718,24 @@ export function handleDefensePlayerClick(event) {
   if (!button || button.disabled) return;
 
   const role = button.dataset.role;
+  const kind = button.dataset.kind || 'player';
   if (!role || (role !== 'lineup' && role !== 'bench')) return;
+  if (kind !== 'player' && kind !== 'position') return;
 
-  const value =
-    role === 'lineup'
-      ? button.dataset.index ?? button.dataset.lineupIndex
-      : button.dataset.index ?? button.dataset.benchIndex;
-  const index = Number(value);
+  const rawValue = button.dataset.index ?? button.dataset.lineupIndex ?? button.dataset.benchIndex;
+  const index = Number(rawValue);
   if (!Number.isInteger(index) || index < 0) return;
+
+  const selection = { role, kind, index };
 
   const currentSelection = stateCache.defenseSelection.first;
 
-  if (currentSelection && currentSelection.type === role && currentSelection.index === index) {
+  if (
+    currentSelection &&
+    currentSelection.role === role &&
+    currentSelection.kind === kind &&
+    Number(currentSelection.index) === index
+  ) {
     stateCache.defenseSelection.first = null;
     setDefenseFeedback(null);
     applyDefenseSelectionHighlights();
@@ -655,14 +744,14 @@ export function handleDefensePlayerClick(event) {
   }
 
   if (!currentSelection) {
-    stateCache.defenseSelection.first = { type: role, index };
+    stateCache.defenseSelection.first = selection;
     setDefenseFeedback(null);
     applyDefenseSelectionHighlights();
     updateDefenseSelectionInfo();
     return;
   }
 
-  const result = applyDefenseSwap(currentSelection, { type: role, index });
+  const result = applyDefenseSwap(currentSelection, selection);
   if (result.success) {
     const plan = stateCache.defensePlan;
     stateCache.defenseSelection.first = null;
@@ -681,13 +770,17 @@ export function resetDefenseSelectionsIfUnavailable(defenseLineup, defenseBenchP
   if (!selection) return;
 
   if (
-    selection.type === 'lineup' &&
-    (!Array.isArray(defenseLineup) || selection.index < 0 || selection.index >= defenseLineup.length)
+    selection.role === 'lineup' &&
+    (!Array.isArray(defenseLineup) ||
+      Number(selection.index) < 0 ||
+      Number(selection.index) >= defenseLineup.length)
   ) {
     resetDefenseSelection();
   } else if (
-    selection.type === 'bench' &&
-    (!Array.isArray(defenseBenchPlayers) || selection.index < 0 || selection.index >= defenseBenchPlayers.length)
+    selection.role === 'bench' &&
+    (!Array.isArray(defenseBenchPlayers) ||
+      Number(selection.index) < 0 ||
+      Number(selection.index) >= defenseBenchPlayers.length)
   ) {
     resetDefenseSelection();
   }

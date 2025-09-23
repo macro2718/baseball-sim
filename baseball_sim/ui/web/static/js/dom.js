@@ -65,7 +65,7 @@ export const elements = {
   modalCloseButtons: Array.from(document.querySelectorAll('.modal-close')),
   defenseResetButton: document.getElementById('defense-reset-button'),
   defenseApplyButton: document.getElementById('defense-sub-button'),
-  defenseField: document.getElementById('defense-field'),
+  defenseField: document.getElementById('defense-lineup-panel'),
   defenseBench: document.getElementById('defense-bench-panel'),
   defenseExtras: document.getElementById('defense-extras'),
   defenseRetired: document.getElementById('defense-retired-panel'),
