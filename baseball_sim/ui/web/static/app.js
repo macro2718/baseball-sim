@@ -126,6 +126,14 @@ const elements = {
   statsTableHead: document.querySelector('#stats-table thead tr'),
   statsTableBody: document.querySelector('#stats-table tbody'),
   statsTitle: document.getElementById('stats-title'),
+  insightRunRate: document.getElementById('insight-run-rate'),
+  insightInningsSample: document.getElementById('insight-innings-sample'),
+  insightBasePressure: document.getElementById('insight-base-pressure'),
+  insightBaseCount: document.getElementById('insight-base-count'),
+  insightRunDiff: document.getElementById('insight-run-diff'),
+  insightProgressFill: document.getElementById('insight-progress-fill'),
+  insightProgressLabel: document.getElementById('insight-progress-label'),
+  insightMeter: document.querySelector('.insight-meter'),
 };
 
 function normalizePositionKey(position) {
@@ -183,6 +191,17 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function numberOrZero(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function setInsightText(element, value, fallback = '--') {
+  if (!element) return;
+  const textValue = value == null || (typeof value === 'string' && value.trim() === '') ? fallback : value;
+  element.textContent = String(textValue);
 }
 
 function getPositionColorClass(position, pitcherType = null) {
@@ -727,6 +746,7 @@ function renderTitle(titleState) {
 }
 
 function renderGame(gameState, teams, log) {
+  updateAnalyticsPanel(gameState);
   if (!gameState.active) {
     elements.gameScreen.classList.add('hidden');
     elements.titleScreen.classList.remove('hidden');
@@ -840,6 +860,117 @@ function updateScoreboard(gameState, teams) {
   html += '</tbody></table>';
 
   elements.scoreboard.innerHTML = html;
+}
+
+function updateAnalyticsPanel(gameState) {
+  if (!elements.insightRunRate) return;
+
+  const resetInsights = () => {
+    setInsightText(elements.insightRunRate, '--');
+    setInsightText(elements.insightInningsSample, 'イニングサンプル: 0');
+    if (elements.insightBasePressure) {
+      setInsightText(elements.insightBasePressure, '--');
+      elements.insightBasePressure.removeAttribute('data-intensity');
+    }
+    setInsightText(elements.insightBaseCount, '0 / 3');
+    if (elements.insightRunDiff) {
+      setInsightText(elements.insightRunDiff, '--');
+      elements.insightRunDiff.dataset.trend = 'neutral';
+    }
+    if (elements.insightProgressFill) {
+      elements.insightProgressFill.style.width = '0%';
+    }
+    if (elements.insightProgressLabel) {
+      elements.insightProgressLabel.textContent = '0%';
+    }
+    if (elements.insightMeter) {
+      elements.insightMeter.setAttribute('aria-label', 'ゲーム進行度 0%');
+    }
+  };
+
+  if (!gameState || !gameState.active) {
+    resetInsights();
+    return;
+  }
+
+  const score = gameState.score || {};
+  const homeRuns = numberOrZero(score.home);
+  const awayRuns = numberOrZero(score.away);
+  const totalRuns = homeRuns + awayRuns;
+
+  const inningsHome = Array.isArray(gameState.inning_scores?.home)
+    ? gameState.inning_scores.home.length
+    : 0;
+  const inningsAway = Array.isArray(gameState.inning_scores?.away)
+    ? gameState.inning_scores.away.length
+    : 0;
+  const inningsSample = Math.max(inningsHome, inningsAway, 1);
+  const runRate = totalRuns / inningsSample;
+
+  setInsightText(elements.insightRunRate, runRate.toFixed(2));
+  setInsightText(elements.insightInningsSample, `イニングサンプル: ${inningsSample}`);
+
+  const bases = Array.isArray(gameState.bases) ? gameState.bases : [];
+  const occupiedBases = bases.reduce(
+    (count, base) => (base && base.occupied ? count + 1 : count),
+    0,
+  );
+  const basePressure = Math.round((occupiedBases / 3) * 100);
+  if (elements.insightBasePressure) {
+    setInsightText(elements.insightBasePressure, `${basePressure}%`);
+    let intensity = 'low';
+    if (basePressure >= 67) {
+      intensity = 'high';
+    } else if (basePressure >= 34) {
+      intensity = 'medium';
+    }
+    elements.insightBasePressure.dataset.intensity = intensity;
+  }
+  setInsightText(elements.insightBaseCount, `${occupiedBases} / 3`);
+
+  if (elements.insightRunDiff) {
+    const runDiff = homeRuns - awayRuns;
+    const formattedDiff = runDiff > 0 ? `+${runDiff}` : runDiff < 0 ? `${runDiff}` : '±0';
+    setInsightText(elements.insightRunDiff, formattedDiff);
+    elements.insightRunDiff.dataset.trend = runDiff > 0 ? 'positive' : runDiff < 0 ? 'negative' : 'neutral';
+  }
+
+  const maxInnings = Math.max(numberOrZero(gameState.max_innings), 1);
+  const inningNumber = Math.max(numberOrZero(gameState.inning), 1);
+  const rawHalfLabel = String(gameState.half_label || '').toLowerCase();
+  const rawHalf = rawHalfLabel || String(gameState.half || '').toLowerCase();
+  let halfFraction = 0.5;
+  if (/(裏|bottom|bot|後攻)/.test(rawHalf)) {
+    halfFraction = 1;
+  } else if (/(mid)/.test(rawHalf)) {
+    halfFraction = 0.75;
+  } else if (/(end)/.test(rawHalf)) {
+    halfFraction = 1;
+  } else if (/(表|top|先攻)/.test(rawHalf)) {
+    halfFraction = 0.5;
+  } else if (rawHalf.startsWith('b')) {
+    halfFraction = 1;
+  } else if (rawHalf.startsWith('t')) {
+    halfFraction = 0.5;
+  }
+
+  const rawProgress = ((inningNumber - 1) + halfFraction) / maxInnings;
+  const clampedProgress = gameState.game_over ? 1 : Math.min(Math.max(rawProgress, 0), 1);
+  const progressPercentRaw = Math.round(Math.max(rawProgress, 0) * 100);
+  const fillPercent = Math.round(clampedProgress * 100);
+
+  if (elements.insightProgressFill) {
+    elements.insightProgressFill.style.width = `${Math.min(Math.max(fillPercent, 0), 100)}%`;
+  }
+  if (elements.insightProgressLabel) {
+    elements.insightProgressLabel.textContent = gameState.game_over ? '試合終了' : `${progressPercentRaw}%`;
+  }
+  if (elements.insightMeter) {
+    elements.insightMeter.setAttribute(
+      'aria-label',
+      `ゲーム進行度 ${gameState.game_over ? '100%' : `${progressPercentRaw}%`}`,
+    );
+  }
 }
 
 function updateBases(bases) {
