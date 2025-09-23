@@ -608,22 +608,65 @@ function getFieldingMetrics(player) {
 function updateDefenseAlignment(gameState, teams) {
   const container = elements.defenseAlignment;
   if (!container) return;
-
-  container.innerHTML = '';
-  container.classList.add('hidden');
-  container.setAttribute('aria-hidden', 'true');
+  
+  // Prepare base ARIA defaults
   container.setAttribute('aria-label', '守備配置');
-  delete container.dataset.team;
 
-  if (!gameState || !gameState.active) {
+  const nextDefenseKey = gameState?.defense || null;
+  const prevDefenseKey = container.dataset.teamKey || null;
+  const isSwitchingDefense = Boolean(prevDefenseKey && nextDefenseKey && prevDefenseKey !== nextDefenseKey);
+  const isAfterFade = container.dataset.justSwitched === '1';
+
+  // Handle inactive or missing team state
+  if (!gameState || !gameState.active || !nextDefenseKey || !teams) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    container.classList.remove('fade-hidden');
+    container.setAttribute('aria-hidden', 'true');
+    delete container.dataset.team;
+    delete container.dataset.teamKey;
+    delete container.dataset.pendingTeamKey;
+    delete container.dataset.fading;
+    delete container.dataset.justSwitched;
     return;
   }
 
-  const defenseKey = gameState.defense;
-  const defenseTeam = defenseKey && teams ? teams[defenseKey] : null;
+  const defenseTeam = teams[nextDefenseKey] || null;
   if (!defenseTeam) {
+    container.innerHTML = '';
+    container.classList.add('hidden');
+    container.classList.remove('fade-hidden');
+    container.setAttribute('aria-hidden', 'true');
+    delete container.dataset.team;
+    delete container.dataset.teamKey;
+    delete container.dataset.pendingTeamKey;
+    delete container.dataset.fading;
+    delete container.dataset.justSwitched;
     return;
   }
+
+  // If switching and not already in a fade sequence, start fade-out and defer rendering
+  if (isSwitchingDefense && !isAfterFade && !container.dataset.fading && container.children.length > 0) {
+    container.dataset.fading = '1';
+    container.dataset.pendingTeamKey = nextDefenseKey;
+    container.classList.add('fade-hidden');
+    // Wait for CSS transition (~240ms); add a small buffer
+    globalThis.setTimeout(() => {
+      // Mark as after-fade for the next invocation
+      container.dataset.justSwitched = '1';
+      delete container.dataset.fading;
+      // Re-render now with the same state (will take the after-fade path)
+      try {
+        updateDefenseAlignment(gameState, teams);
+      } catch (e) {
+        // no-op
+      }
+    }, 260);
+    return; // Defer actual content switch until after fade-out
+  }
+
+  // From here we will actually render the alignment
+  container.innerHTML = '';
 
   const lineup = Array.isArray(defenseTeam.lineup) ? defenseTeam.lineup : [];
   const assignments = new Map();
@@ -701,13 +744,33 @@ function updateDefenseAlignment(gameState, teams) {
   });
 
   if (rendered > 0) {
+    const teamName = defenseTeam.name || '';
     container.classList.remove('hidden');
     container.setAttribute('aria-hidden', 'false');
-    const teamName = defenseTeam.name || '';
     container.setAttribute('aria-label', teamName ? `守備配置 (${teamName})` : '守備配置');
-    if (teamName) {
-      container.dataset.team = teamName;
-    }
+    if (teamName) container.dataset.team = teamName;
+    // Track current defense side by key for future comparisons
+    container.dataset.teamKey = nextDefenseKey;
+  } else {
+    container.classList.add('hidden');
+    container.setAttribute('aria-hidden', 'true');
+    delete container.dataset.team;
+  }
+
+  // If we had faded out due to switching, schedule fade-in after layout
+  if (isAfterFade || (container.classList.contains('fade-hidden') && rendered > 0)) {
+    // Force reflow to ensure transition applies
+    // eslint-disable-next-line no-unused-expressions
+    void container.offsetWidth;
+    // Small timeout to allow DOM paint
+    globalThis.setTimeout(() => {
+      container.classList.remove('fade-hidden');
+      delete container.dataset.justSwitched;
+      delete container.dataset.pendingTeamKey;
+    }, 10);
+  } else {
+    // Ensure we are fully visible in normal updates
+    container.classList.remove('fade-hidden');
   }
 }
 

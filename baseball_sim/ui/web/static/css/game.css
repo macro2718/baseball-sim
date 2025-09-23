@@ -41,7 +41,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  margin-top: clamp(64px, 12vh, 160px);
+  margin-top: clamp(128px, 24vh, 320px);
 }
 
 .scoreboard {
@@ -604,7 +604,7 @@
 }
 
 .field-result-label {
-  font-size: clamp(22px, 3.8vw, 40px);
+  font-size: clamp(22px, 4.6vw, 52px);
   font-weight: 800;
   letter-spacing: 0.16em;
 }
@@ -615,6 +615,47 @@
   letter-spacing: 0.32em;
   text-transform: uppercase;
   opacity: 0.92;
+}
+
+/* Sub-banners stacked under play result */
+.field-result-extras {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: clamp(4px, 0.8vw, 10px);
+  gap: clamp(4px, 0.8vw, 8px);
+}
+
+.field-extra-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: clamp(14px, 2.2vw, 18px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.35);
+  color: #e2e8f0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.field-extra--score {
+  border-color: rgba(74, 222, 128, 0.5);
+  color: #bbf7d0;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(6, 78, 59, 0.35));
+  text-shadow: 0 0 14px rgba(34, 197, 94, 0.55);
+}
+
+.field-extra--inning-end {
+  border-color: rgba(148, 163, 184, 0.45);
+  color: #e2e8f0;
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.22), rgba(15, 23, 42, 0.4));
+  text-shadow: 0 0 12px rgba(148, 163, 184, 0.42);
 }
 
 .field-result-display[data-category='hit'] {
@@ -831,7 +872,22 @@
   max-width: 160px;
   pointer-events: none;
   backdrop-filter: blur(8px);
+  /* Fade animation support */
+  opacity: 1;
+  transform-origin: center;
+  transition: opacity 240ms ease, transform 240ms ease, filter 240ms ease;
 }
+
+/* Container fading state (applied to #defense-alignment) */
+.defense-alignment.fade-hidden .player-chip {
+  opacity: 0;
+  transform: scale(0.98);
+  filter: blur(1px);
+}
+
+/* Explicit classes in case JS toggles per-slot */
+.alignment-fade-out { opacity: 0 !important; transform: scale(0.98) !important; filter: blur(1px) !important; }
+.alignment-fade-in { opacity: 1 !important; transform: none !important; filter: none !important; }
 
 .defense-alignment .pos-tag {
   display: inline-flex;

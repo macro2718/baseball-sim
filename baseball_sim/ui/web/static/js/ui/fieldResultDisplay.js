@@ -42,6 +42,32 @@ let hideTimeoutId = null;
 let cleanupTimeoutId = null;
 let lastSequenceDisplayed = 0;
 
+function toOrdinal(n) {
+  const num = Math.trunc(Number(n) || 0);
+  const mod100 = num % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${num}th`;
+  switch (num % 10) {
+    case 1:
+      return `${num}st`;
+    case 2:
+      return `${num}nd`;
+    case 3:
+      return `${num}rd`;
+    default:
+      return `${num}th`;
+  }
+}
+
+function normalizeHalfLabel(raw) {
+  const text = (raw || '').toString().trim().toLowerCase();
+  if (!text) return null;
+  if (/^(表|top|t)/.test(text)) return 'Top';
+  if (/^(裏|bottom|bot|b)/.test(text)) return 'Bottom';
+  if (/^mid/.test(text)) return 'Mid';
+  if (/^end/.test(text)) return 'End';
+  return null;
+}
+
 function clearTimers() {
   if (hideTimeoutId !== null) {
     window.clearTimeout(hideTimeoutId);
@@ -126,7 +152,7 @@ function computeRunsScored(gameState, previousGameState, offenseHint) {
   return diff > 0 ? diff : 0;
 }
 
-function setDisplayContent(container, label, runsScored) {
+function setDisplayContent(container, label, extras = []) {
   container.innerHTML = '';
   const wrapper = document.createElement('div');
   wrapper.className = 'field-result-text';
@@ -136,21 +162,28 @@ function setDisplayContent(container, label, runsScored) {
   labelEl.textContent = label;
   wrapper.appendChild(labelEl);
 
-  if (runsScored > 0) {
-    const runsEl = document.createElement('span');
-    runsEl.className = 'field-result-runs';
-    runsEl.textContent = `${runsScored} ${runsScored === 1 ? 'Run' : 'Runs'}`;
-    wrapper.appendChild(runsEl);
+  if (Array.isArray(extras) && extras.length > 0) {
+    const extrasWrap = document.createElement('div');
+    extrasWrap.className = 'field-result-extras';
+    extras.forEach((ex) => {
+      if (!ex || !ex.text) return;
+      const badge = document.createElement('div');
+      const type = ex.type || 'info';
+      badge.className = `field-extra-banner field-extra--${type}`;
+      badge.textContent = ex.text;
+      extrasWrap.appendChild(badge);
+    });
+    wrapper.appendChild(extrasWrap);
   }
 
   container.appendChild(wrapper);
 }
 
-function showDisplay(container, category, label, runsScored) {
+function showDisplay(container, category, label, extras) {
   clearTimers();
   container.classList.remove('is-visible', 'is-fading-out');
   container.dataset.category = category;
-  setDisplayContent(container, label, runsScored);
+  setDisplayContent(container, label, extras);
 
   // Force reflow so animations retrigger reliably
   // eslint-disable-next-line no-unused-expressions
@@ -202,6 +235,63 @@ export function updateFieldResultDisplay(gameState, previousGameState) {
   }
 
   const runsScored = computeRunsScored(gameState, previousGameState, previousGameState?.offense);
-  showDisplay(container, category, label, runsScored);
+
+  // Determine if the half-inning ended because of this play
+  const prev = previousGameState || null;
+  const curr = gameState || null;
+  let inningEnded = false;
+  if (prev && curr) {
+    const prevOuts = Number.isFinite(prev.outs) ? Number(prev.outs) : null;
+    const currOuts = Number.isFinite(curr.outs) ? Number(curr.outs) : null;
+    const prevOffense = prev.offense || null;
+    const currOffense = curr.offense || null;
+    const prevHalf = (prev.half_label || prev.half || '').toString().toLowerCase();
+    const currHalf = (curr.half_label || curr.half || '').toString().toLowerCase();
+    const prevInning = Number(prev.inning) || null;
+    const currInning = Number(curr.inning) || null;
+
+    // Case 1: Outs reached 3 on this play
+    if (prevOuts != null && currOuts === 3 && prevOuts < 3) {
+      inningEnded = true;
+    }
+    // Case 2: Half toggled or offense switched (outs likely reset)
+    if (!inningEnded) {
+      const halfChanged = prevHalf && currHalf && prevHalf !== currHalf;
+      const offenseChanged = prevOffense && currOffense && prevOffense !== currOffense;
+      const inningAdvanced = prevInning != null && currInning != null && currInning !== prevInning;
+      // Only treat as inning/half end if we advanced context compared to previous
+      if (halfChanged || offenseChanged || inningAdvanced) {
+        // Guard against initial render where prevOuts could be null
+        if (prevOuts == null || prevOuts < 3) {
+          inningEnded = true;
+        }
+      }
+    }
+  }
+
+  const extras = [];
+  if (runsScored > 0) {
+    const text = `${runsScored} ${runsScored === 1 ? 'Run!' : 'Runs!'}`;
+    extras.push({ type: 'score', text });
+  }
+  if (inningEnded) {
+    let endedHalfText = null;
+    let endedInning = null;
+    if (prev) {
+      endedHalfText = normalizeHalfLabel(prev.half_label || prev.half) || null;
+      const prevInningNum = Number(prev.inning);
+      endedInning = Number.isFinite(prevInningNum) ? prevInningNum : null;
+    }
+
+    if (endedHalfText && endedInning != null) {
+      const ordinal = toOrdinal(endedInning);
+      const text = `End of ${endedHalfText} ${ordinal}`;
+      extras.push({ type: 'inning-end', text });
+    } else {
+      extras.push({ type: 'inning-end', text: 'Side Retired' });
+    }
+  }
+
+  showDisplay(container, category, label, extras);
   lastSequenceDisplayed = sequence;
 }
