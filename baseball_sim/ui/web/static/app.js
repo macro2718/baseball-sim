@@ -134,6 +134,7 @@ const elements = {
   insightProgressFill: document.getElementById('insight-progress-fill'),
   insightProgressLabel: document.getElementById('insight-progress-label'),
   insightMeter: document.querySelector('.insight-meter'),
+  insightGrid: document.getElementById('insight-grid'),
 };
 
 function normalizePositionKey(position) {
@@ -193,6 +194,13 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function formatRosterStat(value, placeholder = '-') {
+  if (value === null || value === undefined || value === '') {
+    return escapeHtml(String(placeholder));
+  }
+  return escapeHtml(String(value));
+}
+
 function numberOrZero(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -202,6 +210,16 @@ function setInsightText(element, value, fallback = '--') {
   if (!element) return;
   const textValue = value == null || (typeof value === 'string' && value.trim() === '') ? fallback : value;
   element.textContent = String(textValue);
+}
+
+function setInsightsVisibility(visible) {
+  const { insightGrid } = elements;
+  if (!insightGrid) return;
+  if (visible) {
+    insightGrid.classList.remove('hidden');
+  } else {
+    insightGrid.classList.add('hidden');
+  }
 }
 
 function getPositionColorClass(position, pitcherType = null) {
@@ -747,7 +765,10 @@ function renderTitle(titleState) {
 
 function renderGame(gameState, teams, log) {
   updateAnalyticsPanel(gameState);
-  if (!gameState.active) {
+  const isActiveGame = Boolean(gameState && gameState.active);
+  setInsightsVisibility(isActiveGame);
+
+  if (!isActiveGame) {
     elements.gameScreen.classList.add('hidden');
     elements.titleScreen.classList.remove('hidden');
     updateScoreboard(gameState, teams);
@@ -820,15 +841,16 @@ function renderGame(gameState, teams, log) {
 function updateScoreboard(gameState, teams) {
   if (!elements.scoreboard) return;
 
-  if (!gameState.active) {
+  if (!gameState || !gameState.active) {
     elements.scoreboard.innerHTML = '<p>試合はまだ開始されていません。</p>';
     return;
   }
 
+  const inningScores = gameState.inning_scores || { home: [], away: [] };
   const innings = Math.max(
     gameState.max_innings || 0,
-    gameState.inning_scores.away.length,
-    gameState.inning_scores.home.length,
+    inningScores.away.length,
+    inningScores.home.length,
     9,
   );
   const hits = gameState.hits || { home: 0, away: 0 };
@@ -842,14 +864,28 @@ function updateScoreboard(gameState, teams) {
 
   const renderRow = (teamKey) => {
     const teamName = teams[teamKey]?.name || (teamKey === 'home' ? 'Home' : 'Away');
-    const scores = gameState.inning_scores[teamKey] || [];
+    const scores = inningScores[teamKey] || [];
     const totalRuns = gameState.score?.[teamKey] ?? 0;
     const totalHits = hits?.[teamKey] ?? 0;
     const totalErrors = errors?.[teamKey] ?? 0;
     let row = `<tr><td class="team-name">${teamName}</td>`;
+    const isHomeTeam = teamKey === 'home';
+    const isTopHalf = String(gameState.half || '').toLowerCase() === 'top';
+    const inningNumber = Number(gameState.inning);
+    const currentInningIndex = Number.isFinite(inningNumber) && inningNumber > 0 ? inningNumber - 1 : null;
     for (let i = 0; i < innings; i += 1) {
       const value = scores[i];
-      row += `<td>${value ?? ''}</td>`;
+      let displayValue = value ?? '';
+      if (
+        isHomeTeam
+        && isTopHalf
+        && currentInningIndex !== null
+        && i === currentInningIndex
+        && (value === 0 || value === '0')
+      ) {
+        displayValue = '';
+      }
+      row += `<td>${displayValue}</td>`;
     }
     row += `<td>${totalRuns}</td><td>${totalHits}</td><td>${totalErrors}</td></tr>`;
     return row;
@@ -1000,12 +1036,16 @@ function updateRosters(tbody, players) {
     const orderLabel = escapeHtml(player.order ?? '');
     const positionHtml = renderPositionToken(player.position, player.pitcher_type);
     const nameHtml = escapeHtml(player.name ?? '-');
-    const eligibleHtml = renderPositionList(player.eligible || [], player.pitcher_type);
+    const avgValue = formatRosterStat(player.avg, '-');
+    const hrValue = formatRosterStat(player.hr, '-');
+    const rbiValue = formatRosterStat(player.rbi, '-');
     tr.innerHTML = `
       <td>${orderLabel}</td>
       <td>${positionHtml}</td>
-      <td>${nameHtml}</td>
-      <td>${eligibleHtml}</td>
+      <td class="player-name">${nameHtml}</td>
+      <td class="stat-col">${avgValue}</td>
+      <td class="stat-col">${hrValue}</td>
+      <td class="stat-col">${rbiValue}</td>
     `;
     tbody.appendChild(tr);
   });
