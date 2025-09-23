@@ -164,8 +164,7 @@ class BuntProcessor:
         # 統計更新
         batter.stats["AB"] += 1
         batter.stats["SAC"] = batter.stats.get("SAC", 0) + 1
-        self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
-        
+
         # 進塁前の塁状況を記録
         runners_before = [
             base is not None for base in self.game_state.bases
@@ -203,8 +202,7 @@ class BuntProcessor:
         """バントアウトの処理"""
         # 統計更新
         batter.stats["AB"] += 1
-        self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
-        
+
         # バントアウト時のランナー処理
         runner_out_message = self._handle_bunt_out_scenarios()
         
@@ -220,7 +218,6 @@ class BuntProcessor:
         """バント失敗の処理"""
         # 統計更新
         batter.stats["AB"] += 1
-        self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
         
         # バント失敗時の追加アウト判定
         additional_outs = self._handle_bunt_failure()
@@ -784,8 +781,6 @@ class RunnerEngine:
             clear_base(self.game_state.bases, 0)
             self.game_state.add_out()  # 一塁走者
             self.game_state.add_out()  # 打者
-            # 追加のアウト分のIPを加算
-            self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
             if runs_scored > 0:
                 return runs_scored, f"Double play! {runs_scored} run(s) scored!"
             return 0, "Double play!"
@@ -801,7 +796,6 @@ class RunnerEngine:
             clear_base(self.game_state.bases, 0)
             self.game_state.add_out()  # 一塁走者 (2アウト目)
             self.game_state.add_out()  # 打者 (3アウト目)
-            self.game_state.fielding_team.current_pitcher.pitching_stats["IP"] += 1/3
             return 0, "Inning-ending double play!"
         else:
             return self._handle_force_out_only(batter, runner_situation)

@@ -34,7 +34,6 @@ class AtBatOutcomeHandler:
 
     def _handle_strikeout(self, batter) -> str:
         pitcher = self._game_state.fielding_team.current_pitcher
-        pitcher.pitching_stats["IP"] += 1 / 3
         batter.stats["AB"] += 1
         StatsCalculator.record_strikeout(batter.stats)
         StatsCalculator.record_strikeout(pitcher.pitching_stats)
@@ -91,8 +90,6 @@ class AtBatOutcomeHandler:
         return f"{runs}-run home run!" if runs > 1 else "Solo home run!"
 
     def _handle_groundout(self, batter) -> str:
-        pitcher = self._game_state.fielding_team.current_pitcher
-        pitcher.pitching_stats["IP"] += 1 / 3
         batter.stats["AB"] += 1
         runs, message = self._runner_engine.apply_groundout(batter)
         if runs > 0:
@@ -100,8 +97,6 @@ class AtBatOutcomeHandler:
         return message
 
     def _apply_flyout_result(self, batter, runner_handler: Callable[[object], int], default_message: str) -> str:
-        pitcher = self._game_state.fielding_team.current_pitcher
-        pitcher.pitching_stats["IP"] += 1 / 3
         batter.stats["AB"] += 1
         runs = runner_handler(batter)
         self._game_state.add_out()
