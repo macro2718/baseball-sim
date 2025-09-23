@@ -5,6 +5,10 @@
   gap: 24px;
 }
 
+.game-layout > .scoreboard {
+  grid-column: 1 / -1;
+}
+
 .field-column {
   display: flex;
   flex-direction: column;

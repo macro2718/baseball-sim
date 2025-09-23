@@ -211,6 +211,11 @@ function updateScoreboard(gameState, teams) {
   );
   const hits = gameState.hits || { home: 0, away: 0 };
   const errors = gameState.errors || { home: 0, away: 0 };
+  const inningNumber = Number(gameState.inning);
+  const currentInningIndex = Number.isFinite(inningNumber) && inningNumber > 0 ? inningNumber - 1 : null;
+  const half = String(gameState.half || '').toLowerCase();
+  const isTopHalf = half === 'top';
+  const gameOver = Boolean(gameState.game_over);
 
   let html = '<table class="score-table"><thead><tr><th class="team-col">Team</th>';
   for (let i = 0; i < innings; i += 1) {
@@ -226,20 +231,15 @@ function updateScoreboard(gameState, teams) {
     const totalErrors = errors?.[teamKey] ?? 0;
     let row = `<tr><td class="team-name">${teamName}</td>`;
     const isHomeTeam = teamKey === 'home';
-    const isTopHalf = String(gameState.half || '').toLowerCase() === 'top';
-    const inningNumber = Number(gameState.inning);
-    const currentInningIndex = Number.isFinite(inningNumber) && inningNumber > 0 ? inningNumber - 1 : null;
     for (let i = 0; i < innings; i += 1) {
       const value = scores[i];
       let displayValue = value ?? '';
-      if (
-        isHomeTeam &&
-        isTopHalf &&
-        currentInningIndex !== null &&
-        i === currentInningIndex &&
-        (value === 0 || value === '0')
-      ) {
-        displayValue = '';
+      if (isHomeTeam && currentInningIndex !== null && i === currentInningIndex) {
+        if (gameOver && isTopHalf) {
+          displayValue = 'x';
+        } else if (isTopHalf && (value === 0 || value === '0' || value == null)) {
+          displayValue = '';
+        }
       }
       row += `<td>${displayValue}</td>`;
     }
