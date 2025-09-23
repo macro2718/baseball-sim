@@ -47,6 +47,16 @@
 
   .roster-panel {
     margin-top: 32px;
+    /* Stack rosters and matchup on small screens */
+    grid-template-columns: 1fr;
+  }
+
+  /* Let items span full width when stacked */
+  #offense-roster,
+  #defense-roster,
+  #matchup-panel {
+    grid-column: 1 !important;
+    justify-self: stretch;
   }
 
   .pitchers-panel {

@@ -491,12 +491,10 @@ function renderUpcomingBatters(listEl, emptyEl, batters, battingTraits) {
     const batsLabel = normalizeTraitValue(formatBatsLabel(batsRaw));
 
     const stats = [
-      { label: '打席', value: batsLabel },
       { label: 'K%', value: coalesceTraitValue(player.k_pct, trait?.k_pct) },
       { label: 'BB%', value: coalesceTraitValue(player.bb_pct, trait?.bb_pct) },
       { label: 'Hard%', value: coalesceTraitValue(player.hard_pct, trait?.hard_pct) },
       { label: 'GB%', value: coalesceTraitValue(player.gb_pct, trait?.gb_pct) },
-      { label: 'Speed', value: coalesceTraitValue(player.speed, trait?.speed) },
     ];
 
     const statsHtml = stats

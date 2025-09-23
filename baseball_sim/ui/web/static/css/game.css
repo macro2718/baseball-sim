@@ -638,10 +638,17 @@
 /* Rosters, bench and game panels */
 .roster-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  /* Explicit 3-column layout so matchup panel can sit on the right */
+  grid-template-columns: 1fr 1fr minmax(400px, 1.6fr);
   gap: 16px;
   margin-top: clamp(56px, 10vh, 136px);
+  align-items: start;
 }
+
+/* Ensure each roster goes to the first two columns, matchup to the rightmost */
+#offense-roster { grid-column: 1; }
+#defense-roster { grid-column: 2; }
+#matchup-panel { grid-column: 3; justify-self: stretch; }
 
 .matchup-panel {
   display: flex;
@@ -815,7 +822,8 @@
 .matchup-batter-stats {
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* With 4 entries (K%, BB%, Hard%, GB%), render 2x2 for balance */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 16px;
   font-family: var(--font-mono);
   font-size: 13px;
