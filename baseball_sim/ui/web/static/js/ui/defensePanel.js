@@ -7,6 +7,7 @@ import {
   updateDefenseContext,
   resetDefenseSelection,
   isKnownFieldPosition,
+  getDefensePlanInvalidAssignments,
 } from '../state.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
 
@@ -354,20 +355,8 @@ function swapLineupPositions(plan, indexA, indexB) {
   const displayPosA = playerA.position || posAKey || '-';
   const displayPosB = playerB.position || posBKey || '-';
 
-  if (posBKey && !canBenchPlayerCoverPosition(playerA, posBKey)) {
-    return {
-      success: false,
-      message: `${playerA.name} は ${displayPosB} を守れません。`,
-      variant: 'danger',
-    };
-  }
-  if (posAKey && !canBenchPlayerCoverPosition(playerB, posAKey)) {
-    return {
-      success: false,
-      message: `${playerB.name} は ${displayPosA} を守れません。`,
-      variant: 'danger',
-    };
-  }
+  const playerACanCover = !posBKey || canBenchPlayerCoverPosition(playerA, posBKey);
+  const playerBCanCover = !posAKey || canBenchPlayerCoverPosition(playerB, posAKey);
 
   playerA.position = displayPosB;
   playerA.position_key = posBKey;
@@ -380,10 +369,23 @@ function swapLineupPositions(plan, indexA, indexB) {
     lineupIndexB: indexB,
   });
 
+  let message = `${playerA.name} と ${playerB.name} の守備位置を入れ替える案を追加しました。`;
+  const warnings = [];
+  if (!playerACanCover) {
+    warnings.push(`${playerA.name} は ${displayPosB} を守れません`);
+  }
+  if (!playerBCanCover) {
+    warnings.push(`${playerB.name} は ${displayPosA} を守れません`);
+  }
+
+  if (warnings.length) {
+    message += ` ただし ${warnings.join('、')}。`;
+  }
+
   return {
     success: true,
-    message: `${playerA.name} と ${playerB.name} の守備位置を入れ替える案を追加しました。`,
-    variant: 'success',
+    message,
+    variant: warnings.length ? 'warning' : 'success',
   };
 }
 
@@ -401,13 +403,7 @@ function swapBenchWithLineup(plan, lineupIndex, benchIndex) {
   const positionKey = normalizePositionKey(lineupPlayer.position_key || lineupPlayer.position);
   const positionLabel = lineupPlayer.position || positionKey || '守備位置';
 
-  if (positionKey && !canBenchPlayerCoverPosition(benchPlayer, positionKey)) {
-    return {
-      success: false,
-      message: `${benchPlayer.name} は ${positionLabel} を守れません。別の選手を選択してください。`,
-      variant: 'danger',
-    };
-  }
+  const canCover = !positionKey || canBenchPlayerCoverPosition(benchPlayer, positionKey);
 
   const entering = cloneBenchPlayer(benchPlayer, lineupIndex);
   entering.order = lineupIndex + 1;
@@ -428,10 +424,15 @@ function swapBenchWithLineup(plan, lineupIndex, benchIndex) {
     benchIndex,
   });
 
+  let message = `${entering.name} を ${positionLabel} に投入する案を追加しました（${lineupPlayer.name} はリタイア）。`;
+  if (!canCover) {
+    message += ` ただし ${entering.name} は ${positionLabel} を守れません。`;
+  }
+
   return {
     success: true,
-    message: `${entering.name} を ${positionLabel} に投入する案を追加しました（${lineupPlayer.name} はリタイア）。`,
-    variant: 'success',
+    message,
+    variant: canCover ? 'success' : 'warning',
   };
 }
 
@@ -502,13 +503,12 @@ export function updateDefenseBenchAvailability() {
     const benchIndex = Number(value);
     const benchPlayer = plan && Number.isInteger(benchIndex) ? plan.bench[benchIndex] : null;
 
-    let enable = canSubBase && Boolean(benchPlayer);
-    let markIneligible = false;
-
-    if (enable && hasLineupSelection && lineupPositionKey) {
-      enable = canBenchPlayerCoverPosition(benchPlayer, lineupPositionKey);
-      markIneligible = !enable;
-    }
+    const enable = canSubBase && Boolean(benchPlayer);
+    const markIneligible =
+      enable &&
+      hasLineupSelection &&
+      lineupPositionKey &&
+      !canBenchPlayerCoverPosition(benchPlayer, lineupPositionKey);
 
     button.disabled = !enable;
     button.classList.toggle('ineligible', markIneligible);
@@ -579,6 +579,7 @@ export function updateDefenseSelectionInfo() {
   const feedback = stateCache.defenseSelection.feedback;
   const canSub = stateCache.defenseContext.canSub;
   const operationsCount = plan?.operations?.length || 0;
+  const invalidAssignments = getDefensePlanInvalidAssignments(plan);
 
   infoEl.classList.remove('success', 'danger', 'warning');
 
@@ -605,6 +606,9 @@ export function updateDefenseSelectionInfo() {
       : '守備交代を行う守備位置を選択してください。';
   } else if (operationsCount > 0) {
     message = `未適用の守備交代案が ${operationsCount} 件あります。適用ボタンで確定してください。`;
+    if (invalidAssignments.length) {
+      message += ' ⚠️ 一部の選手は選択した守備位置を守れません。';
+    }
     variantClass = 'warning';
   }
 

@@ -87,9 +87,10 @@ def create_routes(session: WebGameSession) -> Blueprint:
     def defensive_substitution() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}
         swaps = payload.get("swaps")
+        force = bool(payload.get("force"))
         if isinstance(swaps, list):
             try:
-                state = session.execute_defensive_substitution(swaps=swaps)
+                state = session.execute_defensive_substitution(swaps=swaps, force_illegal=force)
             except GameSessionError as exc:
                 return create_error_response(str(exc), session)
         else:
@@ -99,6 +100,7 @@ def create_routes(session: WebGameSession) -> Blueprint:
                 state = session.execute_defensive_substitution(
                     lineup_index=lineup_index,
                     bench_index=bench_index,
+                    force_illegal=force,
                 )
             except GameSessionError as exc:
                 return create_error_response(str(exc), session)

@@ -263,6 +263,7 @@ class WebGameSession:
         lineup_index: Optional[int] = None,
         bench_index: Optional[int] = None,
         swaps: Optional[List[Dict[str, Any]]] = None,
+        force_illegal: bool = False,
     ) -> Dict[str, object]:
         """Swap defensive players according to the provided instruction."""
 
@@ -272,12 +273,14 @@ class WebGameSession:
         substitution_manager = SubstitutionManager(self.game_state.fielding_team)
 
         if swaps is not None:
-            success, message = substitution_manager.execute_defensive_plan(swaps)
+            success, message = substitution_manager.execute_defensive_plan(
+                swaps, allow_illegal=force_illegal
+            )
         else:
             if lineup_index is None or bench_index is None:
                 raise GameSessionError("Invalid defensive substitution request.")
             success, message = substitution_manager.execute_defensive_substitution(
-                bench_index, lineup_index
+                bench_index, lineup_index, allow_illegal=force_illegal
             )
 
         self._notifications.publish("success" if success else "danger", message)

@@ -48,6 +48,32 @@ export function canBenchPlayerCoverPosition(benchPlayer, positionKey) {
   return eligiblePositions.includes(positionKey);
 }
 
+export function getDefensePlanInvalidAssignments(plan) {
+  if (!plan || !Array.isArray(plan.lineup)) {
+    return [];
+  }
+
+  const invalid = [];
+  plan.lineup.forEach((player, index) => {
+    if (!player) return;
+    const positionKey = normalizePositionKey(player.position_key || player.position);
+    if (!positionKey || positionKey === '-') {
+      return;
+    }
+
+    if (!canBenchPlayerCoverPosition(player, positionKey)) {
+      invalid.push({
+        index,
+        player,
+        positionKey,
+        positionLabel: player.position || positionKey,
+      });
+    }
+  });
+
+  return invalid;
+}
+
 export function updateDefenseContext(lineupMap, benchMap, canSub) {
   stateCache.defenseContext = {
     lineup: lineupMap,

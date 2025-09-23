@@ -163,12 +163,12 @@ class Team:
         
         return True, f"{new_pitcher.name} replaces {old_pitcher.name if old_pitcher else 'starting pitcher'}"
         
-    def switch_positions(self, player1_index, player2_index):
+    def switch_positions(self, player1_index, player2_index, allow_illegal=False):
         # 守備位置交代 (出場メンバーはそのまま)
-        if (0 <= player1_index < len(self.lineup) and 
-            0 <= player2_index < len(self.lineup) and 
+        if (0 <= player1_index < len(self.lineup) and
+            0 <= player2_index < len(self.lineup) and
             player1_index != player2_index):
-            
+
             player1 = self.lineup[player1_index]
             player2 = self.lineup[player2_index]
             
@@ -177,8 +177,13 @@ class Team:
                 return False
             
             # 選手が相手のポジションを守れるかチェック
-            if (not player1.can_play_position(player2.current_position) or 
-                not player2.can_play_position(player1.current_position)):
+            if (
+                not allow_illegal
+                and (
+                    not player1.can_play_position(player2.current_position)
+                    or not player2.can_play_position(player1.current_position)
+                )
+            ):
                 return False
                 
             # ポジションを交換
@@ -188,11 +193,11 @@ class Team:
             # 守備位置辞書を更新
             self.defensive_positions[pos1] = player2
             self.defensive_positions[pos2] = player1
-            
+
             # 選手のポジションを更新
             player1.current_position = pos2
             player2.current_position = pos1
-            
+
             return True
         return False
     
@@ -281,11 +286,11 @@ class Team:
         # 退場リストもリセット（新しい試合の場合）
         self.ejected_players.clear()
     
-    def substitute_player(self, lineup_index, substitute_player):
+    def substitute_player(self, lineup_index, substitute_player, allow_illegal=False):
         """守備交代（代走・守備固めなど）- 選手オブジェクト版"""
         if not (0 <= lineup_index < len(self.lineup)):
             return False, "Invalid lineup index"
-        
+
         if substitute_player not in self.bench:
             return False, f"{substitute_player.name} is not available on the bench"
         
@@ -294,10 +299,10 @@ class Team:
         # 代替選手が既に退場していないかチェック
         if substitute_player in self.ejected_players:
             return False, f"{substitute_player.name} has already been ejected and cannot re-enter"
-        
+
         # 代替選手がそのポジションを守れるかチェック
         position = original_player.current_position
-        if not substitute_player.can_play_position(position):
+        if not allow_illegal and not substitute_player.can_play_position(position):
             return False, f"{substitute_player.name} cannot play {position}"
         
         # 交代を実行
@@ -316,13 +321,13 @@ class Team:
         
         return True, f"{substitute_player.name} substitutes for {original_player.name} at {position}"
     
-    def substitute_player_by_index(self, bench_player_index, lineup_index):
+    def substitute_player_by_index(self, bench_player_index, lineup_index, allow_illegal=False):
         """守備交代（代走・守備固めなど）- インデックス版"""
         if not (0 <= bench_player_index < len(self.bench) and 0 <= lineup_index < len(self.lineup)):
             return False, "Invalid player index"
-        
+
         substitute_player = self.bench[bench_player_index]
-        return self.substitute_player(lineup_index, substitute_player)
+        return self.substitute_player(lineup_index, substitute_player, allow_illegal=allow_illegal)
     
     def is_player_eligible(self, player):
         """選手が出場可能かチェック（退場していないか）"""
