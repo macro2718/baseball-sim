@@ -290,11 +290,40 @@
           <button type="button" class="modal-close" data-close="offense-modal" aria-label="閉じる">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-description">現在の打者に代打を送ります。ベンチから選手を選択してください。</p>
-          <div class="current-batter" id="pinch-current-batter">現在の打者: -</div>
-          <div class="form-grid">
-            <label for="pinch-player">代打に出すベンチ選手</label>
-            <select id="pinch-player"></select>
+          <p class="modal-description">現在の打者に代打を送ります。ベンチカードをクリックして選手を選択してください。</p>
+          <div class="pitcher-change pinch-strategy">
+            <section
+              class="current-pitcher-card current-batter-card"
+              id="pinch-current-card"
+              aria-live="polite"
+            >
+              <p class="pitcher-card-empty">現在の打者情報がまだありません。</p>
+            </section>
+            <section class="pitcher-options-panel pinch-options-panel">
+              <header class="pitcher-options-header pinch-options-header">
+                <div>
+                  <h4>ベンチ候補</h4>
+                  <p class="pitcher-options-subtitle">打順や成績を確認して選択</p>
+                </div>
+                <span class="pitcher-options-hint pinch-options-hint">カードをクリックで選択</span>
+              </header>
+              <div class="pitcher-option-grid pinch-option-grid" id="pinch-option-grid" role="list">
+                <p class="pitcher-card-empty pinch-card-empty">代打候補の読み込みを待機中です…</p>
+              </div>
+              <div class="pitcher-select-fallback pinch-select-fallback">
+                <label for="pinch-player" id="pinch-select-label">リストから選択</label>
+                <div class="select-wrapper">
+                  <select
+                    id="pinch-player"
+                    aria-labelledby="pinch-select-label pinch-select-helper"
+                  ></select>
+                  <span class="select-chevron" aria-hidden="true">▾</span>
+                </div>
+                <p class="pitcher-select-helper pinch-select-helper" id="pinch-select-helper">
+                  カードを選択するとここに反映されます。
+                </p>
+              </div>
+            </section>
           </div>
         </div>
         <div class="modal-footer">

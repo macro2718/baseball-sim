@@ -227,6 +227,73 @@ function updateCurrentPitcherCard(cardEl, pitcher) {
   `;
 }
 
+function formatBatsLabel(rawBats) {
+  if (!rawBats) return '';
+  const normalized = String(rawBats).trim().toUpperCase();
+  if (!normalized) return '';
+  if (normalized === 'L') return '左打';
+  if (normalized === 'R') return '右打';
+  if (normalized === 'S' || normalized === 'B') return '両打';
+  return normalized;
+}
+
+function renderBatsBadge(rawBats) {
+  const label = formatBatsLabel(rawBats);
+  if (!label) return '';
+  const ariaLabel = `打席: ${label}`;
+  return `<span class="pitcher-throws-badge batter-bats-badge" aria-label="${escapeHtml(
+    ariaLabel,
+  )}">${escapeHtml(label)}</span>`;
+}
+
+function updateCurrentBatterCard(cardEl, batter) {
+  if (!cardEl) return;
+  if (!batter) {
+    cardEl.innerHTML = '<p class="pitcher-card-empty">現在の打者情報が取得できません。</p>';
+    return;
+  }
+
+  const orderValue = Number.isInteger(batter.order) ? `${batter.order}番` : '-';
+  const positionHtml =
+    batter.position && batter.position !== '-' ? renderPositionToken(batter.position, batter.pitcher_type) : '';
+  const batsBadge = renderBatsBadge(batter.bats);
+  const tags = [positionHtml, batsBadge].filter(Boolean).join('');
+
+  const nameLabel = escapeHtml(batter.name ?? '-');
+  const orderLabel = escapeHtml(orderValue);
+  const avgValue = formatRosterStat(batter.avg, '-');
+  const hrValue = formatRosterStat(batter.hr, '-');
+  const rbiValue = formatRosterStat(batter.rbi, '-');
+
+  cardEl.innerHTML = `
+    <div class="current-pitcher-header current-batter-header">
+      <span class="card-label">現在の打者</span>
+      <div class="current-batter-tags">${tags || ''}</div>
+    </div>
+    <div class="current-pitcher-body current-batter-body">
+      <h4 class="pitcher-name current-batter-name">${nameLabel}</h4>
+      <div class="pitcher-meta batter-meta">
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">打順</span>
+          <span class="pitcher-meta-value batter-meta-value">${orderLabel}</span>
+        </div>
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">AVG</span>
+          <span class="pitcher-meta-value batter-meta-value">${avgValue}</span>
+        </div>
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">HR</span>
+          <span class="pitcher-meta-value batter-meta-value">${hrValue}</span>
+        </div>
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">RBI</span>
+          <span class="pitcher-meta-value batter-meta-value">${rbiValue}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function highlightPitcherCards(gridEl, selectedValue) {
   if (!gridEl) return;
   const normalized = selectedValue != null ? String(selectedValue) : '';
@@ -323,6 +390,124 @@ function updatePitcherOptionGrid(gridEl, options, selectEl, helperEl) {
     helperEl.textContent = selectionDisabled
       ? '現在は投手交代ができません。'
       : 'カードを選択するとここに反映されます。';
+  }
+}
+
+function highlightPinchCards(gridEl, selectedValue) {
+  if (!gridEl) return;
+  const normalized = selectedValue != null ? String(selectedValue) : '';
+  const cards = gridEl.querySelectorAll('.pinch-card');
+  cards.forEach((card) => {
+    const value = card.dataset.value || '';
+    const isSelected = normalized !== '' && value === normalized;
+    if (isSelected) {
+      card.classList.add('selected');
+      card.setAttribute('aria-pressed', 'true');
+    } else {
+      card.classList.remove('selected');
+      card.setAttribute('aria-pressed', 'false');
+    }
+  });
+}
+
+function updatePinchOptionGrid(gridEl, options, selectEl, helperEl, helperMessage) {
+  if (!gridEl) return;
+
+  gridEl.innerHTML = '';
+  const hasOptions = Array.isArray(options) && options.length > 0;
+  const selectionDisabled = !selectEl || Boolean(selectEl.disabled);
+
+  if (!hasOptions) {
+    const emptyMessage = document.createElement('p');
+    emptyMessage.className = 'pitcher-card-empty pinch-card-empty';
+    emptyMessage.textContent = '代打に使える選手がいません。';
+    gridEl.appendChild(emptyMessage);
+    highlightPinchCards(gridEl, '');
+    if (helperEl) {
+      helperEl.textContent = helperMessage || '現在は代打を選択できません。';
+    }
+    return;
+  }
+
+  options.forEach((player) => {
+    const optionValue = player.index != null ? String(player.index) : '';
+    const nameRaw = player.name ?? '-';
+    const positionHtml =
+      player.position && player.position !== '-' ? renderPositionToken(player.position, player.pitcher_type) : '';
+    const positionsList = renderPositionList(player.eligible || [], player.pitcher_type);
+    const batsBadge = renderBatsBadge(player.bats);
+    const nameLabel = escapeHtml(nameRaw);
+    const avgValue = formatRosterStat(player.avg, '-');
+    const hrValue = formatRosterStat(player.hr, '-');
+    const rbiValue = formatRosterStat(player.rbi, '-');
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pitcher-card pinch-card';
+    button.dataset.value = optionValue;
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('role', 'listitem');
+    button.title = `${nameRaw} | AVG ${player.avg ?? '-'} / HR ${player.hr ?? '-'} / RBI ${player.rbi ?? '-'}`;
+    button.innerHTML = `
+      <div class="pinch-card-top">
+        <div class="pinch-card-heading">
+          ${positionHtml || ''}
+          <h4 class="pinch-card-name">${nameLabel}</h4>
+        </div>
+        ${batsBadge || ''}
+      </div>
+      <div class="pinch-card-stats">
+        <div class="pinch-stat-block">
+          <span class="pinch-stat-label">AVG</span>
+          <span class="pinch-stat-value">${avgValue}</span>
+        </div>
+        <div class="pinch-stat-block">
+          <span class="pinch-stat-label">HR</span>
+          <span class="pinch-stat-value">${hrValue}</span>
+        </div>
+        <div class="pinch-stat-block">
+          <span class="pinch-stat-label">RBI</span>
+          <span class="pinch-stat-value">${rbiValue}</span>
+        </div>
+      </div>
+      <div class="pinch-card-positions">
+        <span class="pinch-stat-label pinch-positions-label">守備適性</span>
+        <div class="pinch-position-list">${positionsList}</div>
+      </div>
+    `;
+
+    button.addEventListener('click', () => {
+      if (!selectEl || selectEl.disabled) return;
+      selectEl.value = optionValue;
+      const changeEvent = new Event('change', { bubbles: true });
+      selectEl.dispatchEvent(changeEvent);
+      highlightPinchCards(gridEl, optionValue);
+    });
+
+    if (selectionDisabled) {
+      button.disabled = true;
+    }
+
+    gridEl.appendChild(button);
+  });
+
+  if (selectEl && !selectEl.dataset.pinchCardListener) {
+    selectEl.addEventListener('change', () => {
+      highlightPinchCards(gridEl, selectEl.value);
+    });
+    selectEl.dataset.pinchCardListener = 'true';
+  }
+
+  highlightPinchCards(gridEl, selectEl ? selectEl.value : '');
+
+  if (helperEl) {
+    if (helperMessage) {
+      helperEl.textContent = helperMessage;
+    } else {
+      helperEl.textContent = selectionDisabled
+        ? '現在は代打を選択できません。'
+        : 'カードを選択するとここに反映されます。';
+    }
   }
 }
 
@@ -534,7 +719,9 @@ function updateStrategyControls(gameState, teams) {
   const {
     pinchPlayer,
     pinchButton,
-    pinchCurrentBatter,
+    pinchCurrentCard,
+    pinchOptionGrid,
+    pinchSelectHelper,
     openOffenseButton,
     offensePinchMenuButton,
     openDefenseButton,
@@ -560,61 +747,57 @@ function updateStrategyControls(gameState, teams) {
   stateCache.currentBatterIndex =
     currentBatter && Number.isInteger(currentBatter.index) ? currentBatter.index : null;
 
-  if (pinchCurrentBatter) {
-    if (currentBatter) {
-      const orderLabel = Number.isInteger(currentBatter.order)
-        ? `${currentBatter.order}. `
-        : '';
-      let positionSegment = '';
-      if (currentBatter.position && currentBatter.position !== '-') {
-        const positionHtml = renderPositionToken(
-          currentBatter.position,
-          currentBatter.pitcher_type,
-        );
-        positionSegment = positionHtml ? `${positionHtml} ` : '';
-      }
-      pinchCurrentBatter.innerHTML = `現在の打者: ${orderLabel}${positionSegment}${escapeHtml(
-        currentBatter.name ?? '-',
-      )}`;
-    } else {
-      pinchCurrentBatter.textContent = '現在の打者: -';
-    }
+  if (pinchCurrentCard) {
+    updateCurrentBatterCard(pinchCurrentCard, currentBatter);
   }
 
-  if (pinchPlayer && pinchButton) {
+  const canPinch = isActive && !isGameOver && Boolean(currentBatter) && offenseBench.length > 0;
+
+  if (pinchPlayer) {
     const benchPlaceholder = !currentBatter
       ? '現在の打者が見つかりません'
       : offenseBench.length
-      ? 'ベンチ選手を選択'
+      ? 'カードまたはリストから選択'
       : '選択可能な選手がいません';
 
     populateSelect(
       pinchPlayer,
       offenseBench.map((player) => ({
         value: player.index,
-        label: `${player.name} (${(player.eligible || []).join(', ') || '-'})`,
+        label: `${player.name} (AVG ${player.avg ?? '-'}, HR ${player.hr ?? '-'})`,
       })),
       benchPlaceholder,
     );
 
-    const canPinch = isActive && !isGameOver && Boolean(currentBatter) && offenseBench.length > 0;
-    pinchButton.disabled = !canPinch || isGameOver;
-    pinchPlayer.disabled = !canPinch || isGameOver;
-    if (!canPinch || isGameOver) {
+    pinchPlayer.disabled = !canPinch;
+    if (!canPinch) {
       pinchPlayer.value = '';
-    }
-    if (isGameOver && pinchButton) {
-      pinchButton.textContent = 'Game Over';
-    } else if (pinchButton) {
-      pinchButton.textContent = '代打';
     }
   }
 
+  if (pinchButton) {
+    pinchButton.disabled = !canPinch;
+    pinchButton.textContent = isGameOver ? 'Game Over' : '代打を送る';
+  }
+
   if (offensePinchMenuButton) {
-    const canPinch =
-      isActive && !isGameOver && Boolean(currentBatter) && (offenseBench?.length ?? 0) > 0;
-    offensePinchMenuButton.disabled = !canPinch || isGameOver;
+    offensePinchMenuButton.disabled = !canPinch;
     offensePinchMenuButton.textContent = isGameOver ? 'Game Over' : '代打戦略';
+  }
+
+  if (pinchOptionGrid) {
+    let pinchHelperMessage = 'カードを選択するとここに反映されます。';
+    if (!isActive) {
+      pinchHelperMessage = '試合開始後に代打が選択できます。';
+    } else if (isGameOver) {
+      pinchHelperMessage = '試合終了のため代打は行えません。';
+    } else if (!currentBatter) {
+      pinchHelperMessage = '現在の打者が確定するまで代打は選択できません。';
+    } else if (!offenseBench.length) {
+      pinchHelperMessage = '代打に使える選手がいません。';
+    }
+
+    updatePinchOptionGrid(pinchOptionGrid, offenseBench, pinchPlayer, pinchSelectHelper, pinchHelperMessage);
   }
 
   if (openOffenseButton) {

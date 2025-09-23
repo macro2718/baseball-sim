@@ -86,7 +86,7 @@ export function createGameActions(render) {
       return;
     }
     if (!benchValue) {
-      showStatus('代打に出すベンチ選手を選択してください。', 'danger');
+      showStatus('代打に出す選手をカード（またはリスト）から選択してください。', 'danger');
       return;
     }
 
