@@ -6,6 +6,8 @@
   align-items: center;
   justify-content: center;
   padding: 32px;
+  /* Vertical offset for modal windows (push down). Example: set to 6vh */
+  --modal-offset-y: 0px;
   background:
     radial-gradient(circle at 20% 20%, rgba(96, 165, 250, 0.18), transparent 60%),
     radial-gradient(circle at 80% 30%, rgba(192, 132, 252, 0.2), transparent 65%),
@@ -28,6 +30,9 @@
 
 .modal-card.strategy-modal {
   width: min(520px, 100%);
+  /* Allow shifting play operation windows vertically */
+  transform: translateY(var(--strategy-modal-offset-y, var(--modal-offset-y)));
+  will-change: transform;
 }
 
 .modal-card.strategy-modal.wide {
