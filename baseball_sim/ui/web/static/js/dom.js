@@ -48,6 +48,7 @@ export const elements = {
   defenseField: document.getElementById('defense-field'),
   defenseBench: document.getElementById('defense-bench-panel'),
   defenseExtras: document.getElementById('defense-extras'),
+  defenseRetired: document.getElementById('defense-retired-panel'),
   defenseSelectionInfo: document.getElementById('defense-selection-info'),
   pitcherSelect: document.getElementById('pitcher-select'),
   pitcherButton: document.getElementById('change-pitcher-button'),

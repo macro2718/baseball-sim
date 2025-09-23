@@ -149,11 +149,11 @@ class SubstitutionManager:
     def execute_defensive_substitution(self, bench_player_index: int, lineup_index: int) -> Tuple[bool, str]:
         """
         守備交代を実行
-        
+
         Args:
             bench_player_index: ベンチ選手のインデックス
             lineup_index: ラインナップでの選手のインデックス
-        
+
         Returns:
             Tuple[bool, str]: (成功/失敗, メッセージ)
         """
@@ -161,7 +161,7 @@ class SubstitutionManager:
             available_bench = self.get_available_bench_players()
             if bench_player_index >= len(available_bench):
                 return False, "Invalid bench player index"
-            
+
             substitute_player = available_bench[bench_player_index]
             
             if lineup_index >= len(self.team.lineup):
@@ -178,16 +178,70 @@ class SubstitutionManager:
             
             # 守備交代実行
             success, result_message = self.team.substitute_player(lineup_index, substitute_player)
-            
+
             return success, result_message
-            
+
         except Exception as e:
             return False, f"Defensive substitution error: {str(e)}"
-    
+
+    def execute_defensive_plan(self, swaps: List[Dict[str, Any]]) -> Tuple[bool, str]:
+        """Apply a sequence of defensive swaps defined by the web UI."""
+
+        if not isinstance(swaps, list) or not swaps:
+            return False, "No defensive swaps were provided"
+
+        messages: List[str] = []
+
+        for step, swap in enumerate(swaps, start=1):
+            if not isinstance(swap, dict):
+                return False, f"Invalid swap instruction at step {step}"
+
+            first = swap.get("a") or swap.get("first")
+            second = swap.get("b") or swap.get("second")
+
+            if not isinstance(first, dict) or not isinstance(second, dict):
+                return False, f"Invalid swap instruction at step {step}"
+
+            group1 = (first.get("group") or first.get("type") or "").lower()
+            group2 = (second.get("group") or second.get("type") or "").lower()
+
+            try:
+                index1 = int(first.get("index"))
+            except (TypeError, ValueError):
+                index1 = -1
+            try:
+                index2 = int(second.get("index"))
+            except (TypeError, ValueError):
+                index2 = -1
+
+            if index1 < 0 or index2 < 0:
+                return False, f"Invalid player index in swap instruction {step}"
+
+            if group1 == "lineup" and group2 == "lineup":
+                success, message = self.execute_position_switch(index1, index2)
+            elif group1 == "bench" and group2 == "lineup":
+                success, message = self.execute_defensive_substitution(index1, index2)
+            elif group1 == "lineup" and group2 == "bench":
+                success, message = self.execute_defensive_substitution(index2, index1)
+            else:
+                return False, f"Unsupported defensive swap combination at step {step}"
+
+            if not success:
+                prefix = f"Swap {step} failed: " if message else "Swap failed"
+                return False, prefix + (message or "")
+
+            messages.append(message)
+
+        summary = f"Applied {len(messages)} defensive swap(s)."
+        if messages:
+            summary += " Details: " + "; ".join(messages)
+
+        return True, summary
+
     def execute_position_switch(self, player1_index: int, player2_index: int) -> Tuple[bool, str]:
         """
         2人の選手のポジションを交換
-        
+
         Args:
             player1_index: 1人目の選手のインデックス
             player2_index: 2人目の選手のインデックス

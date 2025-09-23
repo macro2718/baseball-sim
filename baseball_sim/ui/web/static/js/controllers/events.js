@@ -9,7 +9,7 @@ import {
 } from '../ui/menus.js';
 import { closeModal, openModal, resolveModal } from '../ui/modals.js';
 import { updateStatsPanel } from '../ui/renderers.js';
-import { handleDefenseBenchClick, handleDefenseFieldClick, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
+import { handleDefensePlayerClick, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 
 export function initEventListeners(actions) {
   elements.startButton.addEventListener('click', () => actions.handleStart(false));
@@ -99,13 +99,13 @@ export function initEventListeners(actions) {
   }
 
   if (elements.defenseField) {
-    elements.defenseField.addEventListener('click', handleDefenseFieldClick);
+    elements.defenseField.addEventListener('click', handleDefensePlayerClick);
   }
   if (elements.defenseBench) {
-    elements.defenseBench.addEventListener('click', handleDefenseBenchClick);
+    elements.defenseBench.addEventListener('click', handleDefensePlayerClick);
   }
   if (elements.defenseExtras) {
-    elements.defenseExtras.addEventListener('click', handleDefenseBenchClick);
+    elements.defenseExtras.addEventListener('click', handleDefensePlayerClick);
   }
 
   elements.statsTeamButtons.forEach((button) => {

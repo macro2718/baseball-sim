@@ -86,15 +86,22 @@ def create_routes(session: WebGameSession) -> Blueprint:
     @api_bp.post("/strategy/defense_substitution")
     def defensive_substitution() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}
-        lineup_index = parse_int_param(payload, "lineup_index")
-        bench_index = parse_int_param(payload, "bench_index")
-        try:
-            state = session.execute_defensive_substitution(
-                lineup_index=lineup_index,
-                bench_index=bench_index,
-            )
-        except GameSessionError as exc:
-            return create_error_response(str(exc), session)
+        swaps = payload.get("swaps")
+        if isinstance(swaps, list):
+            try:
+                state = session.execute_defensive_substitution(swaps=swaps)
+            except GameSessionError as exc:
+                return create_error_response(str(exc), session)
+        else:
+            lineup_index = parse_int_param(payload, "lineup_index")
+            bench_index = parse_int_param(payload, "bench_index")
+            try:
+                state = session.execute_defensive_substitution(
+                    lineup_index=lineup_index,
+                    bench_index=bench_index,
+                )
+            except GameSessionError as exc:
+                return create_error_response(str(exc), session)
         return jsonify(state)
 
     @api_bp.post("/strategy/change_pitcher")
