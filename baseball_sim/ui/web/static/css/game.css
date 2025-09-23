@@ -220,9 +220,10 @@
   --dirt-border: clamp(1px, calc(var(--field-size) * 0.007), 4px);
   --mound-size: calc(var(--field-size) * 0.17);
   --mound-border: clamp(1px, calc(var(--field-size) * 0.007), 4px);
-  --base-size: calc(var(--field-size) * 0.185);
-  --base-border: clamp(2px, calc(var(--field-size) * 0.007), 6px);
-  --plate-size: calc(var(--field-size) * 0.19);
+  /* shrink bases and plate to ~2/3 */
+  --base-size: calc(var(--field-size) * 0.185 * 0.6667);
+  --base-border: clamp(2px, calc(var(--field-size) * 0.007 * 0.75), 6px);
+  --plate-size: calc(var(--field-size) * 0.19 * 0.6667);
   --foul-line-width: clamp(3px, calc(var(--field-size) * 0.015), 6px);
   /* Diamond scaling, anchored at home plate */
   --home-top: 80%;
@@ -367,7 +368,7 @@
 .base .base-indicator {
   transform: rotate(-45deg);
   font-weight: 800;
-  font-size: clamp(12px, calc(var(--field-size) * 0.07 * var(--diamond-scale)), 28px);
+  font-size: clamp(10px, calc(var(--field-size) * 0.07 * 0.6667 * var(--diamond-scale)), 22px);
   color: rgba(248, 250, 252, 0.96);
   text-shadow: 0 0 6px rgba(15, 23, 42, 0.6);
 }
@@ -625,7 +626,7 @@
 }
 
 .defense-alignment .pos-p {
-  top: 74%;
+  top: 55%;
   left: 50%;
 }
 
