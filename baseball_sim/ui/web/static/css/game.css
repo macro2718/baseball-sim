@@ -479,6 +479,7 @@
   background: rgba(248, 250, 252, 0.95);
   box-shadow: 0 14px 26px rgba(15, 23, 42, 0.45);
   z-index: 6;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .home-plate::after {
@@ -487,12 +488,24 @@
   inset: clamp(4px, calc(var(--plate-size) * 0.18 * var(--diamond-scale)), 12px);
   border-radius: calc(var(--plate-size) * 0.2);
   background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(148, 163, 184, 0));
+  transition: background 0.3s ease, opacity 0.3s ease;
+}
+
+.home-plate.occupied {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.92), rgba(37, 99, 235, 0.88));
+  border-color: rgba(191, 219, 254, 0.95);
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.55);
+}
+
+.home-plate.runner-arrival::after {
+  background: linear-gradient(135deg, rgba(191, 219, 254, 0.45), rgba(59, 130, 246, 0.18));
+  opacity: 0.95;
 }
 
 .defense-alignment {
   position: absolute;
   inset: 0;
-  z-index: 9;
+  z-index: 8;
   pointer-events: none;
   font-family: var(--font-heading);
   color: var(--text);
@@ -506,6 +519,35 @@
   pointer-events: none;
   font-family: var(--font-heading);
   color: var(--text);
+}
+
+.runner-animation-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.runner-path {
+  position: absolute;
+  width: clamp(18px, calc(var(--field-size) * 0.075 * var(--diamond-scale)), 36px);
+  height: clamp(4px, calc(var(--field-size) * 0.016 * var(--diamond-scale)), 9px);
+  background: linear-gradient(90deg, rgba(191, 219, 254, 0.95), rgba(59, 130, 246, 0.88));
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.45);
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.4));
+  transform-origin: center;
+  opacity: 0.95;
+}
+
+.runner-path::after {
+  content: '';
+  position: absolute;
+  inset: 12%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.6), rgba(37, 99, 235, 0.7));
+  opacity: 0.9;
 }
 
 .play-animation-layer {
