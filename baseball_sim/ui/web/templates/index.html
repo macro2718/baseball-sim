@@ -27,7 +27,7 @@
             </div>
           </div>
 
-          <div class="header-insights hidden" id="insight-grid">
+          <div class="header-insights" id="insight-grid">
             <article class="insight-card" data-insight="run-rate">
               <header class="insight-header">
                 <p class="insight-label">ランペース</p>
@@ -36,6 +36,16 @@
               <div class="insight-value" id="insight-run-rate">--</div>
               <p class="insight-caption">1イニングあたりの総得点期待値</p>
               <p class="insight-meta" id="insight-innings-sample">イニングサンプル: 0</p>
+              <div class="insight-trace" aria-hidden="true">
+                <span style="--h: 34%; --i: 0"></span>
+                <span style="--h: 46%; --i: 1"></span>
+                <span style="--h: 58%; --i: 2"></span>
+                <span style="--h: 65%; --i: 3"></span>
+                <span style="--h: 72%; --i: 4"></span>
+                <span style="--h: 63%; --i: 5"></span>
+                <span style="--h: 78%; --i: 6"></span>
+                <span style="--h: 88%; --i: 7"></span>
+              </div>
             </article>
 
             <article class="insight-card" data-insight="base-pressure">
@@ -46,6 +56,16 @@
               <div class="insight-value" id="insight-base-pressure">--</div>
               <p class="insight-caption">埋まっている塁の割合</p>
               <p class="insight-meta" id="insight-base-count">0 / 3</p>
+              <div class="insight-trace" aria-hidden="true">
+                <span style="--h: 18%; --i: 0"></span>
+                <span style="--h: 32%; --i: 1"></span>
+                <span style="--h: 48%; --i: 2"></span>
+                <span style="--h: 72%; --i: 3"></span>
+                <span style="--h: 68%; --i: 4"></span>
+                <span style="--h: 52%; --i: 5"></span>
+                <span style="--h: 36%; --i: 6"></span>
+                <span style="--h: 54%; --i: 7"></span>
+              </div>
             </article>
 
             <article class="insight-card" data-insight="momentum">
@@ -61,7 +81,28 @@
                 </div>
                 <span class="insight-meter-label" id="insight-progress-label">0%</span>
               </div>
+              <div class="insight-trace" aria-hidden="true">
+                <span style="--h: 56%; --i: 0"></span>
+                <span style="--h: 62%; --i: 1"></span>
+                <span style="--h: 48%; --i: 2"></span>
+                <span style="--h: 68%; --i: 3"></span>
+                <span style="--h: 82%; --i: 4"></span>
+                <span style="--h: 74%; --i: 5"></span>
+                <span style="--h: 58%; --i: 6"></span>
+                <span style="--h: 92%; --i: 7"></span>
+              </div>
             </article>
+          </div>
+
+          <div class="header-ticker" aria-label="シミュレーションデータのトレンド">
+            <span class="ticker-label">DATA FEED</span>
+            <div class="ticker-stream" role="presentation">
+              <span class="ticker-item">シム総数 <strong>12,480</strong></span>
+              <span class="ticker-item">OPS中央値 <strong>.742</strong></span>
+              <span class="ticker-item">平均得点 <strong>4.6</strong></span>
+              <span class="ticker-item">投球スタミナ指数 <strong>68</strong></span>
+              <span class="ticker-item">勝率レンジ <strong>41% - 64%</strong></span>
+            </div>
           </div>
 
           <div class="developer-hint">
