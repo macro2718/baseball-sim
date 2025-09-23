@@ -48,6 +48,7 @@ export const elements = {
   defensePitchers: document.getElementById('defense-pitchers'),
   baseState: document.getElementById('base-state'),
   playAnimationLayer: document.getElementById('play-animation-layer'),
+  fieldResultDisplay: document.getElementById('field-result-display'),
   defenseAlignment: document.getElementById('defense-alignment'),
   batterAlignment: document.getElementById('batter-alignment'),
   pinchPlayer: document.getElementById('pinch-player'),

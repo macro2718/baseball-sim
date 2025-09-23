@@ -33,6 +33,7 @@ import {
 } from './defensePanel.js';
 import { setStatusMessage } from './status.js';
 import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
+import { updateFieldResultDisplay, resetFieldResultDisplay } from './fieldResultDisplay.js';
 
 function setInsightsVisibility(visible) {
   const { insightGrid } = elements;
@@ -1601,7 +1602,7 @@ function updateStrategyControls(gameState, teams) {
   }
 }
 
-export function renderGame(gameState, teams, log) {
+export function renderGame(gameState, teams, log, previousGameState = null) {
   updateAnalyticsPanel(gameState);
   updateDefenseAlignment(gameState, teams);
   updateBatterAlignment(gameState, teams);
@@ -1610,6 +1611,7 @@ export function renderGame(gameState, teams, log) {
 
   if (!isActiveGame) {
     resetPlayAnimation();
+    resetFieldResultDisplay();
     elements.gameScreen.classList.add('hidden');
     elements.titleScreen.classList.remove('hidden');
     updateScoreboard(gameState, teams);
@@ -1647,6 +1649,7 @@ export function renderGame(gameState, teams, log) {
   elements.matchupText.textContent = gameState.matchup || '';
   updateBases(gameState.bases || []);
   triggerPlayAnimation(gameState.last_play || null, { isActive: true });
+  updateFieldResultDisplay(gameState, previousGameState || null);
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
@@ -1952,10 +1955,11 @@ export function updateAbilitiesPanel(state) {
 }
 
 export function render(data) {
+  const previousData = stateCache.data;
   stateCache.data = data;
   setStatusMessage(data.notification);
   renderTitle(data.title);
-  renderGame(data.game, data.teams, data.log);
+  renderGame(data.game, data.teams, data.log, previousData?.game || null);
   updateStatsPanel(data);
   updateAbilitiesPanel(data);
 }

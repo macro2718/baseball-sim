@@ -516,6 +516,107 @@
   overflow: visible;
 }
 
+.field-result-display {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.92);
+  min-width: clamp(180px, 32vw, 360px);
+  padding: clamp(14px, 2.8vw, 28px) clamp(22px, 4.2vw, 40px);
+  border-radius: clamp(18px, 3vw, 36px);
+  text-align: center;
+  pointer-events: none;
+  z-index: 12;
+  font-family: var(--font-heading);
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  backdrop-filter: blur(8px);
+  --result-color: #e0f2fe;
+  --result-glow: rgba(59, 130, 246, 0.32);
+  --result-border: rgba(96, 165, 250, 0.38);
+  --result-bg: linear-gradient(135deg, rgba(30, 64, 175, 0.32), rgba(15, 23, 42, 0.78));
+  color: var(--result-color);
+  text-shadow: 0 0 24px var(--result-glow);
+  border: 1px solid var(--result-border);
+  background: var(--result-bg);
+  box-shadow: 0 28px 60px var(--result-glow);
+}
+
+.field-result-display.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.field-result-display.is-fading-out {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.field-result-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 1.4vw, 12px);
+}
+
+.field-result-label {
+  font-size: clamp(28px, 5vw, 54px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.field-result-runs {
+  font-size: clamp(16px, 2.6vw, 24px);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+.field-result-display[data-category='hit'] {
+  --result-color: #bbf7d0;
+  --result-glow: rgba(34, 197, 94, 0.52);
+  --result-border: rgba(74, 222, 128, 0.52);
+  --result-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.26), rgba(6, 78, 59, 0.62));
+}
+
+.field-result-display[data-category='walk'] {
+  --result-color: #bae6fd;
+  --result-glow: rgba(56, 189, 248, 0.45);
+  --result-border: rgba(56, 189, 248, 0.48);
+  --result-bg: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(12, 74, 110, 0.6));
+}
+
+.field-result-display[data-category='strikeout'] {
+  --result-color: #fecaca;
+  --result-glow: rgba(248, 113, 113, 0.5);
+  --result-border: rgba(248, 113, 113, 0.52);
+  --result-bg: linear-gradient(135deg, rgba(248, 113, 113, 0.26), rgba(76, 29, 149, 0.58));
+}
+
+.field-result-display[data-category='out'] {
+  --result-color: #e2e8f0;
+  --result-glow: rgba(148, 163, 184, 0.4);
+  --result-border: rgba(148, 163, 184, 0.48);
+  --result-bg: linear-gradient(135deg, rgba(100, 116, 139, 0.28), rgba(15, 23, 42, 0.76));
+}
+
+.field-result-display[data-category='homerun'] {
+  --result-color: #fde68a;
+  --result-glow: rgba(251, 191, 36, 0.6);
+  --result-border: rgba(251, 191, 36, 0.52);
+  --result-bg: linear-gradient(135deg, rgba(250, 204, 21, 0.28), rgba(88, 28, 135, 0.6));
+}
+
+.field-result-display[data-category='neutral'] {
+  --result-color: #e0f2fe;
+  --result-glow: rgba(148, 163, 184, 0.36);
+  --result-border: rgba(148, 163, 184, 0.4);
+  --result-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(15, 23, 42, 0.72));
+}
+
 .play-ball {
   position: absolute;
   width: clamp(10px, calc(var(--field-size) * 0.038), 18px);
