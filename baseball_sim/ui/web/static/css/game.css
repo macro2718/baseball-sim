@@ -1000,17 +1000,23 @@
   color: var(--text);
 }
 
-.matchup-batter-stats span {
+.matchup-batter-stats .matchup-batter-stat {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.matchup-batter-stats span strong {
+.matchup-batter-stats .matchup-batter-stat strong {
   font-family: var(--font-heading);
   font-size: 11px;
   letter-spacing: 0.12em;
   color: var(--text-muted);
+}
+
+.matchup-batter-stats .matchup-batter-stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .matchup-empty {

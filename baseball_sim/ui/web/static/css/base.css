@@ -120,6 +120,18 @@ a:focus-visible {
   border: 0;
 }
 
+.ability-colorized {
+  --ability-color: var(--text);
+  --ability-intensity: 0;
+  color: var(--ability-color);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-shadow: none;
+  transition: color 0.2s ease, text-shadow 0.2s ease, transform 0.2s ease;
+}
+
 .app-shell {
   min-height: 100vh;
   display: flex;
