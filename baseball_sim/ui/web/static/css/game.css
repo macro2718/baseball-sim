@@ -893,25 +893,22 @@
   background: rgba(96, 165, 250, 0.16);
 }
 
-.pitchers-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-top: clamp(32px, 7vh, 96px);
+.pitcher-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.pitcher-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 
 .pitcher-list {
-  background: linear-gradient(150deg, rgba(7, 12, 24, 0.9), rgba(30, 41, 83, 0.58));
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 26px 60px rgba(5, 12, 30, 0.5);
-  backdrop-filter: blur(10px);
-}
-
-.pitcher-list ul {
   list-style: none;
-  margin: 12px 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -919,16 +916,24 @@
 }
 
 .pitcher-list li {
-  padding: 9px 12px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.72);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.75);
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08);
+}
+
+.pitcher-list li span:last-child {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .pitcher-list li.current {
-  border: 1px solid rgba(125, 211, 252, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.6);
   background: rgba(96, 165, 250, 0.18);
 }
 

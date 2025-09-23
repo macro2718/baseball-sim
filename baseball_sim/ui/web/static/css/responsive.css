@@ -17,10 +17,6 @@
     margin-top: 28px;
   }
 
-  .pitchers-panel {
-    margin-top: 20px;
-  }
-
   .defense-alignment .player-chip {
     min-width: 108px;
     max-width: 140px;
@@ -57,10 +53,6 @@
   #matchup-panel {
     grid-column: 1 !important;
     justify-self: stretch;
-  }
-
-  .pitchers-panel {
-    margin-top: 24px;
   }
 
   .header-topline {
