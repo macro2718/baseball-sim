@@ -150,10 +150,21 @@ class SessionStateBuilder:
         current_pitcher = None
         if game_state.fielding_team and game_state.fielding_team.current_pitcher:
             pitcher = game_state.fielding_team.current_pitcher
+            throws = getattr(pitcher, "throws", None)
+            throws_display = str(throws).upper() if throws else "-"
+            pitcher_type = getattr(pitcher, "pitcher_type", None)
+            pitcher_type_display = (
+                str(pitcher_type).upper() if pitcher_type else (self._display_position(pitcher) or "P")
+            )
             current_pitcher = {
                 "name": pitcher.name,
                 "stamina": round(getattr(pitcher, "current_stamina", 0), 1),
-                "pitcher_type": getattr(pitcher, "pitcher_type", "P"),
+                "pitcher_type": pitcher_type_display,
+                "throws": throws_display,
+                "k_pct": self._format_percentage(getattr(pitcher, "k_pct", None)),
+                "bb_pct": self._format_percentage(getattr(pitcher, "bb_pct", None)),
+                "hard_pct": self._format_percentage(getattr(pitcher, "hard_pct", None)),
+                "gb_pct": self._format_percentage(getattr(pitcher, "gb_pct", None)),
             }
 
         allowed, _ = game_state.is_game_action_allowed()
@@ -255,6 +266,11 @@ class SessionStateBuilder:
                         "avg": summary["avg"],
                         "hr": summary["hr"],
                         "rbi": summary["rbi"],
+                        "k_pct": self._format_percentage(getattr(player, "k_pct", None)),
+                        "bb_pct": self._format_percentage(getattr(player, "bb_pct", None)),
+                        "hard_pct": self._format_percentage(getattr(player, "hard_pct", None)),
+                        "gb_pct": self._format_percentage(getattr(player, "gb_pct", None)),
+                        "speed": self._format_speed(getattr(player, "speed", None)),
                     }
                 )
 

@@ -238,6 +238,43 @@
                     <ul id="defense-bench" class="bench-list"></ul>
                   </div>
                 </div>
+                <div class="matchup-panel" id="matchup-panel" aria-live="polite">
+                  <section class="matchup-card" id="current-pitcher-panel">
+                    <header class="matchup-card-header">
+                      <h3>現在の投手</h3>
+                      <div class="matchup-tags">
+                        <span class="matchup-tag" id="matchup-pitcher-type">--</span>
+                        <span class="matchup-tag" id="matchup-pitcher-throws">--</span>
+                      </div>
+                    </header>
+                    <p class="matchup-player-name" id="matchup-pitcher-name">--</p>
+                    <dl class="matchup-stat-grid">
+                      <div class="matchup-stat">
+                        <dt>K%</dt>
+                        <dd id="matchup-pitcher-k">--</dd>
+                      </div>
+                      <div class="matchup-stat">
+                        <dt>BB%</dt>
+                        <dd id="matchup-pitcher-bb">--</dd>
+                      </div>
+                      <div class="matchup-stat">
+                        <dt>Hard%</dt>
+                        <dd id="matchup-pitcher-hard">--</dd>
+                      </div>
+                      <div class="matchup-stat">
+                        <dt>GB%</dt>
+                        <dd id="matchup-pitcher-gb">--</dd>
+                      </div>
+                    </dl>
+                  </section>
+                  <section class="matchup-card" id="upcoming-batters-panel">
+                    <header class="matchup-card-header">
+                      <h3>次の打者</h3>
+                    </header>
+                    <ol class="matchup-batter-list" id="upcoming-batters-list"></ol>
+                    <p class="matchup-empty" id="upcoming-batters-empty">打者情報がありません。</p>
+                  </section>
+                </div>
               </div>
 
               <div class="pitchers-panel">
