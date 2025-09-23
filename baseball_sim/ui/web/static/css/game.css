@@ -508,6 +508,96 @@
   color: var(--text);
 }
 
+.play-animation-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.play-ball {
+  position: absolute;
+  width: clamp(10px, calc(var(--field-size) * 0.038), 18px);
+  height: clamp(10px, calc(var(--field-size) * 0.038), 18px);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 32%, #fff 40%, #e2e8f0 68%, rgba(148, 163, 184, 0.45) 100%);
+  box-shadow: 0 0 12px rgba(148, 197, 255, 0.42);
+  transform: translate(-50%, -50%);
+  will-change: transform, opacity;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.play-ball::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--trail-length, clamp(18px, calc(var(--field-size) * 0.08), 28px));
+  height: var(--trail-width, clamp(2px, calc(var(--field-size) * 0.01), 4px));
+  background: linear-gradient(90deg, var(--trail-color, rgba(255, 255, 255, 0.9)), transparent);
+  transform-origin: left center;
+  transform: translate(-100%, -50%) rotate(var(--trail-angle, 0deg));
+  opacity: var(--trail-opacity, 0.6);
+  filter: blur(var(--trail-blur, 1px));
+  pointer-events: none;
+}
+
+.play-ball--groundout {
+  --trail-color: rgba(248, 191, 143, 0.85);
+  --trail-length: clamp(18px, calc(var(--field-size) * 0.07), 26px);
+  --trail-opacity: 0.6;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+}
+
+.play-ball--infield {
+  --trail-color: rgba(191, 219, 254, 0.9);
+  --trail-length: clamp(24px, calc(var(--field-size) * 0.1), 34px);
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.45);
+}
+
+.play-ball--outfield {
+  --trail-color: rgba(165, 243, 252, 0.85);
+  --trail-length: clamp(30px, calc(var(--field-size) * 0.14), 42px);
+  --trail-opacity: 0.55;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+}
+
+.play-ball--single {
+  --trail-color: rgba(129, 140, 248, 0.85);
+  --trail-length: clamp(26px, calc(var(--field-size) * 0.11), 36px);
+  box-shadow: 0 0 14px rgba(129, 140, 248, 0.5);
+}
+
+.play-ball--extra-base {
+  --trail-color: rgba(110, 231, 183, 0.9);
+  --trail-length: clamp(34px, calc(var(--field-size) * 0.16), 48px);
+  --trail-opacity: 0.65;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.5);
+}
+
+.play-ball--home-run {
+  --trail-color: rgba(253, 224, 71, 0.95);
+  --trail-length: clamp(40px, calc(var(--field-size) * 0.2), 56px);
+  --trail-opacity: 0.75;
+  --trail-blur: 1.6px;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.75), 0 0 40px rgba(253, 224, 71, 0.35);
+  background: radial-gradient(circle at 35% 35%, #fff 28%, #fef08a 86%, rgba(251, 191, 36, 0.45) 100%);
+}
+
+.play-ball-spark {
+  position: absolute;
+  width: clamp(16px, calc(var(--field-size) * 0.08), 32px);
+  height: clamp(16px, calc(var(--field-size) * 0.08), 32px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(253, 224, 71, 0.9), rgba(253, 224, 71, 0));
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  z-index: 12;
+}
+
 .batter-alignment .batter-slot {
   position: absolute;
   transform: translate(-50%, -50%);

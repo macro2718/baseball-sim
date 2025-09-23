@@ -155,9 +155,12 @@ class BuntProcessor:
         # 得点があれば加算
         if runs_scored > 0:
             self.game_state._add_runs(runs_scored, batter)
-            return f"Bunt hit! {runs_scored} runs scored!"
-        
-        return "Bunt hit!"
+            message = f"Bunt hit! {runs_scored} runs scored!"
+        else:
+            message = "Bunt hit!"
+
+        self.game_state.record_play(GameResults.BUNT_SINGLE, message)
+        return message
     
     def _handle_sacrifice_bunt(self, batter):
         """送りバント成功の処理"""
@@ -190,13 +193,14 @@ class BuntProcessor:
         # 得点があれば加算
         if runs_scored > 0:
             self.game_state._add_runs(runs_scored, batter)
-            return f"Sacrifice bunt successful! {runs_scored} runs scored! {advance_message}"
-        
-        # 実際に進塁が発生した場合のみ「successful」と表示
-        if actual_advancement or runs_scored > 0:
-            return f"Sacrifice bunt successful! {advance_message}"
+            message = f"Sacrifice bunt successful! {runs_scored} runs scored! {advance_message}"
+        elif actual_advancement or runs_scored > 0:
+            message = f"Sacrifice bunt successful! {advance_message}"
         else:
-            return f"Sacrifice bunt attempted, but no advancement occurred. {advance_message}"
+            message = f"Sacrifice bunt attempted, but no advancement occurred. {advance_message}"
+
+        self.game_state.record_play(GameResults.SACRIFICE_BUNT, message)
+        return message
     
     def _handle_bunt_out(self, batter):
         """バントアウトの処理"""
@@ -210,9 +214,12 @@ class BuntProcessor:
         self.game_state.add_out()
         
         if runner_out_message:
-            return f"Bunt out! {runner_out_message}"
-        
-        return "Bunt out"
+            message = f"Bunt out! {runner_out_message}"
+        else:
+            message = "Bunt out"
+
+        self.game_state.record_play(GameResults.BUNT_OUT, message)
+        return message
     
     def _handle_bunt_failed(self, batter):
         """バント失敗の処理"""
@@ -226,9 +233,12 @@ class BuntProcessor:
         self.game_state.add_out()
         
         if additional_outs > 0:
-            return f"Bunt failed! {additional_outs} additional runner(s) out!"
-        
-        return "Bunt failed!"
+            message = f"Bunt failed! {additional_outs} additional runner(s) out!"
+        else:
+            message = "Bunt failed!"
+
+        self.game_state.record_play(GameResults.BUNT_FAILED, message)
+        return message
     
     def _advance_runners(self, bunt_type, batter=None):
         """統一的なランナー進塁処理"""

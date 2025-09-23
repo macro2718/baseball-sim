@@ -32,6 +32,7 @@ import {
   resetDefenseSelectionsIfUnavailable,
 } from './defensePanel.js';
 import { setStatusMessage } from './status.js';
+import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
 
 function setInsightsVisibility(visible) {
   const { insightGrid } = elements;
@@ -1438,6 +1439,7 @@ export function renderGame(gameState, teams, log) {
   setInsightsVisibility(isActiveGame);
 
   if (!isActiveGame) {
+    resetPlayAnimation();
     elements.gameScreen.classList.add('hidden');
     elements.titleScreen.classList.remove('hidden');
     updateScoreboard(gameState, teams);
@@ -1474,6 +1476,7 @@ export function renderGame(gameState, teams, log) {
   updateOutsIndicator(gameState.outs);
   elements.matchupText.textContent = gameState.matchup || '';
   updateBases(gameState.bases || []);
+  triggerPlayAnimation(gameState.last_play || null, { isActive: true });
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
