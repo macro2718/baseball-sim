@@ -594,6 +594,7 @@ class WebGameSession:
             is_offense = bool(self.game_state and self.game_state.batting_team is team)
             current_batter_index = team.current_batter_index if team.lineup else 0
             for index, player in enumerate(team.lineup):
+                summary = self._lineup_batter_summary(player)
                 lineup.append(
                     {
                         "index": index,
@@ -605,6 +606,9 @@ class WebGameSession:
                         "eligible_all": self._eligible_positions_raw(player),
                         "pitcher_type": getattr(player, "pitcher_type", None),
                         "is_current_batter": is_offense and index == current_batter_index,
+                        "avg": summary["avg"],
+                        "hr": summary["hr"],
+                        "rbi": summary["rbi"],
                     }
                 )
 
@@ -661,6 +665,21 @@ class WebGameSession:
             }
 
         return teams
+
+    def _lineup_batter_summary(self, player) -> Dict[str, object]:
+        if not player:
+            return {"avg": ".000", "hr": 0, "rbi": 0}
+
+        summary = self._serialize_batter_stats(player)
+        avg = summary.get("avg") or ".000"
+        hr = summary.get("hr")
+        rbi = summary.get("rbi")
+
+        return {
+            "avg": avg,
+            "hr": hr if hr is not None else 0,
+            "rbi": rbi if rbi is not None else 0,
+        }
 
     def _build_team_stats(self, team) -> Dict[str, List[Dict[str, object]]]:
         batting: List[Dict[str, object]] = []

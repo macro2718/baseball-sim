@@ -1016,6 +1016,23 @@ button:focus-visible {
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
 }
 
+.roster th.player-col,
+.roster td.player-name {
+  white-space: nowrap;
+}
+
+.roster td.player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roster th.stat-col,
+.roster td.stat-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .roster tbody tr.active {
   background: rgba(96, 165, 250, 0.12);
 }

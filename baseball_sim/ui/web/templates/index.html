@@ -23,7 +23,7 @@
             </div>
           </div>
 
-          <div class="header-insights" id="insight-grid">
+          <div class="header-insights hidden" id="insight-grid">
             <article class="insight-card" data-insight="run-rate">
               <header class="insight-header">
                 <p class="insight-label">ランペース</p>
@@ -137,7 +137,14 @@
                   <h3>攻撃</h3>
                   <table>
                     <thead>
-                      <tr><th>#</th><th>Pos</th><th>選手</th><th>Eligible</th></tr>
+                      <tr>
+                        <th>#</th>
+                        <th>Pos</th>
+                        <th class="player-col">選手</th>
+                        <th class="stat-col">AVG</th>
+                        <th class="stat-col">HR</th>
+                        <th class="stat-col">RBI</th>
+                      </tr>
                     </thead>
                     <tbody></tbody>
                   </table>
@@ -150,7 +157,14 @@
                   <h3>守備</h3>
                   <table>
                     <thead>
-                      <tr><th>#</th><th>Pos</th><th>選手</th><th>Eligible</th></tr>
+                      <tr>
+                        <th>#</th>
+                        <th>Pos</th>
+                        <th class="player-col">選手</th>
+                        <th class="stat-col">AVG</th>
+                        <th class="stat-col">HR</th>
+                        <th class="stat-col">RBI</th>
+                      </tr>
                     </thead>
                     <tbody></tbody>
                   </table>
