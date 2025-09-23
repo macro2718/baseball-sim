@@ -21,37 +21,53 @@
 }
 
 .status-message {
-  min-height: 32px;
-  color: var(--accent-muted);
+  position: relative;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px;
+  border-radius: 18px;
   font-weight: 600;
-  padding: 12px 18px;
-  border-radius: 12px;
-  background: rgba(8, 11, 24, 0.6);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  box-shadow: 0 18px 36px rgba(2, 6, 23, 0.45);
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+  color: var(--accent-muted);
+  background: linear-gradient(145deg, rgba(8, 11, 24, 0.78), rgba(8, 11, 24, 0.58));
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  box-shadow: 0 22px 44px rgba(2, 6, 23, 0.48);
   transition: all 0.3s ease;
 }
 
+.status-message:empty {
+  display: none;
+}
+
 .status-message.danger {
-  color: var(--danger);
+  color: #fecaca;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.22), rgba(67, 13, 13, 0.6));
+  border-color: rgba(248, 113, 113, 0.45);
+  box-shadow: 0 24px 52px rgba(248, 113, 113, 0.28);
 }
 
 .status-message.success {
-  color: var(--success);
-  background: rgba(52, 211, 153, 0.12);
-  border-color: rgba(52, 211, 153, 0.35);
-  box-shadow: 0 18px 42px rgba(16, 185, 129, 0.25);
+  color: #d1fae5;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.22), rgba(6, 78, 59, 0.55));
+  border-color: rgba(52, 211, 153, 0.45);
+  box-shadow: 0 24px 52px rgba(16, 185, 129, 0.28);
 }
 
 .status-message.info {
-  color: var(--accent);
+  color: #e0f2fe;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.26), rgba(8, 47, 73, 0.55));
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 24px 52px rgba(56, 189, 248, 0.26);
 }
 
 .status-message.warning {
-  color: var(--warning);
-  background: rgba(250, 204, 21, 0.12);
-  border-color: rgba(250, 204, 21, 0.32);
-  box-shadow: 0 16px 32px rgba(250, 204, 21, 0.18);
+  color: #fef3c7;
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.22), rgba(113, 63, 18, 0.55));
+  border-color: rgba(250, 204, 21, 0.4);
+  box-shadow: 0 24px 48px rgba(250, 204, 21, 0.28);
 }
 
 .screen.hidden {

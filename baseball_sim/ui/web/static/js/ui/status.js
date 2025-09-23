@@ -3,16 +3,22 @@ import { elements } from '../dom.js';
 export function setStatusMessage(notification) {
   if (!notification) {
     elements.statusMessage.textContent = '';
-    elements.statusMessage.classList.remove('danger', 'success', 'info');
+    elements.statusMessage.classList.remove('danger', 'success', 'info', 'warning');
+    elements.statusMessage.removeAttribute('data-level');
     return;
   }
-  elements.statusMessage.textContent = notification.message;
-  elements.statusMessage.classList.remove('danger', 'success', 'info');
-  elements.statusMessage.classList.add(notification.level || 'info');
+  const level = notification.level || 'info';
+  const message = notification.message ?? '';
+  elements.statusMessage.textContent = message;
+  elements.statusMessage.classList.remove('danger', 'success', 'info', 'warning');
+  elements.statusMessage.classList.add(level);
+  elements.statusMessage.dataset.level = level;
 }
 
 export function showStatus(message, level = 'danger') {
-  elements.statusMessage.textContent = message;
-  elements.statusMessage.classList.remove('danger', 'success', 'info');
+  const resolvedMessage = message ?? '';
+  elements.statusMessage.textContent = resolvedMessage;
+  elements.statusMessage.classList.remove('danger', 'success', 'info', 'warning');
   elements.statusMessage.classList.add(level);
+  elements.statusMessage.dataset.level = level;
 }
