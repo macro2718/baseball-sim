@@ -9,6 +9,7 @@ export const stateCache = {
   defenseContext: { lineup: {}, bench: {}, canSub: false },
   currentBatterIndex: null,
   statsView: { team: 'away', type: 'batting' },
+  abilitiesView: { team: 'away', type: 'batting' },
 };
 
 export function normalizePositionKey(position) {

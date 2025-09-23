@@ -8,7 +8,7 @@ import {
   toggleOffenseMenu,
 } from '../ui/menus.js';
 import { closeModal, openModal, resolveModal } from '../ui/modals.js';
-import { updateStatsPanel } from '../ui/renderers.js';
+import { updateStatsPanel, updateAbilitiesPanel } from '../ui/renderers.js';
 import { handleDefensePlayerClick, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 
 export function initEventListeners(actions) {
@@ -47,6 +47,12 @@ export function initEventListeners(actions) {
       openModal('stats');
     });
   }
+  if (elements.openAbilitiesButton) {
+    elements.openAbilitiesButton.addEventListener('click', () => {
+      updateAbilitiesPanel(stateCache.data);
+      openModal('abilities');
+    });
+  }
   if (elements.defenseResetButton) {
     elements.defenseResetButton.addEventListener('click', actions.handleDefenseReset);
   }
@@ -62,7 +68,7 @@ export function initEventListeners(actions) {
     button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
   });
 
-  ['offense', 'defense', 'pitcher', 'stats'].forEach((name) => {
+  ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
@@ -130,11 +136,31 @@ export function initEventListeners(actions) {
     });
   });
 
+  elements.abilitiesTeamButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      const teamKey = button.dataset.abilitiesTeam;
+      if (!teamKey) return;
+      stateCache.abilitiesView.team = teamKey;
+      updateAbilitiesPanel(stateCache.data);
+    });
+  });
+
+  elements.abilitiesTypeButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      const viewType = button.dataset.abilitiesType;
+      if (!viewType) return;
+      stateCache.abilitiesView.type = viewType;
+      updateAbilitiesPanel(stateCache.data);
+    });
+  });
+
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       hideOffenseMenu();
       hideDefenseMenu();
-      ['offense', 'defense', 'pitcher', 'stats'].forEach((name) => {
+      ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);
