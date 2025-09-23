@@ -1,6 +1,6 @@
 import { CONFIG } from '../config.js';
 import { elements } from '../dom.js';
-import { stateCache, resetDefenseSelection } from '../state.js';
+import { stateCache, resetDefenseSelection, getDefensePlanInvalidAssignments } from '../state.js';
 import { apiRequest } from '../services/apiClient.js';
 import { showStatus } from '../ui/status.js';
 
@@ -119,6 +119,25 @@ export function createGameActions(render) {
       return;
     }
 
+    const invalidAssignments = getDefensePlanInvalidAssignments(plan);
+    let force = false;
+    if (invalidAssignments.length > 0) {
+      const details = invalidAssignments
+        .map((entry) => `・${entry.player?.name ?? '-'} (${entry.positionLabel ?? entry.positionKey ?? '-'})`)
+        .join('\n');
+      const confirmMessage =
+        '⚠️ 守備適性のない守備配置が含まれています。' +
+        (details ? `\n${details}` : '') +
+        '\nこのまま強制的に適用しますか？';
+      const confirmed = window.confirm(confirmMessage);
+      if (!confirmed) {
+        showStatus('守備交代の適用をキャンセルしました。', 'warning');
+        return;
+      }
+      force = true;
+      showStatus('守備適性のない守備位置を含めたまま守備交代を適用します。', 'warning');
+    }
+
     const swaps = operations
       .map((op) => {
         if (op.type === 'lineup_lineup') {
@@ -145,7 +164,7 @@ export function createGameActions(render) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.defenseSubstitution, {
         method: 'POST',
-        body: JSON.stringify({ swaps }),
+        body: JSON.stringify({ swaps, force }),
       });
       stateCache.defensePlan = null;
       resetDefenseSelection();

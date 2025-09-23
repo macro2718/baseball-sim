@@ -34,7 +34,13 @@ class SubstitutionManager:
         """出場可能な投手のリストを取得"""
         return self.team.get_available_pitchers()
     
-    def validate_substitution(self, substitute_player, position: Optional[str] = None) -> Tuple[bool, str]:
+    def validate_substitution(
+        self,
+        substitute_player,
+        position: Optional[str] = None,
+        *,
+        allow_illegal_position: bool = False,
+    ) -> Tuple[bool, str]:
         """
         選手交代の妥当性をチェック
         
@@ -75,9 +81,9 @@ class SubstitutionManager:
         if is_pitcher and substitute_player == getattr(self.team, "current_pitcher", None):
             return False, f"{substitute_player.name} is already the active pitcher"
         
-        if position and not substitute_player.can_play_position(position):
+        if position and not allow_illegal_position and not substitute_player.can_play_position(position):
             return False, f"{substitute_player.name} cannot play position {position}"
-        
+
         return True, "Substitution is valid"
     
     def execute_pinch_hit(self, bench_player_index: int, lineup_index: int) -> Tuple[bool, str]:
@@ -146,7 +152,13 @@ class SubstitutionManager:
         except Exception as e:
             return False, f"Pitcher change error: {str(e)}"
     
-    def execute_defensive_substitution(self, bench_player_index: int, lineup_index: int) -> Tuple[bool, str]:
+    def execute_defensive_substitution(
+        self,
+        bench_player_index: int,
+        lineup_index: int,
+        *,
+        allow_illegal: bool = False,
+    ) -> Tuple[bool, str]:
         """
         守備交代を実行
 
@@ -172,19 +184,25 @@ class SubstitutionManager:
             position = original_player.current_position
             
             # 妥当性チェック
-            valid, message = self.validate_substitution(substitute_player, position)
+            valid, message = self.validate_substitution(
+                substitute_player, position, allow_illegal_position=allow_illegal
+            )
             if not valid:
                 return False, message
-            
+
             # 守備交代実行
-            success, result_message = self.team.substitute_player(lineup_index, substitute_player)
+            success, result_message = self.team.substitute_player(
+                lineup_index, substitute_player, allow_illegal=allow_illegal
+            )
 
             return success, result_message
 
         except Exception as e:
             return False, f"Defensive substitution error: {str(e)}"
 
-    def execute_defensive_plan(self, swaps: List[Dict[str, Any]]) -> Tuple[bool, str]:
+    def execute_defensive_plan(
+        self, swaps: List[Dict[str, Any]], *, allow_illegal: bool = False
+    ) -> Tuple[bool, str]:
         """Apply a sequence of defensive swaps defined by the web UI."""
 
         if not isinstance(swaps, list) or not swaps:
@@ -218,11 +236,17 @@ class SubstitutionManager:
                 return False, f"Invalid player index in swap instruction {step}"
 
             if group1 == "lineup" and group2 == "lineup":
-                success, message = self.execute_position_switch(index1, index2)
+                success, message = self.execute_position_switch(
+                    index1, index2, allow_illegal=allow_illegal
+                )
             elif group1 == "bench" and group2 == "lineup":
-                success, message = self.execute_defensive_substitution(index1, index2)
+                success, message = self.execute_defensive_substitution(
+                    index1, index2, allow_illegal=allow_illegal
+                )
             elif group1 == "lineup" and group2 == "bench":
-                success, message = self.execute_defensive_substitution(index2, index1)
+                success, message = self.execute_defensive_substitution(
+                    index2, index1, allow_illegal=allow_illegal
+                )
             else:
                 return False, f"Unsupported defensive swap combination at step {step}"
 
@@ -238,7 +262,9 @@ class SubstitutionManager:
 
         return True, summary
 
-    def execute_position_switch(self, player1_index: int, player2_index: int) -> Tuple[bool, str]:
+    def execute_position_switch(
+        self, player1_index: int, player2_index: int, *, allow_illegal: bool = False
+    ) -> Tuple[bool, str]:
         """
         2人の選手のポジションを交換
 
@@ -262,13 +288,15 @@ class SubstitutionManager:
                 return False, "Cannot switch positions with DH"
             
             # 選手がお互いのポジションを守れるかチェック
-            if not player1.can_play_position(player2.current_position):
+            if not allow_illegal and not player1.can_play_position(player2.current_position):
                 return False, f"{player1.name} cannot play position {player2.current_position}"
-            if not player2.can_play_position(player1.current_position):
+            if not allow_illegal and not player2.can_play_position(player1.current_position):
                 return False, f"{player2.name} cannot play position {player1.current_position}"
-            
+
             # ポジション交換実行
-            success = self.team.switch_positions(player1_index, player2_index)
+            success = self.team.switch_positions(
+                player1_index, player2_index, allow_illegal=allow_illegal
+            )
             
             if success:
                 return True, f"Position switch completed: {player1.name} <-> {player2.name}"
