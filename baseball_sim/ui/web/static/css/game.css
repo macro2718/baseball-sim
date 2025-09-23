@@ -15,6 +15,27 @@
   gap: 20px;
 }
 
+.play-result-card {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.play-result-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 35%, rgba(148, 163, 184, 0.22), transparent 55%),
+    radial-gradient(circle at 85% 25%, rgba(56, 189, 248, 0.18), transparent 60%);
+  opacity: 0.35;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.play-result-card:empty::before {
+  opacity: 0;
+}
+
 .control-column {
   display: flex;
   flex-direction: column;
