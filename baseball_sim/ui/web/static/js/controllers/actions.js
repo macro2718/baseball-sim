@@ -1,0 +1,206 @@
+import { CONFIG } from '../config.js';
+import { elements } from '../dom.js';
+import {
+  stateCache,
+  getLineupPlayer,
+  getBenchPlayer,
+  getLineupPositionKey,
+  canBenchPlayerCoverPosition,
+} from '../state.js';
+import { apiRequest } from '../services/apiClient.js';
+import { showStatus } from '../ui/status.js';
+
+function handleApiError(error, render) {
+  if (error?.payload?.state) {
+    render(error.payload.state);
+  }
+  if (error?.payload?.error) {
+    showStatus(error.payload.error, 'danger');
+  } else if (error instanceof Error) {
+    showStatus(error.message, 'danger');
+  } else {
+    showStatus('リクエスト中に不明なエラーが発生しました。', 'danger');
+  }
+  console.warn(error);
+}
+
+export function createGameActions(render) {
+  async function handleStart(reload) {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameStart, {
+        method: 'POST',
+        body: JSON.stringify({ reload }),
+      });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleReloadTeams() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.reloadTeams, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleReturnToTitle() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameStop, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleClearLog() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.clearLog, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleSwing() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameSwing, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleBunt() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameBunt, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handlePinchHit() {
+    if (!elements.pinchPlayer) return;
+    const benchValue = elements.pinchPlayer.value;
+    const lineupIndex = stateCache.currentBatterIndex;
+    if (!Number.isInteger(lineupIndex)) {
+      showStatus('現在の打者が見つかりません。', 'danger');
+      return;
+    }
+    if (!benchValue) {
+      showStatus('代打に出すベンチ選手を選択してください。', 'danger');
+      return;
+    }
+
+    const benchIndex = Number(benchValue);
+    if (Number.isNaN(benchIndex)) {
+      showStatus('選択内容を解釈できませんでした。', 'danger');
+      return;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.pinchHit, {
+        method: 'POST',
+        body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
+      });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleDefenseSubstitution() {
+    const { lineupIndex, benchIndex } = stateCache.defenseSelection;
+    if (!stateCache.defenseContext.canSub) {
+      showStatus('守備交代は現在行えません。', 'danger');
+      return;
+    }
+    if (!Number.isInteger(lineupIndex) || lineupIndex < 0) {
+      showStatus('交代させる守備位置を選択してください。', 'danger');
+      return;
+    }
+    if (!Number.isInteger(benchIndex) || benchIndex < 0) {
+      showStatus('ベンチから交代させる選手を選択してください。', 'danger');
+      return;
+    }
+
+    const lineupPlayer = getLineupPlayer(lineupIndex);
+    if (!lineupPlayer) {
+      showStatus('選択された守備位置が無効です。', 'danger');
+      return;
+    }
+    const benchPlayer = getBenchPlayer(benchIndex);
+    if (!benchPlayer) {
+      showStatus('選択されたベンチ選手が見つかりません。', 'danger');
+      return;
+    }
+    const targetPositionKey = getLineupPositionKey(lineupPlayer);
+    if (targetPositionKey && !canBenchPlayerCoverPosition(benchPlayer, targetPositionKey)) {
+      const positionLabel = lineupPlayer.position || targetPositionKey;
+      showStatus(`${benchPlayer.name} は ${positionLabel} を守れません。別の選手を選択してください。`, 'danger');
+      return;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.defenseSubstitution, {
+        method: 'POST',
+        body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
+      });
+      stateCache.defenseSelection = { lineupIndex: null, benchIndex: null };
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handlePitcherChange() {
+    if (!elements.pitcherSelect) return;
+    const pitcherValue = elements.pitcherSelect.value;
+    if (!pitcherValue) {
+      showStatus('交代する投手を選択してください。', 'danger');
+      return;
+    }
+
+    const pitcherIndex = Number(pitcherValue);
+    if (Number.isNaN(pitcherIndex)) {
+      showStatus('選択内容を解釈できませんでした。', 'danger');
+      return;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.changePitcher, {
+        method: 'POST',
+        body: JSON.stringify({ pitcher_index: pitcherIndex }),
+      });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function loadInitialState() {
+    try {
+      const initialState = await apiRequest(CONFIG.api.endpoints.gameState);
+      render(initialState);
+    } catch (error) {
+      console.error(error);
+      showStatus('初期状態の取得に失敗しました。ページを再読み込みしてください。', 'danger');
+    }
+  }
+
+  return {
+    handleStart,
+    handleReloadTeams,
+    handleReturnToTitle,
+    handleClearLog,
+    handleSwing,
+    handleBunt,
+    handlePinchHit,
+    handleDefenseSubstitution,
+    handlePitcherChange,
+    loadInitialState,
+  };
+}
