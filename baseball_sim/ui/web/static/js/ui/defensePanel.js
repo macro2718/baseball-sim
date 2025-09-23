@@ -622,6 +622,11 @@ export function updateDefenseSelectionInfo() {
     elements.defenseApplyButton.disabled = !canApply;
   }
 
+  const canReset = Boolean(plan) && operationsCount > 0;
+  if (elements.defenseResetButton) {
+    elements.defenseResetButton.disabled = !canReset;
+  }
+
   applyDefenseSelectionHighlights();
 }
 

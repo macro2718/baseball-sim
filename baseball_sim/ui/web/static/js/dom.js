@@ -44,6 +44,7 @@ export const elements = {
   pitcherModal: document.getElementById('pitcher-modal'),
   statsModal: document.getElementById('stats-modal'),
   modalCloseButtons: Array.from(document.querySelectorAll('.modal-close')),
+  defenseResetButton: document.getElementById('defense-reset-button'),
   defenseApplyButton: document.getElementById('defense-sub-button'),
   defenseField: document.getElementById('defense-field'),
   defenseBench: document.getElementById('defense-bench-panel'),

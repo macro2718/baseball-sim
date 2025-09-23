@@ -2,6 +2,7 @@ import { CONFIG } from '../config.js';
 import { elements } from '../dom.js';
 import { stateCache, resetDefenseSelection, getDefensePlanInvalidAssignments } from '../state.js';
 import { apiRequest } from '../services/apiClient.js';
+import { renderDefensePanel, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 import { showStatus } from '../ui/status.js';
 
 function handleApiError(error, render) {
@@ -174,6 +175,25 @@ export function createGameActions(render) {
     }
   }
 
+  function handleDefenseReset() {
+    const data = stateCache.data;
+    const gameState = data?.game;
+    const teams = data?.teams || {};
+    const defenseKey = gameState?.defense;
+    const defenseTeam = defenseKey ? teams[defenseKey] : null;
+
+    stateCache.defensePlan = null;
+    resetDefenseSelection();
+
+    if (!defenseTeam) {
+      updateDefenseSelectionInfo();
+      return;
+    }
+
+    renderDefensePanel(defenseTeam, gameState);
+    updateDefenseSelectionInfo();
+  }
+
   async function handlePitcherChange() {
     if (!elements.pitcherSelect) return;
     const pitcherValue = elements.pitcherSelect.value;
@@ -218,6 +238,7 @@ export function createGameActions(render) {
     handleBunt,
     handlePinchHit,
     handleDefenseSubstitution,
+    handleDefenseReset,
     handlePitcherChange,
     loadInitialState,
   };

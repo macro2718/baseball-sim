@@ -47,6 +47,9 @@ export function initEventListeners(actions) {
       openModal('stats');
     });
   }
+  if (elements.defenseResetButton) {
+    elements.defenseResetButton.addEventListener('click', actions.handleDefenseReset);
+  }
   if (elements.defenseApplyButton) {
     elements.defenseApplyButton.addEventListener('click', actions.handleDefenseSubstitution);
   }
