@@ -370,6 +370,216 @@ function updatePitchers(listEl, pitchers) {
   });
 }
 
+function normalizeTraitValue(value) {
+  if (value === null || value === undefined) {
+    return '--';
+  }
+  const text = String(value).trim();
+  if (!text || text === '-' || text === '--') {
+    return '--';
+  }
+  return text;
+}
+
+function coalesceTraitValue(primary, fallback) {
+  const normalizedPrimary = normalizeTraitValue(primary);
+  if (normalizedPrimary !== '--') {
+    return normalizedPrimary;
+  }
+  return normalizeTraitValue(fallback);
+}
+
+function setMatchupText(element, value) {
+  if (!element) return;
+  element.textContent = normalizeTraitValue(value);
+}
+
+function buildPitcherDisplay(pitcher, defenseTeam) {
+  const base = {
+    name: normalizeTraitValue(pitcher?.name),
+    pitcher_type: normalizeTraitValue(pitcher?.pitcher_type),
+    throws: normalizeTraitValue(pitcher?.throws),
+    k_pct: normalizeTraitValue(pitcher?.k_pct),
+    bb_pct: normalizeTraitValue(pitcher?.bb_pct),
+    hard_pct: normalizeTraitValue(pitcher?.hard_pct),
+    gb_pct: normalizeTraitValue(pitcher?.gb_pct),
+  };
+
+  if (!defenseTeam) {
+    return base;
+  }
+
+  const traitEntries = defenseTeam.traits?.pitching;
+  if (!Array.isArray(traitEntries) || !pitcher?.name) {
+    return base;
+  }
+
+  const trait = traitEntries.find((entry) => entry && entry.name === pitcher.name);
+  if (!trait) {
+    return base;
+  }
+
+  return {
+    ...base,
+    name: coalesceTraitValue(base.name, trait.name),
+    pitcher_type: coalesceTraitValue(base.pitcher_type, trait.pitcher_type),
+    throws: coalesceTraitValue(base.throws, trait.throws),
+    k_pct: coalesceTraitValue(base.k_pct, trait.k_pct),
+    bb_pct: coalesceTraitValue(base.bb_pct, trait.bb_pct),
+    hard_pct: coalesceTraitValue(base.hard_pct, trait.hard_pct),
+    gb_pct: coalesceTraitValue(base.gb_pct, trait.gb_pct),
+  };
+}
+
+function buildUpcomingBatters(offenseTeam, gameState) {
+  if (!offenseTeam || !Array.isArray(offenseTeam.lineup) || offenseTeam.lineup.length === 0) {
+    return [];
+  }
+
+  const lineup = offenseTeam.lineup;
+  let currentIndex = lineup.findIndex((player) => player && player.is_current_batter);
+  if (currentIndex < 0 && gameState?.current_batter?.name) {
+    const targetName = String(gameState.current_batter.name).trim();
+    if (targetName) {
+      currentIndex = lineup.findIndex((player) => player && player.name === targetName);
+    }
+  }
+  if (currentIndex < 0) {
+    currentIndex = 0;
+  }
+
+  const count = Math.min(3, lineup.length);
+  const batters = [];
+  for (let offset = 0; offset < count; offset += 1) {
+    const index = (currentIndex + offset) % lineup.length;
+    const player = lineup[index];
+    if (!player) continue;
+    batters.push({ player, isCurrent: offset === 0 });
+  }
+  return batters;
+}
+
+function renderUpcomingBatters(listEl, emptyEl, batters, battingTraits) {
+  if (!listEl) return;
+
+  listEl.innerHTML = '';
+
+  const hasBatters = Array.isArray(batters) && batters.length > 0;
+  if (emptyEl) {
+    emptyEl.classList.toggle('hidden', hasBatters);
+  }
+  if (!hasBatters) {
+    return;
+  }
+
+  const traitMap = new Map();
+  if (Array.isArray(battingTraits)) {
+    battingTraits.forEach((trait) => {
+      if (!trait || !trait.name) return;
+      traitMap.set(trait.name, trait);
+    });
+  }
+
+  batters.forEach(({ player, isCurrent }) => {
+    const trait = traitMap.get(player.name);
+    const orderLabel = Number.isInteger(player.order) ? `${player.order}番` : '--';
+    const nameLabel = escapeHtml(player.name ?? '--');
+    const positionHtml = renderPositionToken(player.position, player.pitcher_type);
+    const batsRaw = player.bats || (trait && trait.bats && trait.bats !== '-' ? trait.bats : null);
+    const batsBadge = renderBatsBadge(batsRaw);
+    const batsBadgeHtml = batsBadge || '<span class="batter-bats-placeholder">--</span>';
+    const batsLabel = normalizeTraitValue(formatBatsLabel(batsRaw));
+
+    const stats = [
+      { label: '打席', value: batsLabel },
+      { label: 'K%', value: coalesceTraitValue(player.k_pct, trait?.k_pct) },
+      { label: 'BB%', value: coalesceTraitValue(player.bb_pct, trait?.bb_pct) },
+      { label: 'Hard%', value: coalesceTraitValue(player.hard_pct, trait?.hard_pct) },
+      { label: 'GB%', value: coalesceTraitValue(player.gb_pct, trait?.gb_pct) },
+      { label: 'Speed', value: coalesceTraitValue(player.speed, trait?.speed) },
+    ];
+
+    const statsHtml = stats
+      .map(
+        (entry) =>
+          `<span><strong>${escapeHtml(entry.label)}</strong>${escapeHtml(entry.value)}</span>`
+      )
+      .join('');
+
+    const li = document.createElement('li');
+    li.className = 'matchup-batter-item';
+    if (isCurrent) {
+      li.classList.add('current');
+    }
+    li.innerHTML = `
+      <div class="matchup-batter-header">
+        <div class="matchup-batter-title">
+          <span class="matchup-batter-order">${escapeHtml(orderLabel)}</span>
+          <span class="matchup-batter-name">${nameLabel}</span>
+        </div>
+        <div class="matchup-batter-badges">
+          ${positionHtml}
+          ${batsBadgeHtml}
+        </div>
+      </div>
+      <div class="matchup-batter-stats">
+        ${statsHtml}
+      </div>
+    `;
+
+    listEl.appendChild(li);
+  });
+}
+
+function updateMatchupPanel(gameState, teams) {
+  const {
+    matchupPanel,
+    matchupPitcherName,
+    matchupPitcherType,
+    matchupPitcherThrows,
+    matchupPitcherK,
+    matchupPitcherBB,
+    matchupPitcherHard,
+    matchupPitcherGB,
+    upcomingBattersList,
+    upcomingBattersEmpty,
+  } = elements;
+
+  if (!matchupPanel) return;
+
+  const isActive = Boolean(gameState && gameState.active);
+  matchupPanel.classList.toggle('inactive', !isActive);
+
+  const defenseKey = gameState ? gameState.defense : null;
+  const offenseKey = gameState ? gameState.offense : null;
+
+  const defenseTeam = defenseKey ? teams?.[defenseKey] : null;
+  const offenseTeam = offenseKey ? teams?.[offenseKey] : null;
+
+  let pitcherSource = isActive ? gameState.current_pitcher || null : null;
+  if (!pitcherSource && defenseTeam && Array.isArray(defenseTeam.pitchers)) {
+    pitcherSource = defenseTeam.pitchers.find((pitcher) => pitcher && pitcher.is_current) || null;
+  }
+
+  const pitcherDisplay = buildPitcherDisplay(pitcherSource, defenseTeam);
+
+  setMatchupText(matchupPitcherName, pitcherDisplay.name);
+  setMatchupText(matchupPitcherType, pitcherDisplay.pitcher_type);
+  setMatchupText(matchupPitcherThrows, pitcherDisplay.throws);
+  setMatchupText(matchupPitcherK, pitcherDisplay.k_pct);
+  setMatchupText(matchupPitcherBB, pitcherDisplay.bb_pct);
+  setMatchupText(matchupPitcherHard, pitcherDisplay.hard_pct);
+  setMatchupText(matchupPitcherGB, pitcherDisplay.gb_pct);
+
+  const batters = isActive ? buildUpcomingBatters(offenseTeam, gameState) : [];
+  renderUpcomingBatters(
+    upcomingBattersList,
+    upcomingBattersEmpty,
+    batters,
+    offenseTeam?.traits?.batting || [],
+  );
+}
+
 function clampStaminaPercent(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -1163,6 +1373,7 @@ export function renderGame(gameState, teams, log) {
     updateRosters(elements.defenseRoster, []);
     updateBench(elements.offenseBench, []);
     updateBench(elements.defenseBenchList, []);
+    updateMatchupPanel(gameState || {}, teams || {});
     updateLog(log || []);
     elements.defenseErrors.classList.add('hidden');
     elements.defenseErrors.textContent = '';
@@ -1187,6 +1398,8 @@ export function renderGame(gameState, teams, log) {
   updateBench(elements.offenseBench, offenseTeam?.bench || []);
   updateRosters(elements.defenseRoster, defenseTeam?.lineup || []);
   updateBench(elements.defenseBenchList, defenseTeam?.bench || []);
+
+  updateMatchupPanel(gameState, teams);
 
   updatePitchers(elements.homePitchers, teams.home?.pitchers || []);
   updatePitchers(elements.awayPitchers, teams.away?.pitchers || []);
