@@ -52,6 +52,146 @@ function hasAbilityData(team) {
   return battingCount > 0 || pitchingCount > 0;
 }
 
+const ABILITY_METRIC_CONFIG = {
+  k_pct: { mean: 22.8, variation: 0.15, min: 9 },
+  bb_pct: { mean: 8.5, variation: 0.15, min: 2.5 },
+  hard_pct: { mean: 38.6, variation: 0.15, min: 18 },
+  gb_pct: { mean: 44.6, variation: 0.15, min: 20 },
+  speed: { mean: 4.3, variation: 0.05, min: 3.3, max: 5.8 },
+  fielding: { mean: 100, variation: 0.15, min: 40, max: 160 },
+  stamina: { mean: 80, variation: 0.15, min: 30, max: 150 },
+};
+
+const ABILITY_COLOR_PRESETS = {
+  table: Object.freeze({ emphasize: true, glowBase: 4.6, glowScale: 5.4 }),
+  matchupPitcher: Object.freeze({ emphasize: true, glowBase: 3.1, glowScale: 4.6 }),
+  matchupBatter: Object.freeze({ emphasize: false, glowBase: 2.4, glowScale: 3.8 }),
+};
+
+function parseAbilityNumeric(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '-' || trimmed === '--') {
+    return null;
+  }
+  const sanitized = trimmed.replace(/[,]/g, '');
+  const match = sanitized.match(/-?\d+(?:\.\d+)?/);
+  if (!match) {
+    return null;
+  }
+  const numeric = Number.parseFloat(match[0]);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function computeAbilityMetricStyling(metricKey, displayValue) {
+  const config = ABILITY_METRIC_CONFIG[metricKey];
+  if (!config) {
+    return null;
+  }
+
+  const numeric = parseAbilityNumeric(displayValue);
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+
+  const mean = config.mean ?? numeric;
+  const variation = config.variation ?? 0.15;
+  const spread = config.spread ?? Math.max(mean * variation * 4, 1e-6);
+  const lowerBound =
+    config.min != null ? config.min : Math.max(0, mean - spread);
+  const upperBound =
+    config.max != null ? config.max : Math.max(mean + spread, lowerBound + 1e-3);
+
+  const ratio = (numeric - lowerBound) / (upperBound - lowerBound);
+  const clamped = Math.min(1, Math.max(0, ratio));
+  const distance = Math.abs(clamped - 0.5) * 2;
+
+  const hue = 120 - clamped * 120;
+  const saturationBase = config.saturationBase ?? 52;
+  const saturationRange = config.saturationRange ?? 32;
+  const saturation = Math.max(
+    35,
+    Math.min(90, saturationBase + saturationRange * distance),
+  );
+  const lightnessBase = config.lightnessBase ?? 67;
+  const lightnessRange = config.lightnessRange ?? 15;
+  const lightness = Math.max(
+    42,
+    Math.min(78, lightnessBase - lightnessRange * distance),
+  );
+
+  const hueValue = Math.round(hue);
+  const saturationValue = Math.round(saturation);
+  const lightnessValue = Math.round(lightness);
+
+  return {
+    color: `hsl(${hueValue}, ${saturationValue}%, ${lightnessValue}%)`,
+    ratio: clamped,
+    intensity: distance,
+    numeric,
+  };
+}
+
+function resetAbilityColor(element) {
+  element.classList.remove('ability-colorized');
+  element.style.removeProperty('--ability-color');
+  element.style.removeProperty('--ability-intensity');
+  element.style.removeProperty('color');
+  element.style.removeProperty('text-shadow');
+  element.style.removeProperty('font-weight');
+  delete element.dataset.abilityMetric;
+}
+
+function applyAbilityColor(
+  element,
+  metricKey,
+  displayValue,
+  options = {},
+) {
+  if (!element) return;
+  const config = metricKey ? ABILITY_METRIC_CONFIG[metricKey] : null;
+  if (!config) {
+    resetAbilityColor(element);
+    return;
+  }
+
+  const styling = computeAbilityMetricStyling(metricKey, displayValue);
+  if (!styling) {
+    resetAbilityColor(element);
+    return;
+  }
+
+  const { emphasize = false, glowBase = 3, glowScale = 4 } = options;
+  const glow = glowBase + glowScale * styling.intensity;
+
+  element.classList.add('ability-colorized');
+  element.dataset.abilityMetric = metricKey;
+  element.style.setProperty('--ability-color', styling.color);
+  element.style.setProperty('--ability-intensity', styling.intensity.toFixed(3));
+  element.style.color = styling.color;
+  element.style.textShadow = `0 0 ${glow.toFixed(1)}px ${styling.color}`;
+
+  if (emphasize) {
+    let weight = '500';
+    if (styling.intensity > 0.8) {
+      weight = '700';
+    } else if (styling.intensity > 0.45) {
+      weight = '600';
+    }
+    element.style.fontWeight = weight;
+  } else {
+    element.style.removeProperty('font-weight');
+  }
+}
+
 const FIELD_ALIGNMENT_SLOTS = FIELD_POSITIONS.filter((slot) => slot.key !== 'DH');
 
 const BASE_LABELS = ['一塁', '二塁', '三塁'];
@@ -467,9 +607,21 @@ function coalesceTraitValue(primary, fallback) {
   return normalizeTraitValue(fallback);
 }
 
-function setMatchupText(element, value) {
+function setMatchupText(element, value, metricKey) {
   if (!element) return;
-  element.textContent = normalizeTraitValue(value);
+  const normalized = normalizeTraitValue(value);
+  element.textContent = normalized;
+
+  if (metricKey) {
+    applyAbilityColor(
+      element,
+      metricKey,
+      normalized,
+      ABILITY_COLOR_PRESETS.matchupPitcher,
+    );
+  } else {
+    resetAbilityColor(element);
+  }
 }
 
 function buildPitcherDisplay(pitcher, defenseTeam) {
@@ -568,20 +720,6 @@ function renderUpcomingBatters(listEl, emptyEl, batters, battingTraits) {
     const batsBadgeHtml = batsBadge || '<span class="batter-bats-placeholder">--</span>';
     const batsLabel = normalizeTraitValue(formatBatsLabel(batsRaw));
 
-    const stats = [
-      { label: 'K%', value: coalesceTraitValue(player.k_pct, trait?.k_pct) },
-      { label: 'BB%', value: coalesceTraitValue(player.bb_pct, trait?.bb_pct) },
-      { label: 'Hard%', value: coalesceTraitValue(player.hard_pct, trait?.hard_pct) },
-      { label: 'GB%', value: coalesceTraitValue(player.gb_pct, trait?.gb_pct) },
-    ];
-
-    const statsHtml = stats
-      .map(
-        (entry) =>
-          `<span><strong>${escapeHtml(entry.label)}</strong>${escapeHtml(entry.value)}</span>`
-      )
-      .join('');
-
     const li = document.createElement('li');
     li.className = 'matchup-batter-item';
     if (isCurrent) {
@@ -598,10 +736,42 @@ function renderUpcomingBatters(listEl, emptyEl, batters, battingTraits) {
           ${batsBadgeHtml}
         </div>
       </div>
-      <div class="matchup-batter-stats">
-        ${statsHtml}
-      </div>
+      <div class="matchup-batter-stats"></div>
     `;
+
+    const statsContainer = li.querySelector('.matchup-batter-stats');
+    if (statsContainer) {
+      const stats = [
+        { label: 'K%', key: 'k_pct', value: coalesceTraitValue(player.k_pct, trait?.k_pct) },
+        { label: 'BB%', key: 'bb_pct', value: coalesceTraitValue(player.bb_pct, trait?.bb_pct) },
+        { label: 'Hard%', key: 'hard_pct', value: coalesceTraitValue(player.hard_pct, trait?.hard_pct) },
+        { label: 'GB%', key: 'gb_pct', value: coalesceTraitValue(player.gb_pct, trait?.gb_pct) },
+      ];
+
+      stats.forEach((entry) => {
+        const statWrap = document.createElement('span');
+        statWrap.className = 'matchup-batter-stat';
+
+        const labelEl = document.createElement('strong');
+        labelEl.textContent = entry.label;
+
+        const valueEl = document.createElement('span');
+        valueEl.className = 'matchup-batter-stat-value';
+        const displayValue = normalizeTraitValue(entry.value);
+        valueEl.textContent = displayValue;
+
+        applyAbilityColor(
+          valueEl,
+          entry.key,
+          displayValue,
+          ABILITY_COLOR_PRESETS.matchupBatter,
+        );
+
+        statWrap.appendChild(labelEl);
+        statWrap.appendChild(valueEl);
+        statsContainer.appendChild(statWrap);
+      });
+    }
 
     listEl.appendChild(li);
   });
@@ -642,10 +812,10 @@ function updateMatchupPanel(gameState, teams) {
   setMatchupText(matchupPitcherName, pitcherDisplay.name);
   setMatchupText(matchupPitcherType, pitcherDisplay.pitcher_type);
   setMatchupText(matchupPitcherThrows, pitcherDisplay.throws);
-  setMatchupText(matchupPitcherK, pitcherDisplay.k_pct);
-  setMatchupText(matchupPitcherBB, pitcherDisplay.bb_pct);
-  setMatchupText(matchupPitcherHard, pitcherDisplay.hard_pct);
-  setMatchupText(matchupPitcherGB, pitcherDisplay.gb_pct);
+  setMatchupText(matchupPitcherK, pitcherDisplay.k_pct, 'k_pct');
+  setMatchupText(matchupPitcherBB, pitcherDisplay.bb_pct, 'bb_pct');
+  setMatchupText(matchupPitcherHard, pitcherDisplay.hard_pct, 'hard_pct');
+  setMatchupText(matchupPitcherGB, pitcherDisplay.gb_pct, 'gb_pct');
 
   const batters = isActive ? buildUpcomingBatters(offenseTeam, gameState) : [];
   renderUpcomingBatters(
@@ -1709,7 +1879,8 @@ export function updateAbilitiesPanel(state) {
     stateCache.abilitiesView.type = viewType;
   }
 
-  const columns = viewType === 'pitching' ? ABILITY_PITCHING_COLUMNS : ABILITY_BATTING_COLUMNS;
+  const columns =
+    viewType === 'pitching' ? ABILITY_PITCHING_COLUMNS : ABILITY_BATTING_COLUMNS;
   const rows = viewType === 'pitching' ? pitchingRows : battingRows;
 
   elements.abilitiesTeamButtons.forEach((button) => {
@@ -1753,7 +1924,19 @@ export function updateAbilitiesPanel(state) {
         columns.forEach((column) => {
           const td = document.createElement('td');
           const value = row[column.key];
-          td.textContent = value != null && value !== '' ? value : '-';
+          const displayValue =
+            value != null && value !== '' ? String(value) : '-';
+          td.textContent = displayValue;
+
+          if (ABILITY_METRIC_CONFIG[column.key]) {
+            applyAbilityColor(
+              td,
+              column.key,
+              displayValue,
+              ABILITY_COLOR_PRESETS.table,
+            );
+          }
+
           tr.appendChild(td);
         });
         elements.abilitiesTableBody.appendChild(tr);
