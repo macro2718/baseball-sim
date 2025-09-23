@@ -329,20 +329,23 @@
   gap: 12px;
 }
 
-.pitcher-change {
+.pitcher-change,
+.pinch-strategy {
   margin-top: 4px;
   display: grid;
   gap: 18px;
 }
 
 @media (min-width: 720px) {
-  .pitcher-change {
+  .pitcher-change,
+  .pinch-strategy {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     align-items: stretch;
   }
 }
 
-.current-pitcher-card {
+.current-pitcher-card,
+.current-batter-card {
   position: relative;
   overflow: hidden;
   border-radius: 20px;
@@ -356,7 +359,8 @@
   min-height: 200px;
 }
 
-.current-pitcher-card::after {
+.current-pitcher-card::after,
+.current-batter-card::after {
   content: '';
   position: absolute;
   inset: -50% 25% auto -40%;
@@ -367,23 +371,38 @@
   pointer-events: none;
 }
 
-.current-pitcher-card > * {
+.current-pitcher-card > *,
+.current-batter-card > * {
   position: relative;
   z-index: 1;
 }
 
-.current-pitcher-header {
+.current-pitcher-header,
+.current-batter-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.current-pitcher-card .card-label {
+.current-pitcher-card .card-label,
+.current-batter-card .card-label {
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(226, 232, 240, 0.68);
+}
+
+.current-batter-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.current-batter-tags .position-token {
+  font-size: 11px;
 }
 
 .pitcher-role-badge {
@@ -410,10 +429,20 @@
   color: rgba(226, 232, 240, 0.85);
 }
 
+.batter-bats-badge {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: rgba(253, 230, 138, 0.95);
+}
+
 .current-pitcher-card .pitcher-name {
   margin: 0;
   font-size: 26px;
   letter-spacing: 0.04em;
+}
+
+.current-batter-card .current-batter-name {
+  margin-bottom: 4px;
 }
 
 .pitcher-meta {
@@ -456,7 +485,8 @@
   background: linear-gradient(135deg, #22d3ee 0%, var(--accent) 100%);
 }
 
-.pitcher-options-panel {
+.pitcher-options-panel,
+.pinch-options-panel {
   background: rgba(15, 23, 42, 0.88);
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 20px;
@@ -466,27 +496,31 @@
   gap: 16px;
 }
 
-.pitcher-options-header {
+.pitcher-options-header,
+.pinch-options-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.pitcher-options-header h4 {
+.pitcher-options-header h4,
+.pinch-options-header h4 {
   margin: 0;
   font-size: 16px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.pitcher-options-subtitle {
+.pitcher-options-subtitle,
+.pinch-options-subtitle {
   margin: 4px 0 0;
   font-size: 13px;
   color: rgba(148, 163, 184, 0.78);
 }
 
-.pitcher-options-hint {
+.pitcher-options-hint,
+.pinch-options-hint {
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -494,14 +528,16 @@
   white-space: nowrap;
 }
 
-.pitcher-option-grid {
+.pitcher-option-grid,
+.pinch-option-grid {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 @media (min-width: 960px) {
-  .pitcher-option-grid {
+  .pitcher-option-grid,
+  .pinch-option-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
@@ -586,7 +622,8 @@
   font-size: 14px;
 }
 
-.pitcher-select-fallback {
+.pitcher-select-fallback,
+.pinch-select-fallback {
   margin-top: 4px;
   padding: 14px;
   border-radius: 16px;
@@ -596,18 +633,21 @@
   gap: 8px;
 }
 
-.pitcher-select-fallback label {
+.pitcher-select-fallback label,
+.pinch-select-fallback label {
   font-size: 12px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: rgba(148, 163, 184, 0.75);
 }
 
-.pitcher-select-fallback .select-wrapper {
+.pitcher-select-fallback .select-wrapper,
+.pinch-select-fallback .select-wrapper {
   position: relative;
 }
 
-.pitcher-select-fallback select {
+.pitcher-select-fallback select,
+.pinch-select-fallback select {
   width: 100%;
   appearance: none;
   border-radius: 12px;
@@ -619,7 +659,8 @@
   transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
-.pitcher-select-fallback select:focus {
+.pitcher-select-fallback select:focus,
+.pinch-select-fallback select:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
@@ -635,10 +676,79 @@
   font-size: 14px;
 }
 
-.pitcher-select-helper {
+.pitcher-select-helper,
+.pinch-select-helper {
   margin: 0;
   font-size: 12px;
   color: rgba(148, 163, 184, 0.7);
+}
+
+.pinch-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pinch-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pinch-card-heading .position-token {
+  font-size: 12px;
+}
+
+.pinch-card-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.pinch-card-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.pinch-stat-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pinch-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.pinch-stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pinch-card-positions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pinch-positions-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.pinch-position-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .stats-modal-body {

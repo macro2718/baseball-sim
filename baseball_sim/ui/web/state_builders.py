@@ -225,6 +225,8 @@ class SessionStateBuilder:
             current_batter_index = team.current_batter_index if team.lineup else 0
             for index, player in enumerate(team.lineup):
                 summary = self._lineup_batter_summary(player)
+                bats = getattr(player, "bats", None)
+                bats_display = str(bats).upper() if bats else None
                 lineup.append(
                     {
                         "index": index,
@@ -235,6 +237,7 @@ class SessionStateBuilder:
                         "eligible": self._eligible_positions(player),
                         "eligible_all": self._eligible_positions_raw(player),
                         "pitcher_type": getattr(player, "pitcher_type", None),
+                        "bats": bats_display,
                         "is_current_batter": is_offense and index == current_batter_index,
                         "avg": summary["avg"],
                         "hr": summary["hr"],
@@ -249,13 +252,22 @@ class SessionStateBuilder:
             )
             bench: List[Dict[str, object]] = []
             for bench_index, player in enumerate(available_bench):
+                summary = self._lineup_batter_summary(player)
+                bats = getattr(player, "bats", None)
+                bats_display = str(bats).upper() if bats else None
                 bench.append(
                     {
                         "index": bench_index,
                         "name": player.name,
+                        "position": self._display_position(player),
+                        "position_key": self._defensive_position_key(player),
                         "eligible": self._eligible_positions(player),
                         "eligible_all": self._eligible_positions_raw(player),
                         "pitcher_type": getattr(player, "pitcher_type", None),
+                        "bats": bats_display,
+                        "avg": summary["avg"],
+                        "hr": summary["hr"],
+                        "rbi": summary["rbi"],
                     }
                 )
 
