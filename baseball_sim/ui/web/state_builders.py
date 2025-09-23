@@ -259,6 +259,19 @@ class SessionStateBuilder:
                     }
                 )
 
+            retired: List[Dict[str, object]] = []
+            for player in getattr(team, "ejected_players", []) or []:
+                retired.append(
+                    {
+                        "name": getattr(player, "name", "-"),
+                        "position": self._display_position(player),
+                        "position_key": self._defensive_position_key(player),
+                        "eligible": self._eligible_positions(player),
+                        "eligible_all": self._eligible_positions_raw(player),
+                        "pitcher_type": getattr(player, "pitcher_type", None),
+                    }
+                )
+
             pitchers: List[Dict[str, object]] = []
             seen_ids = set()
             if getattr(team, "current_pitcher", None):
@@ -289,6 +302,7 @@ class SessionStateBuilder:
                 "name": team.name,
                 "lineup": lineup,
                 "bench": bench,
+                "retired": retired,
                 "pitchers": pitchers,
                 "pitcher_options": pitcher_options,
                 "stats": self._build_team_stats(team),

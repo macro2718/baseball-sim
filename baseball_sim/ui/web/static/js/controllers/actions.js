@@ -1,12 +1,6 @@
 import { CONFIG } from '../config.js';
 import { elements } from '../dom.js';
-import {
-  stateCache,
-  getLineupPlayer,
-  getBenchPlayer,
-  getLineupPositionKey,
-  canBenchPlayerCoverPosition,
-} from '../state.js';
+import { stateCache, resetDefenseSelection } from '../state.js';
 import { apiRequest } from '../services/apiClient.js';
 import { showStatus } from '../ui/status.js';
 
@@ -113,43 +107,48 @@ export function createGameActions(render) {
   }
 
   async function handleDefenseSubstitution() {
-    const { lineupIndex, benchIndex } = stateCache.defenseSelection;
     if (!stateCache.defenseContext.canSub) {
       showStatus('守備交代は現在行えません。', 'danger');
       return;
     }
-    if (!Number.isInteger(lineupIndex) || lineupIndex < 0) {
-      showStatus('交代させる守備位置を選択してください。', 'danger');
-      return;
-    }
-    if (!Number.isInteger(benchIndex) || benchIndex < 0) {
-      showStatus('ベンチから交代させる選手を選択してください。', 'danger');
+
+    const plan = stateCache.defensePlan;
+    const operations = plan?.operations || [];
+    if (!plan || operations.length === 0) {
+      showStatus('守備交代の変更内容が選択されていません。', 'danger');
       return;
     }
 
-    const lineupPlayer = getLineupPlayer(lineupIndex);
-    if (!lineupPlayer) {
-      showStatus('選択された守備位置が無効です。', 'danger');
-      return;
-    }
-    const benchPlayer = getBenchPlayer(benchIndex);
-    if (!benchPlayer) {
-      showStatus('選択されたベンチ選手が見つかりません。', 'danger');
-      return;
-    }
-    const targetPositionKey = getLineupPositionKey(lineupPlayer);
-    if (targetPositionKey && !canBenchPlayerCoverPosition(benchPlayer, targetPositionKey)) {
-      const positionLabel = lineupPlayer.position || targetPositionKey;
-      showStatus(`${benchPlayer.name} は ${positionLabel} を守れません。別の選手を選択してください。`, 'danger');
+    const swaps = operations
+      .map((op) => {
+        if (op.type === 'lineup_lineup') {
+          return {
+            a: { group: 'lineup', index: op.lineupIndexA },
+            b: { group: 'lineup', index: op.lineupIndexB },
+          };
+        }
+        if (op.type === 'bench_lineup') {
+          return {
+            a: { group: 'bench', index: op.benchIndex },
+            b: { group: 'lineup', index: op.lineupIndex },
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    if (!swaps.length) {
+      showStatus('守備交代の指示が正しく選択されていません。', 'danger');
       return;
     }
 
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.defenseSubstitution, {
         method: 'POST',
-        body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
+        body: JSON.stringify({ swaps }),
       });
-      stateCache.defenseSelection = { lineupIndex: null, benchIndex: null };
+      stateCache.defensePlan = null;
+      resetDefenseSelection();
       render(payload);
     } catch (error) {
       handleApiError(error, render);

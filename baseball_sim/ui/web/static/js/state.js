@@ -4,7 +4,8 @@ import { FIELD_POSITION_KEYS } from './config.js';
 
 export const stateCache = {
   data: null,
-  defenseSelection: { lineupIndex: null, benchIndex: null },
+  defensePlan: null,
+  defenseSelection: { first: null, feedback: null },
   defenseContext: { lineup: {}, bench: {}, canSub: false },
   currentBatterIndex: null,
   statsView: { team: 'away', type: 'batting' },
@@ -56,7 +57,7 @@ export function updateDefenseContext(lineupMap, benchMap, canSub) {
 }
 
 export function resetDefenseSelection() {
-  stateCache.defenseSelection = { lineupIndex: null, benchIndex: null };
+  stateCache.defenseSelection = { first: null, feedback: null };
 }
 
 export function isKnownFieldPosition(positionKey) {

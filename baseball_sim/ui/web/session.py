@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from baseball_sim.config import GameResults, setup_project_environment
 from baseball_sim.data.loader import DataLoader
@@ -258,17 +258,27 @@ class WebGameSession:
         return self.build_state()
 
     def execute_defensive_substitution(
-        self, lineup_index: int, bench_index: int
+        self,
+        *,
+        lineup_index: Optional[int] = None,
+        bench_index: Optional[int] = None,
+        swaps: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, object]:
-        """Swap a defensive player with a bench player."""
+        """Swap defensive players according to the provided instruction."""
 
         if not self.game_state or not self.game_state.fielding_team:
             raise GameSessionError("Game has not started yet.")
 
         substitution_manager = SubstitutionManager(self.game_state.fielding_team)
-        success, message = substitution_manager.execute_defensive_substitution(
-            bench_index, lineup_index
-        )
+
+        if swaps is not None:
+            success, message = substitution_manager.execute_defensive_plan(swaps)
+        else:
+            if lineup_index is None or bench_index is None:
+                raise GameSessionError("Invalid defensive substitution request.")
+            success, message = substitution_manager.execute_defensive_substitution(
+                bench_index, lineup_index
+            )
 
         self._notifications.publish("success" if success else "danger", message)
         variant = "highlight" if success else "danger"

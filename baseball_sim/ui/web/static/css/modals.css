@@ -261,6 +261,35 @@
   background: rgba(239, 68, 68, 0.12);
 }
 
+.defense-retired {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.defense-retired .retired-card {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+}
+
+.defense-retired .retired-card strong {
+  color: var(--text);
+}
+
+.defense-retired .retired-card .retired-status {
+  font-size: 12px;
+  color: var(--danger);
+}
+
 .bench-card .eligible-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -280,6 +309,18 @@
   margin: 0;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+.selection-info.success {
+  color: var(--success);
+}
+
+.selection-info.danger {
+  color: var(--danger);
+}
+
+.selection-info.warning {
+  color: var(--warning);
 }
 
 .defense-actions {
