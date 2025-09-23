@@ -241,6 +241,7 @@
                   <button id="open-offense-strategy">攻撃側采配</button>
                   <button id="open-defense-strategy">守備側采配</button>
                   <button id="open-stats">成績</button>
+                  <button id="open-abilities">能力</button>
                 </div>
                 <div
                   class="strategy-menu hidden"
@@ -370,6 +371,36 @@
           <h4 id="stats-title" class="stats-title"></h4>
           <div class="stats-table-wrapper">
             <table id="stats-table" class="stats-table">
+              <thead>
+                <tr></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="abilities-modal" aria-hidden="true">
+      <div class="modal-card stats-modal" role="dialog" aria-modal="true" aria-labelledby="abilities-modal-title">
+        <div class="modal-header">
+          <h3 id="abilities-modal-title">能力</h3>
+          <button type="button" class="modal-close" data-close="abilities-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body stats-modal-body">
+          <div class="stats-controls">
+            <div class="toggle-group" role="radiogroup" aria-label="チーム選択">
+              <button type="button" class="toggle" data-abilities-team="away">ビジター</button>
+              <button type="button" class="toggle" data-abilities-team="home">ホーム</button>
+            </div>
+            <div class="toggle-group" role="radiogroup" aria-label="表示切替">
+              <button type="button" class="toggle" data-abilities-type="batting">打者特性</button>
+              <button type="button" class="toggle" data-abilities-type="pitching">投手特性</button>
+            </div>
+          </div>
+          <h4 id="abilities-title" class="stats-title"></h4>
+          <div class="stats-table-wrapper">
+            <table id="abilities-table" class="stats-table">
               <thead>
                 <tr></tr>
               </thead>

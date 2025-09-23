@@ -306,6 +306,7 @@ class SessionStateBuilder:
                 "pitchers": pitchers,
                 "pitcher_options": pitcher_options,
                 "stats": self._build_team_stats(team),
+                "traits": self._build_team_traits(team),
             }
 
         return teams
@@ -368,6 +369,114 @@ class SessionStateBuilder:
                 add_pitcher(pitcher)
 
         return {"batting": batting, "pitching": pitching}
+
+    def _build_team_traits(self, team) -> Dict[str, List[Dict[str, object]]]:
+        batting: List[Dict[str, object]] = []
+        pitching: List[Dict[str, object]] = []
+
+        if not team:
+            return {"batting": batting, "pitching": pitching}
+
+        for index, player in enumerate(getattr(team, "lineup", []) or []):
+            batting.append(self._serialize_batter_traits(player, role_label=f"{index + 1}番"))
+
+        available_bench = (
+            team.get_available_bench_players()
+            if hasattr(team, "get_available_bench_players")
+            else list(getattr(team, "bench", []))
+        )
+
+        current_pitcher = getattr(team, "current_pitcher", None)
+        seen_pitchers: set[int] = set()
+
+        def add_pitcher(player, role_label: str) -> None:
+            if not player:
+                return
+            player_id = id(player)
+            if player_id in seen_pitchers:
+                return
+            seen_pitchers.add(player_id)
+            pitching.append(self._serialize_pitcher_traits(player, role_label=role_label))
+
+        if current_pitcher:
+            add_pitcher(current_pitcher, "登板中")
+
+        for idx, pitcher in enumerate(getattr(team, "pitchers", []) or []):
+            if pitcher is current_pitcher:
+                add_pitcher(pitcher, "登板中")
+            else:
+                add_pitcher(pitcher, f"控え{idx + 1}")
+
+        for bench_index, player in enumerate(available_bench or []):
+            role_label = f"ベンチ{bench_index + 1}"
+            if self._is_pitcher(player):
+                add_pitcher(player, role_label)
+            else:
+                batting.append(self._serialize_batter_traits(player, role_label=role_label))
+
+        return {"batting": batting, "pitching": pitching}
+
+    def _serialize_batter_traits(self, player, *, role_label: str) -> Dict[str, object]:
+        if not player:
+            return {
+                "name": "-",
+                "role_label": role_label,
+                "position": "-",
+                "bats": "-",
+                "k_pct": "-",
+                "bb_pct": "-",
+                "hard_pct": "-",
+                "gb_pct": "-",
+                "speed": "-",
+                "fielding": "-",
+            }
+
+        bats = getattr(player, "bats", None)
+        bats_display = str(bats).upper() if bats else "-"
+
+        return {
+            "name": getattr(player, "name", "-"),
+            "role_label": role_label,
+            "position": self._display_position(player) or "-",
+            "bats": bats_display,
+            "k_pct": self._format_percentage(getattr(player, "k_pct", None)),
+            "bb_pct": self._format_percentage(getattr(player, "bb_pct", None)),
+            "hard_pct": self._format_percentage(getattr(player, "hard_pct", None)),
+            "gb_pct": self._format_percentage(getattr(player, "gb_pct", None)),
+            "speed": self._format_speed(getattr(player, "speed", None)),
+            "fielding": self._format_rating(getattr(player, "fielding_skill", None)),
+        }
+
+    def _serialize_pitcher_traits(self, player, *, role_label: str) -> Dict[str, object]:
+        if not player:
+            return {
+                "name": "-",
+                "role_label": role_label,
+                "pitcher_type": "-",
+                "throws": "-",
+                "k_pct": "-",
+                "bb_pct": "-",
+                "hard_pct": "-",
+                "gb_pct": "-",
+                "stamina": "-",
+            }
+
+        throws = getattr(player, "throws", None)
+        throws_display = str(throws).upper() if throws else "-"
+        pitcher_type = getattr(player, "pitcher_type", None)
+        pitcher_type_display = str(pitcher_type).upper() if pitcher_type else (self._display_position(player) or "-")
+
+        return {
+            "name": getattr(player, "name", "-"),
+            "role_label": role_label,
+            "pitcher_type": pitcher_type_display,
+            "throws": throws_display,
+            "k_pct": self._format_percentage(getattr(player, "k_pct", None)),
+            "bb_pct": self._format_percentage(getattr(player, "bb_pct", None)),
+            "hard_pct": self._format_percentage(getattr(player, "hard_pct", None)),
+            "gb_pct": self._format_percentage(getattr(player, "gb_pct", None)),
+            "stamina": self._format_rating(getattr(player, "stamina", None)),
+        }
 
     def _serialize_batter_stats(self, player) -> Dict[str, object]:
         stats = getattr(player, "stats", {}) or {}
@@ -462,6 +571,47 @@ class SessionStateBuilder:
             "era": era,
             "whip": whip,
         }
+
+    @staticmethod
+    def _format_percentage(value) -> str:
+        if value is None:
+            return "-"
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return "-"
+        return f"{numeric:.1f}%"
+
+    @staticmethod
+    def _format_speed(value) -> str:
+        if value is None:
+            return "-"
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return "-"
+        return f"{numeric:.2f}秒"
+
+    @staticmethod
+    def _format_rating(value) -> str:
+        if value is None:
+            return "-"
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return "-"
+        if numeric.is_integer():
+            return str(int(numeric))
+        return f"{numeric:.1f}"
+
+    @staticmethod
+    def _is_pitcher(player) -> bool:
+        if not player:
+            return False
+        if hasattr(player, "pitcher_type"):
+            return True
+        positions = getattr(player, "eligible_positions", None) or []
+        return any(str(pos).upper() == "P" for pos in positions)
 
     @staticmethod
     def _serialize_pitcher(pitcher, is_current: bool) -> Dict[str, object]:

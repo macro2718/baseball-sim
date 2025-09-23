@@ -1,4 +1,10 @@
-import { CONFIG, BATTING_COLUMNS, PITCHING_COLUMNS } from '../config.js';
+import {
+  CONFIG,
+  BATTING_COLUMNS,
+  PITCHING_COLUMNS,
+  ABILITY_BATTING_COLUMNS,
+  ABILITY_PITCHING_COLUMNS,
+} from '../config.js';
 import { elements } from '../dom.js';
 import {
   stateCache,
@@ -32,6 +38,14 @@ function setInsightsVisibility(visible) {
   } else {
     insightGrid.classList.add('hidden');
   }
+}
+
+function hasAbilityData(team) {
+  if (!team || !team.traits) return false;
+  const { batting, pitching } = team.traits;
+  const battingCount = Array.isArray(batting) ? batting.length : 0;
+  const pitchingCount = Array.isArray(pitching) ? pitching.length : 0;
+  return battingCount > 0 || pitchingCount > 0;
 }
 
 export function updateOutsIndicator(outs) {
@@ -361,6 +375,7 @@ function updateStrategyControls(gameState, teams) {
     offensePinchMenuButton,
     openDefenseButton,
     openStatsButton,
+    openAbilitiesButton,
     defenseSubMenuButton,
     pitcherMenuButton,
     pitcherSelect,
@@ -501,6 +516,11 @@ function updateStrategyControls(gameState, teams) {
     const homeStatsAvailable = Boolean(teams.home?.stats);
     const awayStatsAvailable = Boolean(teams.away?.stats);
     openStatsButton.disabled = !(homeStatsAvailable || awayStatsAvailable);
+  }
+  if (openAbilitiesButton) {
+    const homeAbilitiesAvailable = hasAbilityData(teams.home);
+    const awayAbilitiesAvailable = hasAbilityData(teams.away);
+    openAbilitiesButton.disabled = !(homeAbilitiesAvailable || awayAbilitiesAvailable);
   }
 }
 
@@ -704,10 +724,133 @@ export function updateStatsPanel(state) {
   }
 }
 
+export function updateAbilitiesPanel(state) {
+  if (!state) return;
+  const teams = state.teams || {};
+  const availableTeams = ['away', 'home'].filter((key) => hasAbilityData(teams[key]));
+  const fallbackColumnCount = Math.max(ABILITY_BATTING_COLUMNS.length, ABILITY_PITCHING_COLUMNS.length);
+
+  elements.abilitiesTeamButtons.forEach((button) => {
+    const teamKey = button.dataset.abilitiesTeam;
+    const isAvailable = availableTeams.includes(teamKey);
+    button.disabled = !isAvailable;
+    if (!isAvailable) {
+      button.classList.remove('active');
+    }
+  });
+
+  if (!availableTeams.length) {
+    if (elements.abilitiesTableHead) {
+      elements.abilitiesTableHead.innerHTML = '';
+    }
+    if (elements.abilitiesTableBody) {
+      elements.abilitiesTableBody.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = fallbackColumnCount;
+      td.textContent = '能力データがありません。';
+      td.classList.add('empty');
+      tr.appendChild(td);
+      elements.abilitiesTableBody.appendChild(tr);
+    }
+    if (elements.abilitiesTitle) {
+      elements.abilitiesTitle.textContent = '能力データがありません';
+    }
+    elements.abilitiesTypeButtons.forEach((button) => {
+      button.disabled = true;
+      button.classList.remove('active');
+    });
+    return;
+  }
+
+  if (!availableTeams.includes(stateCache.abilitiesView.team)) {
+    stateCache.abilitiesView.team = availableTeams[0];
+  }
+
+  let viewType = stateCache.abilitiesView.type;
+  if (!['batting', 'pitching'].includes(viewType)) {
+    viewType = 'batting';
+    stateCache.abilitiesView.type = viewType;
+  }
+
+  const teamKey = stateCache.abilitiesView.team;
+  const teamData = teams[teamKey] || {};
+  const traits = teamData.traits || {};
+  const battingRows = Array.isArray(traits.batting) ? traits.batting : [];
+  const pitchingRows = Array.isArray(traits.pitching) ? traits.pitching : [];
+
+  if (viewType === 'batting' && !battingRows.length && pitchingRows.length) {
+    viewType = 'pitching';
+    stateCache.abilitiesView.type = viewType;
+  } else if (viewType === 'pitching' && !pitchingRows.length && battingRows.length) {
+    viewType = 'batting';
+    stateCache.abilitiesView.type = viewType;
+  }
+
+  const columns = viewType === 'pitching' ? ABILITY_PITCHING_COLUMNS : ABILITY_BATTING_COLUMNS;
+  const rows = viewType === 'pitching' ? pitchingRows : battingRows;
+
+  elements.abilitiesTeamButtons.forEach((button) => {
+    const isActive = button.dataset.abilitiesTeam === teamKey;
+    button.classList.toggle('active', isActive);
+  });
+
+  elements.abilitiesTypeButtons.forEach((button) => {
+    const type = button.dataset.abilitiesType;
+    const hasData = type === 'pitching' ? pitchingRows.length > 0 : battingRows.length > 0;
+    button.disabled = !hasData;
+    const isActive = type === viewType && hasData;
+    button.classList.toggle('active', isActive);
+    if (!hasData) {
+      button.classList.remove('active');
+    }
+  });
+
+  if (elements.abilitiesTableHead) {
+    elements.abilitiesTableHead.innerHTML = '';
+    columns.forEach((column) => {
+      const th = document.createElement('th');
+      th.textContent = column.label;
+      elements.abilitiesTableHead.appendChild(th);
+    });
+  }
+
+  if (elements.abilitiesTableBody) {
+    elements.abilitiesTableBody.innerHTML = '';
+    if (!rows.length) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = columns.length || 1;
+      td.textContent = '選択したカテゴリーの能力データがありません。';
+      td.classList.add('empty');
+      tr.appendChild(td);
+      elements.abilitiesTableBody.appendChild(tr);
+    } else {
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        columns.forEach((column) => {
+          const td = document.createElement('td');
+          const value = row[column.key];
+          td.textContent = value != null && value !== '' ? value : '-';
+          tr.appendChild(td);
+        });
+        elements.abilitiesTableBody.appendChild(tr);
+      });
+    }
+  }
+
+  if (elements.abilitiesTitle) {
+    const teamName = teamData?.name || (teamKey === 'home' ? 'Home' : 'Away');
+    const typeLabel = viewType === 'pitching' ? '投手特性' : '打者特性';
+    elements.abilitiesTitle.textContent = `${teamName} の${typeLabel}`;
+  }
+}
+
 export function render(data) {
   stateCache.data = data;
   setStatusMessage(data.notification);
   renderTitle(data.title);
   renderGame(data.game, data.teams, data.log);
   updateStatsPanel(data);
+  updateAbilitiesPanel(data);
 }

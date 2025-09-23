@@ -69,3 +69,28 @@ export const PITCHING_COLUMNS = [
   { label: 'ERA', key: 'era' },
   { label: 'WHIP', key: 'whip' },
 ];
+
+export const ABILITY_BATTING_COLUMNS = [
+  { label: 'Player', key: 'name' },
+  { label: '区分', key: 'role_label' },
+  { label: 'Pos', key: 'position' },
+  { label: '打席', key: 'bats' },
+  { label: 'K%', key: 'k_pct' },
+  { label: 'BB%', key: 'bb_pct' },
+  { label: 'Hard%', key: 'hard_pct' },
+  { label: 'GB%', key: 'gb_pct' },
+  { label: 'Speed', key: 'speed' },
+  { label: 'Field', key: 'fielding' },
+];
+
+export const ABILITY_PITCHING_COLUMNS = [
+  { label: 'Player', key: 'name' },
+  { label: '区分', key: 'role_label' },
+  { label: 'Type', key: 'pitcher_type' },
+  { label: 'Throws', key: 'throws' },
+  { label: 'K%', key: 'k_pct' },
+  { label: 'BB%', key: 'bb_pct' },
+  { label: 'Hard%', key: 'hard_pct' },
+  { label: 'GB%', key: 'gb_pct' },
+  { label: 'Stamina', key: 'stamina' },
+];
