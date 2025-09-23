@@ -339,10 +339,31 @@
           <button type="button" class="modal-close" data-close="pitcher-modal" aria-label="閉じる">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-description">交代する投手を選択してください。</p>
+          <p class="modal-description">ブルペンの状況を確認しながら交代投手を選択してください。</p>
           <div class="pitcher-change">
-            <label for="pitcher-select">投手</label>
-            <select id="pitcher-select"></select>
+            <section class="current-pitcher-card" id="pitcher-current-card" aria-live="polite">
+              <p class="pitcher-card-empty">現在の投手情報がまだありません。</p>
+            </section>
+            <section class="pitcher-options-panel">
+              <header class="pitcher-options-header">
+                <div>
+                  <h4>ブルペン候補</h4>
+                  <p class="pitcher-options-subtitle">スタミナと投球タイプをチェックして選択</p>
+                </div>
+                <span class="pitcher-options-hint">カードをクリックで選択</span>
+              </header>
+              <div class="pitcher-option-grid" id="pitcher-option-grid" role="list">
+                <p class="pitcher-card-empty">交代候補の読み込みを待機中です…</p>
+              </div>
+              <div class="pitcher-select-fallback">
+                <label for="pitcher-select" id="pitcher-select-label">リストから選択</label>
+                <div class="select-wrapper">
+                  <select id="pitcher-select" aria-labelledby="pitcher-select-label pitcher-select-helper"></select>
+                  <span class="select-chevron" aria-hidden="true">▾</span>
+                </div>
+                <p class="pitcher-select-helper" id="pitcher-select-helper">カードを選択するとここに反映されます。</p>
+              </div>
+            </section>
           </div>
         </div>
         <div class="modal-footer">
