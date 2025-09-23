@@ -180,6 +180,28 @@ class SessionStateBuilder:
         max_innings = max(len(scoreboard["away"]), len(scoreboard["home"]), 9)
         situation = format_situation(game_state)
 
+        last_play_raw = getattr(game_state, "last_play", None)
+        if isinstance(last_play_raw, dict):
+            raw_result = last_play_raw.get("result")
+            raw_message = last_play_raw.get("message", "")
+            raw_sequence = last_play_raw.get("sequence", 0)
+            result_text = raw_result if raw_result is None else str(raw_result)
+            if isinstance(raw_message, str):
+                message_text = raw_message
+            else:
+                message_text = str(raw_message)
+            if isinstance(raw_sequence, int):
+                sequence_number = raw_sequence
+            else:
+                try:
+                    sequence_number = int(raw_sequence)
+                except (TypeError, ValueError):
+                    sequence_number = getattr(game_state, "_play_sequence", 0)
+        else:
+            result_text = None
+            message_text = ""
+            sequence_number = getattr(game_state, "_play_sequence", 0)
+
         return (
             {
                 "active": True,
@@ -224,6 +246,11 @@ class SessionStateBuilder:
                 "situation": situation,
                 "matchup": format_matchup(current_batter, current_pitcher),
                 "max_innings": max_innings,
+                "last_play": {
+                    "result": result_text,
+                    "message": message_text,
+                    "sequence": sequence_number,
+                },
             },
             action_block_reason,
         )

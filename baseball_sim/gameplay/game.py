@@ -64,6 +64,8 @@ class GameState:
         self.model_type = model_info.model_type
         self._probability_calculator = OutcomeProbabilityCalculator(self.model, self.model_type)
         self._outcome_handler = AtBatOutcomeHandler(self)
+        self._play_sequence = 0
+        self.last_play = {"result": None, "message": "", "sequence": 0}
 
     # ------------------------------------------------------------------
     # Properties exposing internal state in a backward compatible manner
@@ -220,6 +222,18 @@ class GameState:
             return False
         return True
 
+    def record_play(self, result, message):
+        """記録されたプレー結果を保存し、連番を更新する"""
+
+        result_key = str(result) if result is not None else None
+        message_text = str(message) if message is not None else ""
+        self._play_sequence += 1
+        self.last_play = {
+            "result": result_key,
+            "message": message_text,
+            "sequence": self._play_sequence,
+        }
+
     def execute_bunt(self, batter, pitcher):
         """バントを実行し、結果を返す"""
         from baseball_sim.gameplay.utils import BuntProcessor
@@ -258,4 +272,6 @@ class GameState:
     def apply_result(self, result, batter):
         """結果をゲーム状態に適用し、メッセージを返す"""
         batter.stats["PA"] += 1
-        return self._outcome_handler.apply(result, batter)
+        message = self._outcome_handler.apply(result, batter)
+        self.record_play(result, message)
+        return message
