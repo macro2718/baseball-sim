@@ -153,9 +153,23 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.openMatchButton) {
+    elements.openMatchButton.addEventListener('click', () => {
+      setUIView('team-select');
+      refreshView();
+    });
+  }
+
   if (elements.backToLobby) {
     elements.backToLobby.addEventListener('click', () => {
       setUIView('lobby');
+      refreshView();
+    });
+  }
+
+  if (elements.backToTeamSelect) {
+    elements.backToTeamSelect.addEventListener('click', () => {
+      setUIView('team-select');
       refreshView();
     });
   }

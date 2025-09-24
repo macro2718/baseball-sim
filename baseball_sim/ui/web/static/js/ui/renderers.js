@@ -2448,12 +2448,16 @@ function renderTeamBuilder(teamLibraryState) {
 export function updateScreenVisibility() {
   const view = stateCache.uiView;
   const showLobby = view === 'lobby';
+  const showTeamSelect = view === 'team-select';
   const showBuilder = view === 'team-builder';
   const showTitle = view === 'title';
   const showGame = view === 'game';
 
   if (elements.lobbyScreen) {
     elements.lobbyScreen.classList.toggle('hidden', !showLobby);
+  }
+  if (elements.teamSelectScreen) {
+    elements.teamSelectScreen.classList.toggle('hidden', !showTeamSelect);
   }
   if (elements.teamBuilderScreen) {
     elements.teamBuilderScreen.classList.toggle('hidden', !showBuilder);

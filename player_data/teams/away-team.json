@@ -1,19 +1,12 @@
 {
-  "name": "Away Team",
-  "pitchers": [
-    "Yosuke Fukuda",
-    "Akira Murakami",
-    "Yuki Ota",
-    "Ryota Yamazaki",
-    "Ryota Yamamoto",
-    "Kazuo Ogawa",
-    "Yu Kimura",
-    "Yuji Matsumoto",
-    "Tatsuya Yamamoto",
-    "Yosuke Ito",
-    "Naoki Hayashi",
-    "Ichiro Hayashi",
-    "Soichiro Sakamoto"
+  "bench": [
+    "Shigeru Yamazaki",
+    "Kenji Hasegawa",
+    "Takumi Sakamoto",
+    "Jin Yamazaki",
+    "Akira Yamamoto",
+    "Takuya Watanabe",
+    "Naoki Takeuchi"
   ],
   "lineup": [
     {
@@ -53,13 +46,20 @@
       "position": "DH"
     }
   ],
-  "bench": [
-    "Shigeru Yamazaki",
-    "Kenji Hasegawa",
-    "Takumi Sakamoto",
-    "Jin Yamazaki",
-    "Akira Yamamoto",
-    "Takuya Watanabe",
-    "Naoki Takeuchi"
+  "name": "Away Team",
+  "pitchers": [
+    "Yosuke Fukuda",
+    "Akira Murakami",
+    "Yuki Ota",
+    "Ryota Yamazaki",
+    "Ryota Yamamoto",
+    "Kazuo Ogawa",
+    "Yu Kimura",
+    "Yuji Matsumoto",
+    "Tatsuya Yamamoto",
+    "Yosuke Ito",
+    "Naoki Hayashi",
+    "Ichiro Hayashi",
+    "Soichiro Sakamoto"
   ]
 }

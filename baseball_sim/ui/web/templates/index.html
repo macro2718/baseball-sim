@@ -111,6 +111,17 @@
 
         <section id="lobby-screen" class="screen">
           <div class="title-card lobby-card">
+            <h2>ホーム</h2>
+            <p class="lobby-description">ようこそ。以下から選択してください。</p>
+            <div class="title-actions">
+              <button id="open-match" class="primary">試合</button>
+              <button id="open-team-builder">チーム作成</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="team-select-screen" class="screen hidden">
+          <div class="title-card lobby-card">
             <h2>チームセレクション</h2>
             <p class="lobby-description">
               試合で使用するホームチームとアウェイチームを選択してください。
@@ -127,8 +138,8 @@
             </div>
             <p class="title-hint" id="lobby-hint"></p>
             <div class="title-actions">
-              <button id="enter-title" class="primary">試合へ</button>
-              <button id="open-team-builder">チーム作成</button>
+              <button id="enter-title" class="primary">決定</button>
+              <button id="back-to-lobby">戻る</button>
             </div>
           </div>
         </section>
@@ -188,7 +199,7 @@
             <div class="title-actions">
               <button id="start-game" class="primary">ゲーム開始</button>
               <button id="reload-teams">データ再読込</button>
-              <button id="back-to-lobby">チーム選択</button>
+              <button id="back-to-team-select">チーム選択</button>
             </div>
           </div>
         </section>
