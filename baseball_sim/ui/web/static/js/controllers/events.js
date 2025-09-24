@@ -35,7 +35,7 @@ const DEFAULT_TEAM_TEMPLATE = JSON.stringify(
     bench: ['Reserve 1'],
   },
   null,
-  2,
+  2
 );
 
 function setTeamBuilderFeedback(message, level = 'info') {

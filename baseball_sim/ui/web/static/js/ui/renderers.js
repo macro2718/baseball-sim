@@ -1763,7 +1763,7 @@ function updatePinchOptionGrid(gridEl, options, selectEl, helperEl, helperMessag
   }
 }
 
-function populateSelect(selectEl, options, placeholder) {
+function populateSelectSimple(selectEl, options, placeholder) {
   if (!selectEl) return;
   const previousValue = selectEl.value;
   selectEl.innerHTML = '';
@@ -2064,7 +2064,7 @@ function updateStrategyControls(gameState, teams) {
       ? 'カードまたはリストから選択'
       : '選択可能な選手がいません';
 
-    populateSelect(
+    populateSelectSimple(
       pinchPlayer,
       offenseBench.map((player) => ({
         value: player.index,
@@ -2146,7 +2146,7 @@ function updateStrategyControls(gameState, teams) {
       ? '交代する投手を選択'
       : '交代可能な投手がいません';
 
-    populateSelect(
+    populateSelectSimple(
       pitcherSelect,
       pitcherOptions.map((pitcher) => ({
         value: pitcher.index,
