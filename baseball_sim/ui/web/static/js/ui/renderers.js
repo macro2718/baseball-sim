@@ -2450,6 +2450,7 @@ export function updateScreenVisibility() {
   const showLobby = view === 'lobby';
   const showTeamSelect = view === 'team-select';
   const showBuilder = view === 'team-builder';
+  const showPlayerBuilder = view === 'player-builder';
   const showTitle = view === 'title';
   const showGame = view === 'game';
 
@@ -2461,6 +2462,9 @@ export function updateScreenVisibility() {
   }
   if (elements.teamBuilderScreen) {
     elements.teamBuilderScreen.classList.toggle('hidden', !showBuilder);
+  }
+  if (elements.playerBuilderScreen) {
+    elements.playerBuilderScreen.classList.toggle('hidden', !showPlayerBuilder);
   }
   if (elements.titleScreen) {
     elements.titleScreen.classList.toggle('hidden', !showTitle);

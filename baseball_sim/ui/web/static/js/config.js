@@ -18,6 +18,10 @@ export const CONFIG = {
       teamSelect: '/api/teams/library/select',
       teamSave: '/api/teams/library/save',
       teamDetail: '/api/teams/library',
+      // Player endpoints
+      playersList: '/api/players/list',
+      playerDetail: '/api/players/detail',
+      playerSave: '/api/players/save',
       health: '/api/health',
     },
   },

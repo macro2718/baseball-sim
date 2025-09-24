@@ -259,6 +259,26 @@
       "gb_pct": 55.3188495908414,
       "stamina": 82.08970815437958,
       "throws": "R"
+    },
+    {
+      "name": "average pitcher",
+      "pitcher_type": "SP",
+      "throws": "R",
+      "k_pct": 22.8,
+      "bb_pct": 8.5,
+      "hard_pct": 38.6,
+      "gb_pct": 44.6,
+      "stamina": 80
+    },
+    {
+      "bb_pct": 8.5,
+      "gb_pct": 44.6,
+      "hard_pct": 38.6,
+      "k_pct": 22.8,
+      "name": "Average Pitcher",
+      "pitcher_type": "SP",
+      "stamina": 80,
+      "throws": "R"
     }
   ],
   "batters": [
@@ -742,6 +762,38 @@
       "speed": 4.692105883220473,
       "fielding_skill": 71.20867462860643,
       "bats": "L"
+    },
+    {
+      "name": "average batter",
+      "eligible_positions": [
+        "LF",
+        "CF",
+        "RF",
+        "DH"
+      ],
+      "bats": "R",
+      "k_pct": 22.8,
+      "bb_pct": 8.5,
+      "hard_pct": 38.6,
+      "gb_pct": 44.6,
+      "speed": 4.3,
+      "fielding_skill": 100
+    },
+    {
+      "bats": "R",
+      "bb_pct": 8.5,
+      "eligible_positions": [
+        "LF",
+        "CF",
+        "RF",
+        "DH"
+      ],
+      "fielding_skill": 100,
+      "gb_pct": 44.6,
+      "hard_pct": 38.6,
+      "k_pct": 22.8,
+      "name": "Average Batter",
+      "speed": 4.3
     }
   ]
 }

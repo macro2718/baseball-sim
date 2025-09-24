@@ -24,7 +24,7 @@
           <div class="header-topline">
             <div class="title-group">
               <h1>Baseball Simulation</h1>
-              <p class="subtitle">ブラウザで遊べるデータドリブン野球シミュレーター</p>
+              <p class="subtitle">ブラウザで遊べるデータ駆動野球シミュレーター</p>
             </div>
             <div class="header-tags" aria-hidden="true">
               <span class="header-tag">DATA DRIVEN</span>
@@ -115,7 +115,8 @@
             <p class="lobby-description">ようこそ。以下から選択してください。</p>
             <div class="title-actions">
               <button id="open-match" class="primary">試合</button>
-              <button id="open-team-builder">チーム作成</button>
+              <button id="open-team-builder">チーム作成/編集</button>
+              <button id="open-player-builder">選手作成/編集</button>
             </div>
           </div>
         </section>
@@ -173,6 +174,53 @@
             </div>
             <div
               id="team-builder-feedback"
+              class="team-builder-feedback"
+              role="status"
+              aria-live="polite"
+            ></div>
+          </div>
+        </section>
+
+        <section id="player-builder-screen" class="screen hidden">
+          <div class="title-card team-builder-card">
+            <div class="team-builder-header">
+              <h2>選手作成・編集</h2>
+              <p>
+                野手または投手を選択し、ステータスを編集して保存します。保存すると <code>players.json</code> に反映されます。
+              </p>
+            </div>
+            <div class="team-builder-controls">
+              <div class="team-builder-select-row" style="gap: 12px; align-items: end; flex-wrap: wrap;">
+                <div>
+                  <label for="player-editor-role">区分</label>
+                  <select id="player-editor-role">
+                    <option value="batter">野手</option>
+                    <option value="pitcher">投手</option>
+                  </select>
+                </div>
+                <div style="flex: 1 1 300px;">
+                  <label for="player-editor-select">編集する選手</label>
+                  <select id="player-editor-select"></select>
+                </div>
+                <div>
+                  <button id="player-builder-new" type="button">新規テンプレート</button>
+                </div>
+              </div>
+            </div>
+            <div class="team-builder-editor">
+              <textarea
+                id="player-editor-json"
+                rows="20"
+                spellcheck="false"
+                aria-label="選手定義JSON"
+              ></textarea>
+            </div>
+            <div class="team-builder-actions">
+              <button id="player-builder-save" class="primary" type="button">保存</button>
+              <button id="player-builder-back" type="button">ホームに戻る</button>
+            </div>
+            <div
+              id="player-builder-feedback"
               class="team-builder-feedback"
               role="status"
               aria-live="polite"

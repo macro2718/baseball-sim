@@ -279,6 +279,46 @@ export function createGameActions(render) {
     }
   }
 
+  async function fetchPlayersList(role) {
+    const endpoint = `${CONFIG.api.endpoints.playersList}?role=${encodeURIComponent(role || 'batter')}`;
+    try {
+      const payload = await apiRequest(endpoint);
+      return Array.isArray(payload?.players) ? payload.players : [];
+    } catch (error) {
+      handleApiError(error, render);
+      return [];
+    }
+  }
+
+  async function fetchPlayerDefinition(name) {
+    if (!name) return null;
+    const endpoint = `${CONFIG.api.endpoints.playerDetail}?name=${encodeURIComponent(name)}`;
+    try {
+      const payload = await apiRequest(endpoint);
+      return payload?.player || null;
+    } catch (error) {
+      handleApiError(error, render);
+      return null;
+    }
+  }
+
+  async function handlePlayerSave(playerData, role) {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playerSave, {
+        method: 'POST',
+        body: JSON.stringify({ player: playerData, role }),
+      });
+      // After save, re-render state so any dependent UI updates (if any) happen
+      if (payload?.state) {
+        render(payload.state);
+      }
+      return payload?.name || playerData?.name || null;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
   return {
     handleStart,
     handleReloadTeams,
@@ -294,5 +334,8 @@ export function createGameActions(render) {
     handleTeamSelection,
     fetchTeamDefinition,
     handleTeamSave,
+    fetchPlayersList,
+    fetchPlayerDefinition,
+    handlePlayerSave,
   };
 }

@@ -38,6 +38,61 @@ const DEFAULT_TEAM_TEMPLATE = JSON.stringify(
   2
 );
 
+const DEFAULT_PLAYER_TEMPLATES = {
+  batter: JSON.stringify(
+    {
+      name: 'New Batter',
+      eligible_positions: ['LF', 'CF', 'RF', 'DH'],
+      bats: 'R',
+      k_pct: 22.8,
+      bb_pct: 8.5,
+      hard_pct: 38.6,
+      gb_pct: 44.6,
+      speed: 4.3,
+      fielding_skill: 100,
+    },
+    null,
+    2,
+  ),
+  pitcher: JSON.stringify(
+    {
+      name: 'New Pitcher',
+      pitcher_type: 'SP',
+      throws: 'R',
+      k_pct: 22.8,
+      bb_pct: 8.5,
+      hard_pct: 38.6,
+      gb_pct: 44.6,
+      stamina: 80,
+    },
+    null,
+    2,
+  ),
+};
+
+function setPlayerBuilderFeedback(message, level = 'info') {
+  if (!elements.playerBuilderFeedback) return;
+  const el = elements.playerBuilderFeedback;
+  el.textContent = message || '';
+  el.classList.remove('danger', 'success', 'info');
+  if (message) {
+    el.classList.add(level);
+    el.dataset.level = level;
+  } else {
+    el.removeAttribute('data-level');
+  }
+}
+
+function loadPlayerTemplate(role = 'batter') {
+  if (!elements.playerEditorJson) return;
+  const tpl = DEFAULT_PLAYER_TEMPLATES[role] || DEFAULT_PLAYER_TEMPLATES.batter;
+  elements.playerEditorJson.value = tpl;
+  if (elements.playerEditorSelect) {
+    elements.playerEditorSelect.value = '__new__';
+  }
+  setPlayerBuilderFeedback('テンプレートを読み込みました。', 'info');
+}
+
 function setTeamBuilderFeedback(message, level = 'info') {
   if (!elements.teamBuilderFeedback) return;
   const feedback = elements.teamBuilderFeedback;
@@ -160,6 +215,38 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.openPlayerBuilder) {
+    elements.openPlayerBuilder.addEventListener('click', () => {
+      setUIView('player-builder');
+      refreshView();
+      setPlayerBuilderFeedback('区分と選手を選択するか、新規作成してください。', 'info');
+      (async () => {
+        const role = elements.playerEditorRole?.value || 'batter';
+        const players = await actions.fetchPlayersList(role);
+        const select = elements.playerEditorSelect;
+        if (select) {
+          const prev = select.value;
+          select.innerHTML = '';
+          const ph = document.createElement('option');
+          ph.value = '';
+          ph.textContent = '選手を選択';
+          select.appendChild(ph);
+          const newOpt = document.createElement('option');
+          newOpt.value = '__new__';
+          newOpt.textContent = '新規選手を作成';
+          select.appendChild(newOpt);
+          players.forEach((name) => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+          });
+          select.value = prev && players.includes(prev) ? prev : '';
+        }
+      })();
+    });
+  }
+
   if (elements.backToLobby) {
     elements.backToLobby.addEventListener('click', () => {
       setUIView('lobby');
@@ -181,9 +268,23 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.playerBuilderBack) {
+    elements.playerBuilderBack.addEventListener('click', () => {
+      setUIView('lobby');
+      refreshView();
+    });
+  }
+
   if (elements.teamBuilderNew) {
     elements.teamBuilderNew.addEventListener('click', () => {
       loadTeamTemplate();
+    });
+  }
+
+  if (elements.playerBuilderNew) {
+    elements.playerBuilderNew.addEventListener('click', () => {
+      const role = elements.playerEditorRole?.value || 'batter';
+      loadPlayerTemplate(role);
     });
   }
 
@@ -212,6 +313,102 @@ export function initEventListeners(actions) {
         setTeamBuilderFeedback('チームデータを読み込みました。', 'info');
       } else {
         setTeamBuilderFeedback('チームデータの読み込みに失敗しました。', 'danger');
+      }
+    });
+  }
+
+  if (elements.playerEditorRole) {
+    elements.playerEditorRole.addEventListener('change', () => {
+      // 切替時は選手一覧を再取得し、テンプレートを表示
+      if (elements.playerEditorSelect) {
+        elements.playerEditorSelect.value = '';
+      }
+      if (elements.playerEditorJson) {
+        elements.playerEditorJson.value = '';
+      }
+      setPlayerBuilderFeedback('区分が変更されました。選手を選ぶかテンプレートを作成してください。', 'info');
+      (async () => {
+        const role = elements.playerEditorRole?.value || 'batter';
+        const players = await actions.fetchPlayersList(role);
+        const select = elements.playerEditorSelect;
+        if (select) {
+          select.innerHTML = '';
+          const ph = document.createElement('option');
+          ph.value = '';
+          ph.textContent = '選手を選択';
+          select.appendChild(ph);
+          const newOpt = document.createElement('option');
+          newOpt.value = '__new__';
+          newOpt.textContent = '新規選手を作成';
+          select.appendChild(newOpt);
+          players.forEach((name) => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+          });
+        }
+      })();
+    });
+  }
+
+  if (elements.playerEditorSelect) {
+    elements.playerEditorSelect.addEventListener('change', async (event) => {
+      const selectValue = event.target.value;
+      if (selectValue === '__new__') {
+        const role = elements.playerEditorRole?.value || 'batter';
+        loadPlayerTemplate(role);
+        return;
+      }
+      if (!selectValue) {
+        if (elements.playerEditorJson) elements.playerEditorJson.value = '';
+        setPlayerBuilderFeedback('編集する選手を選択してください。', 'info');
+        return;
+      }
+      setPlayerBuilderFeedback('選手データを読み込み中...', 'info');
+      const player = await actions.fetchPlayerDefinition(selectValue);
+      if (player && elements.playerEditorJson) {
+        elements.playerEditorJson.value = JSON.stringify(player, null, 2);
+        setPlayerBuilderFeedback('選手データを読み込みました。', 'info');
+      } else {
+        setPlayerBuilderFeedback('選手データの読み込みに失敗しました。', 'danger');
+      }
+    });
+  }
+
+  if (elements.playerEditorJson) {
+    elements.playerEditorJson.addEventListener('input', () => {
+      // reserved for dirty flag if needed
+    });
+  }
+
+  if (elements.playerBuilderSave) {
+    elements.playerBuilderSave.addEventListener('click', async () => {
+      if (!elements.playerEditorJson) return;
+      const raw = elements.playerEditorJson.value;
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'JSONを解析できません。';
+        setPlayerBuilderFeedback(`JSONの構文エラー: ${message}`, 'danger');
+        return;
+      }
+      const role = elements.playerEditorRole?.value || 'batter';
+      elements.playerBuilderSave.disabled = true;
+      try {
+        const savedName = await actions.handlePlayerSave(parsed, role);
+        if (savedName) {
+          if (elements.playerEditorSelect) {
+            elements.playerEditorSelect.value = savedName;
+          }
+          setPlayerBuilderFeedback('選手を保存しました。', 'success');
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '選手の保存に失敗しました。';
+        setPlayerBuilderFeedback(message, 'danger');
+      } finally {
+        elements.playerBuilderSave.disabled = false;
       }
     });
   }
