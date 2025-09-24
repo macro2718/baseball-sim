@@ -50,6 +50,24 @@
     grid-template-columns: 1fr;
   }
 
+  .team-builder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .team-builder-player-panel {
+    max-height: none;
+  }
+
+  .player-panel-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .player-panel-controls input[type='search'] {
+    flex: 1 1 240px;
+  }
+
   .player-selector-panel {
     flex-direction: row;
     flex-wrap: wrap;
@@ -105,6 +123,22 @@
   .toolbar-left,
   .toolbar-right {
     justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .team-builder-player-list {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .section-heading-inline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .section-actions {
+    width: 100%;
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
 

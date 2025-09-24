@@ -263,6 +263,19 @@ export function createGameActions(render) {
     }
   }
 
+  async function fetchPlayersCatalog() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playersCatalog);
+      return {
+        batters: Array.isArray(payload?.batters) ? payload.batters : [],
+        pitchers: Array.isArray(payload?.pitchers) ? payload.pitchers : [],
+      };
+    } catch (error) {
+      handleApiError(error, render);
+      return { batters: [], pitchers: [] };
+    }
+  }
+
   async function handleTeamSave(teamId, teamData) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.teamSave, {
@@ -390,6 +403,7 @@ export function createGameActions(render) {
     loadInitialState,
     handleTeamSelection,
     fetchTeamDefinition,
+    fetchPlayersCatalog,
     handleTeamSave,
     fetchPlayersList,
     fetchPlayerDefinition,
