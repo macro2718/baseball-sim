@@ -206,6 +206,7 @@ def create_routes(session: WebGameSession) -> Blueprint:
         payload = request.get_json(silent=True) or {}
         player = payload.get('player')
         role = (payload.get('role') or '').strip().lower()
+        original_name = (payload.get('original_name') or '').strip()
         if not isinstance(player, dict) or not player.get('name'):
             return create_error_response("選手データの形式が不正です。", session)
         if role not in ('batter', 'pitcher'):
@@ -219,16 +220,27 @@ def create_routes(session: WebGameSession) -> Blueprint:
         data.setdefault('batters', [])
         data.setdefault('pitchers', [])
 
-        # 既存を更新 or 追加
+        # 上書き保存のポリシー：
+        # - original_name が指定されていれば、それを持つ選手をバッター/ピッチャーの両方から除去
+        # - 指定がなければ、同名(player.name)を両方から除去
+        # - その後、現在の role リストに player を追加（=置換）
+        def strip_existing(all_data: dict, name: str) -> None:
+            if not name:
+                return
+            for role_key in ('batters', 'pitchers'):
+                cleaned = []
+                for item in all_data.get(role_key, []):
+                    if isinstance(item, dict) and item.get('name') == name:
+                        continue
+                    cleaned.append(item)
+                all_data[role_key] = cleaned
+
+        target_remove_name = original_name or str(player['name'])
+        strip_existing(data, target_remove_name)
+
+        # 最終的に新しい定義を現在のrole側へ入れる
         key = 'pitchers' if role == 'pitcher' else 'batters'
-        updated = False
-        for i, p in enumerate(list(data[key])):
-            if isinstance(p, dict) and p.get('name') == player['name']:
-                data[key][i] = player
-                updated = True
-                break
-        if not updated:
-            data[key].append(player)
+        data[key].append(player)
 
         if not FileUtils.safe_json_save(data, players_path):
             return create_error_response("選手データの保存に失敗しました。", session)

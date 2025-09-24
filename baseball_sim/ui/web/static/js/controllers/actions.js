@@ -326,11 +326,11 @@ export function createGameActions(render) {
     }
   }
 
-  async function handlePlayerSave(playerData, role) {
+  async function handlePlayerSave(playerData, role, originalName = null) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.playerSave, {
         method: 'POST',
-        body: JSON.stringify({ player: playerData, role }),
+        body: JSON.stringify({ player: playerData, role, original_name: originalName }),
       });
       // After save, re-render state so any dependent UI updates (if any) happen
       if (payload?.state) {

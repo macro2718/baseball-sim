@@ -680,9 +680,12 @@ export function initEventListeners(actions) {
       if (!formData) {
         return;
       }
+      // If editing an existing player, capture the original name from the selector
+      const originalNameRaw = elements.playerEditorSelect?.value || '';
+      const originalName = originalNameRaw && originalNameRaw !== '__new__' ? originalNameRaw : null;
       elements.playerBuilderSave.disabled = true;
       try {
-        const savedName = await actions.handlePlayerSave(formData, role);
+        const savedName = await actions.handlePlayerSave(formData, role, originalName);
         if (savedName) {
           await populatePlayerSelect(role, savedName);
           setPlayerBuilderFeedback('選手を保存しました。', 'success');

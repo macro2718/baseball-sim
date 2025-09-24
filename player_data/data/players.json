@@ -764,20 +764,20 @@
       "bats": "L"
     },
     {
-      "bats": "R",
+      "name": "Average Batter",
+      "k_pct": 22.8,
       "bb_pct": 8.5,
+      "hard_pct": 38.6,
+      "gb_pct": 44.6,
       "eligible_positions": [
         "LF",
         "CF",
         "RF",
         "DH"
       ],
-      "fielding_skill": 100,
-      "gb_pct": 44.6,
-      "hard_pct": 38.6,
-      "k_pct": 22.8,
-      "name": "Average Batter",
-      "speed": 4.3
+      "bats": "R",
+      "speed": 4.3,
+      "fielding_skill": 100
     }
   ]
 }
