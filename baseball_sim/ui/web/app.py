@@ -8,12 +8,20 @@ from flask import Flask, render_template
 
 from .routes import create_routes
 from .session import WebGameSession
+from baseball_sim.infrastructure.initializer import AppInitializer
 
 APP_ROOT = Path(__file__).resolve().parent
 
 
 def create_app() -> Flask:
     """Create and configure the Flask application."""
+
+    # Ensure application initialization (logging, optional seed)
+    try:
+        AppInitializer.initialize_application()
+    except Exception:
+        # Avoid crashing app creation due to init errors; they are logged
+        pass
 
     app = Flask(
         __name__,

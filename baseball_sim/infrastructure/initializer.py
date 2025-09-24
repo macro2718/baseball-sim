@@ -17,8 +17,9 @@ class AppInitializer:
             random.seed(seed)
             logger.info(f"Random seed set to: {seed}")
         else:
-            random.seed(0)  # デフォルトシード
-            logger.info("Random seed set to default: 0")
+            # ユーザーが固定シードを設定していない場合は、システムのランダム性を使用
+            # ここでは明示的にseedを設定しない（predictableにならないようにする）
+            logger.info("Random seed not fixed (using system randomness)")
     
     @staticmethod
     def initialize_logging() -> None:

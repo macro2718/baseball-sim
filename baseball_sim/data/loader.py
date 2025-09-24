@@ -96,20 +96,22 @@ class DataLoader:
         home_team = Team(home_team_data["name"])
         away_team = Team(away_team_data["name"])
 
-        # 選手辞書の作成
-        players_dict = cls.create_players_dict(player_data)
+        # 選手辞書の作成（home/awayで別インスタンスにする）
+        # 同じ選手名を共有すると、試合中のスタミナや成績が相互に影響してしまうため
+        players_home = cls.create_players_dict(player_data)
+        players_away = cls.create_players_dict(player_data)
 
         # 投手陣の設定
-        cls.setup_team_pitchers(home_team, home_team_data, players_dict)
-        cls.setup_team_pitchers(away_team, away_team_data, players_dict)
+        cls.setup_team_pitchers(home_team, home_team_data, players_home)
+        cls.setup_team_pitchers(away_team, away_team_data, players_away)
 
         # ラインナップの設定
-        home_errors = cls.setup_team_lineup(home_team, home_team_data, players_dict)
-        away_errors = cls.setup_team_lineup(away_team, away_team_data, players_dict)
+        home_errors = cls.setup_team_lineup(home_team, home_team_data, players_home)
+        away_errors = cls.setup_team_lineup(away_team, away_team_data, players_away)
 
         # ベンチの設定
-        cls.setup_team_bench(home_team, home_team_data, players_dict)
-        cls.setup_team_bench(away_team, away_team_data, players_dict)
+        cls.setup_team_bench(home_team, home_team_data, players_home)
+        cls.setup_team_bench(away_team, away_team_data, players_away)
         
         # ラインナップの妥当性チェック
         print(f"\n=== Validating lineups ===")

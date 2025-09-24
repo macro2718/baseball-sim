@@ -1,0 +1,51 @@
+{
+  "name": "All-MLB 2024 First Team",
+  "lineup": [
+    {
+      "name": "Aaron Judge('24)",
+      "position": "CF"
+    },
+    {
+      "name": "Ohtani Shohei('24)",
+      "position": "DH"
+    },
+    {
+      "name": "Juan Soto('24)",
+      "position": "LF"
+    },
+    {
+      "name": "Mookie Betts('24)",
+      "position": "RF"
+    },
+    {
+      "name": "Ketel Marte('24)",
+      "position": "2B"
+    },
+    {
+      "name": "Vladimir Guerrero Jr.('24)",
+      "position": "1B"
+    },
+    {
+      "name": "William Contreras('24)",
+      "position": "C"
+    },
+    {
+      "name": "José Ramírez('24)",
+      "position": "3B"
+    },
+    {
+      "name": "Bobby Witt Jr.('24)",
+      "position": "SS"
+    }
+  ],
+  "pitchers": [
+    "Chris Sale('24)",
+    "Corbin Burnes('24)",
+    "Paul Skenes('24)",
+    "Zack Wheeler('24)",
+    "Tarik Skubal('24)",
+    "Ryan Helsley('24)",
+    "Emmanuel Clase('24)"
+  ],
+  "bench": []
+}

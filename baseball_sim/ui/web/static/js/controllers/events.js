@@ -1932,16 +1932,18 @@ function renderTeamBuilderCatalog() {
   }
   const catalog = stateCache.teamBuilder.catalog === 'pitchers' ? 'pitchers' : 'batters';
   let list = Array.isArray(players[catalog]) ? players[catalog] : [];
-  // Exclude players already assigned in the lineup from the selectable list
+  // Exclude players already assigned anywhere (lineup, bench, pitchers) from the selectable list
   try {
     const form = getTeamBuilderForm();
-    const lineupIds = new Set(
-      (form?.lineup || [])
-        .map((slot) => (slot && slot.playerId ? String(slot.playerId) : null))
-        .filter((id) => id)
+    const takenIds = new Set(
+      [
+        ...((form?.lineup || []).map((slot) => (slot && slot.playerId ? String(slot.playerId) : null))),
+        ...((form?.bench || []).map((entry) => (entry && entry.playerId ? String(entry.playerId) : null))),
+        ...((form?.pitchers || []).map((entry) => (entry && entry.playerId ? String(entry.playerId) : null))),
+      ].filter((id) => id)
     );
-    if (lineupIds.size > 0) {
-      list = list.filter((record) => record && !lineupIds.has(String(record.id)));
+    if (takenIds.size > 0) {
+      list = list.filter((record) => record && !takenIds.has(String(record.id)));
     }
   } catch (_) {
     // noop – fall back to unfiltered list if anything goes wrong
@@ -1961,8 +1963,8 @@ function renderTeamBuilderCatalog() {
   const playerSwapSource = stateCache.teamBuilder.playerSwap?.source;
   filtered.forEach((record) => {
     const assignment = findPlayerAssignment(record.id);
-    // Lineup players are already filtered out above; keep this guard for safety
-    if (assignment?.group === 'lineup') return;
+  // Already-assigned players are filtered above; keep guard for safety
+  if (assignment) return;
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'builder-player-card';
@@ -2325,80 +2327,6 @@ export function initEventListeners(actions) {
   }
   if (elements.openOffenseButton) {
     elements.openOffenseButton.addEventListener('click', toggleOffenseMenu);
-  }
-  // Open team/player delete modals from lobby
-  if (elements.openTeamDelete) {
-    elements.openTeamDelete.addEventListener('click', () => {
-      // Populate team delete select from current team library
-      const select = elements.teamDeleteSelect;
-      const feedback = elements.teamDeleteFeedback;
-      if (feedback) feedback.textContent = '';
-      if (select) {
-        const teams = (stateCache.teamLibrary?.teams || []).slice();
-        select.innerHTML = '';
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'チームを選択';
-        select.appendChild(placeholder);
-        teams.forEach((t) => {
-          if (!t || !t.id) return;
-          const opt = document.createElement('option');
-          opt.value = t.id;
-          opt.textContent = t.name || t.id;
-          select.appendChild(opt);
-        });
-        select.value = '';
-      }
-      openModal('team-delete');
-    });
-  }
-  if (elements.openPlayerDelete) {
-    elements.openPlayerDelete.addEventListener('click', async () => {
-      const roleSel = elements.playerDeleteRole;
-      const listSel = elements.playerDeleteSelect;
-      const feedback = elements.playerDeleteFeedback;
-      if (feedback) feedback.textContent = '';
-      const role = roleSel?.value || 'batter';
-      if (listSel) {
-        listSel.innerHTML = '';
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = '選手を選択';
-        listSel.appendChild(placeholder);
-        try {
-          const players = await actions.fetchPlayersList(role);
-          players.forEach((p) => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = p.name;
-            listSel.appendChild(opt);
-          });
-          listSel.value = '';
-        } catch (e) {
-          if (feedback) feedback.textContent = e instanceof Error ? e.message : '選手リストの取得に失敗しました。';
-        }
-      }
-      openModal('player-delete');
-    });
-  }
-
-  // "ホームに戻る" buttons inside delete modals
-  if (elements.teamDeleteHome) {
-    elements.teamDeleteHome.addEventListener('click', () => {
-      // Close modal and go back to lobby
-      const modal = elements.teamDeleteModal;
-      if (modal) closeModal(modal);
-      setUIView('lobby');
-      refreshView();
-    });
-  }
-  if (elements.playerDeleteHome) {
-    elements.playerDeleteHome.addEventListener('click', () => {
-      const modal = elements.playerDeleteModal;
-      if (modal) closeModal(modal);
-      setUIView('lobby');
-      refreshView();
-    });
   }
   if (elements.offensePinchMenuButton) {
     elements.offensePinchMenuButton.addEventListener('click', () => openModal('offense'));
@@ -2978,7 +2906,7 @@ export function initEventListeners(actions) {
     button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
   });
 
-  ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'team-delete', 'player-delete'].forEach((name) => {
+  ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
@@ -2988,120 +2916,6 @@ export function initEventListeners(actions) {
       });
     }
   });
-
-  // Team delete confirm
-  if (elements.teamDeleteConfirm) {
-    elements.teamDeleteConfirm.addEventListener('click', async () => {
-      const select = elements.teamDeleteSelect;
-      const feedback = elements.teamDeleteFeedback;
-      const teamId = select?.value || '';
-      if (!teamId) {
-        if (feedback) feedback.textContent = '削除するチームを選択してください。';
-        return;
-      }
-      elements.teamDeleteConfirm.disabled = true;
-      try {
-        await actions.handleTeamDelete(teamId);
-        if (feedback) feedback.textContent = 'チームを削除しました。';
-        // Refresh the list from updated state
-        if (select) {
-          const teams = (stateCache.teamLibrary?.teams || []).slice();
-          select.innerHTML = '';
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = 'チームを選択';
-          select.appendChild(placeholder);
-          teams.forEach((t) => {
-            if (!t || !t.id) return;
-            const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = t.name || t.id;
-            select.appendChild(opt);
-          });
-          select.value = '';
-        }
-      } catch (error) {
-        if (feedback) {
-          const message = error instanceof Error ? error.message : 'チームの削除に失敗しました。';
-          feedback.textContent = message;
-        }
-      } finally {
-        elements.teamDeleteConfirm.disabled = false;
-      }
-    });
-  }
-
-  // Player delete role change -> repopulate list
-  if (elements.playerDeleteRole) {
-    elements.playerDeleteRole.addEventListener('change', async () => {
-      const role = elements.playerDeleteRole.value || 'batter';
-      const select = elements.playerDeleteSelect;
-      const feedback = elements.playerDeleteFeedback;
-      if (feedback) feedback.textContent = '';
-      if (select) {
-        select.innerHTML = '';
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = '選手を選択';
-        select.appendChild(placeholder);
-        try {
-          const players = await actions.fetchPlayersList(role);
-          players.forEach((p) => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = p.name;
-            select.appendChild(opt);
-          });
-          select.value = '';
-        } catch (e) {
-          if (feedback) feedback.textContent = e instanceof Error ? e.message : '選手リストの取得に失敗しました。';
-        }
-      }
-    });
-  }
-
-  // Player delete confirm
-  if (elements.playerDeleteConfirm) {
-    elements.playerDeleteConfirm.addEventListener('click', async () => {
-      const role = elements.playerDeleteRole?.value || 'batter';
-      const select = elements.playerDeleteSelect;
-      const feedback = elements.playerDeleteFeedback;
-      const playerId = select?.value || '';
-      const nameText = select?.selectedOptions?.[0]?.textContent || '';
-      if (!playerId) {
-        if (feedback) feedback.textContent = '削除する選手を選択してください。';
-        return;
-      }
-      elements.playerDeleteConfirm.disabled = true;
-      try {
-        await actions.handlePlayerDelete(playerId, role, nameText);
-        if (feedback) feedback.textContent = '選手を削除しました。';
-        // Repopulate list for current role
-        const players = await actions.fetchPlayersList(role);
-        if (select) {
-          select.innerHTML = '';
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = '選手を選択';
-          select.appendChild(placeholder);
-          players.forEach((p) => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = p.name;
-            select.appendChild(opt);
-          });
-          select.value = '';
-        }
-      } catch (error) {
-        if (feedback) {
-          const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';
-          feedback.textContent = message;
-        }
-      } finally {
-        elements.playerDeleteConfirm.disabled = false;
-      }
-    });
-  }
 
   if (elements.offenseMenu) {
     document.addEventListener('click', (event) => {
@@ -3184,7 +2998,7 @@ export function initEventListeners(actions) {
     if (event.key === 'Escape') {
       hideOffenseMenu();
       hideDefenseMenu();
-      ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'team-delete', 'player-delete'].forEach((name) => {
+      ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);
