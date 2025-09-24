@@ -1,3 +1,5 @@
+// Note: Player management uses stable IDs from backend to avoid name collisions.
+// All player list/detail/save/delete requests should use `player_id` when available.
 import { CONFIG } from '../config.js';
 import { elements } from '../dom.js';
 import {
@@ -301,64 +303,73 @@ export function createGameActions(render) {
     const endpoint = `${CONFIG.api.endpoints.playersList}?role=${encodeURIComponent(role || 'batter')}`;
     try {
       const payload = await apiRequest(endpoint);
-      return Array.isArray(payload?.players) ? payload.players : [];
+      const list = Array.isArray(payload?.players) ? payload.players : [];
+      // Normalize: expect { id, name }
+      return list
+        .map((p) => (p && typeof p === 'object' ? { id: String(p.id || ''), name: String(p.name || '') } : null))
+        .filter((p) => p && p.id && p.name);
     } catch (error) {
       handleApiError(error, render);
       return [];
     }
   }
 
-  async function fetchPlayerDefinition(name) {
-    if (!name) return null;
-    const endpoint = `${CONFIG.api.endpoints.playerDetail}?name=${encodeURIComponent(name)}`;
+  async function fetchPlayerDefinition(idOrName) {
+    if (!idOrName) return null;
+    // Prefer id query param for precision; fall back to name for compatibility
+    const paramKey = /^[0-9a-fA-F-]{36}$/.test(String(idOrName)) ? 'id' : 'name';
+    const endpoint = `${CONFIG.api.endpoints.playerDetail}?${paramKey}=${encodeURIComponent(idOrName)}`;
     try {
       const payload = await apiRequest(endpoint);
       if (payload && typeof payload === 'object') {
         return {
           player: payload.player || null,
           role: payload.role || null,
+          hasReferences: Boolean(payload.has_references),
+          referencedBy: Array.isArray(payload.referenced_by) ? payload.referenced_by : [],
         };
       }
-      return { player: null, role: null };
+      return { player: null, role: null, hasReferences: false, referencedBy: [] };
     } catch (error) {
       handleApiError(error, render);
-      return { player: null, role: null };
+      return { player: null, role: null, hasReferences: false, referencedBy: [] };
     }
   }
 
-  async function handlePlayerSave(playerData, role, originalName = null) {
+  async function handlePlayerSave(playerData, role, originalName = null, playerId = null) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.playerSave, {
         method: 'POST',
-        body: JSON.stringify({ player: playerData, role, original_name: originalName }),
+        body: JSON.stringify({ player: playerData, role, original_name: originalName, player_id: playerId }),
       });
       // After save, re-render state so any dependent UI updates (if any) happen
       if (payload?.state) {
         render(payload.state);
       }
-      return payload?.name || playerData?.name || null;
+      // Return id and name for caller convenience
+      return { id: payload?.id || playerId || null, name: payload?.name || playerData?.name || null };
     } catch (error) {
       handleApiError(error, render);
       throw error;
     }
   }
 
-  async function handlePlayerDelete(name, role) {
-    if (!name) {
+  async function handlePlayerDelete(playerId, role, fallbackName = null) {
+    if (!playerId && !fallbackName) {
       showStatus('削除する選手を選択してください。', 'danger');
       return null;
     }
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.playerDelete, {
         method: 'POST',
-        body: JSON.stringify({ name, role }),
+        body: JSON.stringify({ player_id: playerId, role, name: fallbackName }),
       });
       if (payload?.state) {
         render(payload.state);
       } else {
         render(payload);
       }
-      return name;
+      return playerId || fallbackName;
     } catch (error) {
       handleApiError(error, render);
       throw error;

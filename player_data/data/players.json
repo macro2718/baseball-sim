@@ -8,7 +8,8 @@
       "hard_pct": 27.93895252215333,
       "gb_pct": 37.35821803863101,
       "stamina": 104.32191926931957,
-      "throws": "R"
+      "throws": "R",
+      "id": "54b197c4-7c27-4d90-8241-24f1dbc49286"
     },
     {
       "name": "Masaru Inoue",
@@ -18,7 +19,8 @@
       "hard_pct": 41.401353692964875,
       "gb_pct": 37.853390329580286,
       "stamina": 100.70042948875493,
-      "throws": "L"
+      "throws": "L",
+      "id": "2252d34f-4aba-4b69-a0af-b72c03b064b1"
     },
     {
       "name": "Takashi Ito",
@@ -28,7 +30,8 @@
       "hard_pct": 34.160744091842936,
       "gb_pct": 43.38660496626473,
       "stamina": 77.89708304367784,
-      "throws": "L"
+      "throws": "L",
+      "id": "999da550-345e-40fc-b622-81471af113bc"
     },
     {
       "name": "Yuki Yamashita",
@@ -38,7 +41,8 @@
       "hard_pct": 38.46748818182691,
       "gb_pct": 40.149569618291885,
       "stamina": 89.61535072766509,
-      "throws": "R"
+      "throws": "R",
+      "id": "3165325f-2a35-49a2-9f9b-d427d151558f"
     },
     {
       "name": "Takeshi Sato",
@@ -48,7 +52,8 @@
       "hard_pct": 51.821068193048475,
       "gb_pct": 46.47882303552262,
       "stamina": 63.53432787773761,
-      "throws": "R"
+      "throws": "R",
+      "id": "0e79946e-f92d-48ea-95f4-470534019d4b"
     },
     {
       "name": "Takumi Miura",
@@ -58,7 +63,8 @@
       "hard_pct": 42.72471214967579,
       "gb_pct": 36.2496776876322,
       "stamina": 67.34507317883563,
-      "throws": "L"
+      "throws": "L",
+      "id": "e4b740b3-faa1-4d7a-8788-922016dad814"
     },
     {
       "name": "Tadashi Nakamura",
@@ -68,7 +74,8 @@
       "hard_pct": 31.64108936002769,
       "gb_pct": 50.519986151426856,
       "stamina": 56.35946644106865,
-      "throws": "R"
+      "throws": "R",
+      "id": "1c71ee07-b46e-485b-9128-533286e1ff7e"
     },
     {
       "name": "Takuya Nakajima",
@@ -78,7 +85,8 @@
       "hard_pct": 42.65198455973556,
       "gb_pct": 46.51679222719804,
       "stamina": 90.8335428212063,
-      "throws": "R"
+      "throws": "R",
+      "id": "9414fac1-f83b-4183-b415-76da273d707e"
     },
     {
       "name": "Takuya Fukuda",
@@ -88,7 +96,8 @@
       "hard_pct": 44.20781501707152,
       "gb_pct": 38.695404790514786,
       "stamina": 60.54349146604177,
-      "throws": "L"
+      "throws": "L",
+      "id": "da238c89-7f71-449e-9e59-59056fba82c7"
     },
     {
       "name": "Yu Okada",
@@ -98,7 +107,8 @@
       "hard_pct": 37.141185595956046,
       "gb_pct": 54.62496098033961,
       "stamina": 72.19977095930459,
-      "throws": "R"
+      "throws": "R",
+      "id": "1ea8f1ff-9ef9-4391-8a18-48a3f5ad583b"
     },
     {
       "name": "Yu Takahashi",
@@ -108,7 +118,8 @@
       "hard_pct": 38.615955795286766,
       "gb_pct": 59.75960897825442,
       "stamina": 61.325059762625415,
-      "throws": "R"
+      "throws": "R",
+      "id": "2a3a2b1f-32b4-4435-94d6-6a8cdf0063d2"
     },
     {
       "name": "Naoki Arai",
@@ -118,7 +129,8 @@
       "hard_pct": 35.75799296530238,
       "gb_pct": 42.70959649541451,
       "stamina": 67.42989900783712,
-      "throws": "L"
+      "throws": "L",
+      "id": "b0430f2b-7a6c-483e-b17e-5ca98b8e483c"
     },
     {
       "name": "Yusuke Fujii",
@@ -128,7 +140,8 @@
       "hard_pct": 45.97282373082046,
       "gb_pct": 44.354929288335235,
       "stamina": 55.862445349962755,
-      "throws": "R"
+      "throws": "R",
+      "id": "a81aa251-17de-40dc-90c5-50c73cce434c"
     },
     {
       "name": "Yosuke Fukuda",
@@ -138,7 +151,8 @@
       "hard_pct": 35.145971222535515,
       "gb_pct": 47.25135976666706,
       "stamina": 88.80369581450913,
-      "throws": "R"
+      "throws": "R",
+      "id": "0bee8b54-df3d-4c81-924f-33a2ee83edf8"
     },
     {
       "name": "Akira Murakami",
@@ -148,7 +162,8 @@
       "hard_pct": 31.930254497427846,
       "gb_pct": 39.39663948304158,
       "stamina": 62.25262672745208,
-      "throws": "R"
+      "throws": "R",
+      "id": "b52d73b4-61ef-4c71-b7a8-eeca29cb74e6"
     },
     {
       "name": "Yuki Ota",
@@ -158,7 +173,8 @@
       "hard_pct": 41.65200841021946,
       "gb_pct": 58.74118504956906,
       "stamina": 65.74462864567403,
-      "throws": "R"
+      "throws": "R",
+      "id": "59f80317-e831-4782-8a66-a23c6641b055"
     },
     {
       "name": "Ryota Yamazaki",
@@ -168,7 +184,8 @@
       "hard_pct": 42.63653302669711,
       "gb_pct": 40.179819542799066,
       "stamina": 85.24995811605383,
-      "throws": "R"
+      "throws": "R",
+      "id": "351be419-2c77-40bf-a987-5cf88c84576f"
     },
     {
       "name": "Ryota Yamamoto",
@@ -178,7 +195,8 @@
       "hard_pct": 37.47419501062019,
       "gb_pct": 53.07749044725791,
       "stamina": 52.373983161866775,
-      "throws": "L"
+      "throws": "L",
+      "id": "52272491-5d70-4f46-9246-4bea8105b67c"
     },
     {
       "name": "Kazuo Ogawa",
@@ -188,7 +206,8 @@
       "hard_pct": 26.06038439409302,
       "gb_pct": 45.64582129447478,
       "stamina": 56.433902358963024,
-      "throws": "R"
+      "throws": "R",
+      "id": "c0e12921-2262-4b1a-8e36-61da4dcb7e32"
     },
     {
       "name": "Yu Kimura",
@@ -198,7 +217,8 @@
       "hard_pct": 38.164836672998156,
       "gb_pct": 41.57691686960222,
       "stamina": 62.81722988879514,
-      "throws": "R"
+      "throws": "R",
+      "id": "3cbaa549-9dbe-41d3-af9f-b89540a95f42"
     },
     {
       "name": "Yuji Matsumoto",
@@ -208,7 +228,8 @@
       "hard_pct": 34.16248948099965,
       "gb_pct": 57.97585089653037,
       "stamina": 71.63431863914971,
-      "throws": "R"
+      "throws": "R",
+      "id": "a9058985-6a8e-44a8-b233-5c3e3e8756ab"
     },
     {
       "name": "Tatsuya Yamamoto",
@@ -218,7 +239,8 @@
       "hard_pct": 34.26371114884136,
       "gb_pct": 48.99220541403135,
       "stamina": 61.033267713623076,
-      "throws": "R"
+      "throws": "R",
+      "id": "3180b866-792c-4de4-a59a-a4e86b37566e"
     },
     {
       "name": "Yosuke Ito",
@@ -228,7 +250,8 @@
       "hard_pct": 42.328591338984154,
       "gb_pct": 31.948213932914648,
       "stamina": 66.33554575964288,
-      "throws": "R"
+      "throws": "R",
+      "id": "011823b2-106b-41d1-b9d9-302057cb3009"
     },
     {
       "name": "Naoki Hayashi",
@@ -238,7 +261,8 @@
       "hard_pct": 32.72409527137499,
       "gb_pct": 44.80543018507864,
       "stamina": 67.60029080723075,
-      "throws": "L"
+      "throws": "L",
+      "id": "dcaf18a3-44d9-41df-81b9-08de8253f167"
     },
     {
       "name": "Ichiro Hayashi",
@@ -248,7 +272,8 @@
       "hard_pct": 33.82009911905073,
       "gb_pct": 32.95491014924997,
       "stamina": 78.37346650919687,
-      "throws": "L"
+      "throws": "L",
+      "id": "4388d6a8-8935-4d46-9d9c-c6bf136a0bfd"
     },
     {
       "name": "Soichiro Sakamoto",
@@ -258,7 +283,8 @@
       "hard_pct": 46.98985074012411,
       "gb_pct": 55.3188495908414,
       "stamina": 82.08970815437958,
-      "throws": "R"
+      "throws": "R",
+      "id": "b1e9203d-1eab-4e26-a52f-7c11b145bcf2"
     },
     {
       "name": "average pitcher",
@@ -268,7 +294,8 @@
       "bb_pct": 8.5,
       "hard_pct": 38.6,
       "gb_pct": 44.6,
-      "stamina": 80
+      "stamina": 80,
+      "id": "d3d29026-3a03-45c1-9aed-7ff977833342"
     },
     {
       "bb_pct": 8.5,
@@ -278,7 +305,8 @@
       "name": "Average Pitcher",
       "pitcher_type": "SP",
       "stamina": 80,
-      "throws": "R"
+      "throws": "R",
+      "id": "95b53c3d-ba03-4dec-aea8-87cfcac8d34f"
     }
   ],
   "batters": [
@@ -296,7 +324,8 @@
       "gb_pct": 51.317809042479425,
       "speed": 4.073069641022717,
       "fielding_skill": 84.53045153381623,
-      "bats": "L"
+      "bats": "L",
+      "id": "9db52565-3e31-41e6-a3ce-74be0e49a1b2"
     },
     {
       "name": "Ryo Kimura",
@@ -312,7 +341,8 @@
       "gb_pct": 40.91727555623243,
       "speed": 4.214743926445166,
       "fielding_skill": 135.88261519181094,
-      "bats": "L"
+      "bats": "L",
+      "id": "b31df820-323c-4938-8222-0d28c4d0123e"
     },
     {
       "name": "Akira Matsuda",
@@ -326,7 +356,8 @@
       "gb_pct": 51.97809924302219,
       "speed": 4.343756512047609,
       "fielding_skill": 105.52757057951968,
-      "bats": "L"
+      "bats": "L",
+      "id": "ce665d82-c414-417d-9e6f-f8403983ee79"
     },
     {
       "name": "Satoshi Ishikawa",
@@ -340,7 +371,8 @@
       "gb_pct": 45.36643843977144,
       "speed": 4.499552205970156,
       "fielding_skill": 106.85607748822925,
-      "bats": "R"
+      "bats": "R",
+      "id": "5818d8c6-fe25-43bd-a798-dfb429628a10"
     },
     {
       "name": "Keisuke Miura",
@@ -356,7 +388,8 @@
       "gb_pct": 41.44890256290804,
       "speed": 4.550730181554049,
       "fielding_skill": 95.26952308941777,
-      "bats": "R"
+      "bats": "R",
+      "id": "8d30b731-f653-47e3-a824-e5931fa22eb4"
     },
     {
       "name": "Kenta Ishikawa",
@@ -370,7 +403,8 @@
       "gb_pct": 40.24689903604413,
       "speed": 3.895056091161395,
       "fielding_skill": 99.15156383396207,
-      "bats": "R"
+      "bats": "R",
+      "id": "f9080193-b4d7-4497-8115-b1fe41d602be"
     },
     {
       "name": "Daiki Yamashita",
@@ -386,7 +420,8 @@
       "gb_pct": 45.07806030516443,
       "speed": 4.318921193666256,
       "fielding_skill": 113.50618281342761,
-      "bats": "R"
+      "bats": "R",
+      "id": "56062fd9-6011-47e9-9274-2cd06ccd8ee2"
     },
     {
       "name": "Tadashi Matsumoto",
@@ -400,7 +435,8 @@
       "gb_pct": 51.145992227971206,
       "speed": 4.016842433586007,
       "fielding_skill": 116.45258911340149,
-      "bats": "R"
+      "bats": "R",
+      "id": "3b3045c7-1a66-4d80-8e0a-8554934a2358"
     },
     {
       "name": "Sho Maeda",
@@ -415,7 +451,8 @@
       "gb_pct": 42.0081302429984,
       "speed": 4.128808245771982,
       "fielding_skill": 100.88492009963414,
-      "bats": "L"
+      "bats": "L",
+      "id": "06bf3b34-93d7-433b-9b4b-896be808f694"
     },
     {
       "name": "Dai Fujii",
@@ -431,7 +468,8 @@
       "gb_pct": 39.65571549238887,
       "speed": 3.9109602684569134,
       "fielding_skill": 113.06236177885636,
-      "bats": "L"
+      "bats": "L",
+      "id": "286a6164-0b05-4768-b173-f6cc33964dd3"
     },
     {
       "name": "Kazuki Sato",
@@ -446,7 +484,8 @@
       "gb_pct": 50.60754281779963,
       "speed": 4.801580025104138,
       "fielding_skill": 111.87940497252742,
-      "bats": "R"
+      "bats": "R",
+      "id": "1c5a8861-c86b-4b7c-8da5-1be17824c0aa"
     },
     {
       "name": "Yuji Hayashi",
@@ -460,7 +499,8 @@
       "gb_pct": 37.06067404243518,
       "speed": 4.31380935330077,
       "fielding_skill": 90.95992125780288,
-      "bats": "R"
+      "bats": "R",
+      "id": "b07c19f3-ffe2-4426-8d24-2b0ee7cd9c01"
     },
     {
       "name": "Koji Sato",
@@ -475,7 +515,8 @@
       "gb_pct": 43.000756613233484,
       "speed": 4.3149263276384096,
       "fielding_skill": 123.16273703068914,
-      "bats": "R"
+      "bats": "R",
+      "id": "f9a77ac7-a35a-498b-b9c0-c7d7e13ee9e0"
     },
     {
       "name": "Soichiro Fukuda",
@@ -490,7 +531,8 @@
       "gb_pct": 41.76103639013887,
       "speed": 4.459960043075532,
       "fielding_skill": 79.30360392678395,
-      "bats": "L"
+      "bats": "L",
+      "id": "2120bf30-1b7b-444f-8ad3-b5da4fa2eaf0"
     },
     {
       "name": "Takashi Yamazaki",
@@ -505,7 +547,8 @@
       "gb_pct": 51.803575158137136,
       "speed": 4.204262974136775,
       "fielding_skill": 88.17129052425307,
-      "bats": "L"
+      "bats": "L",
+      "id": "370d315b-4f5b-432a-88bb-91e02b1eba29"
     },
     {
       "name": "Takashi Endo",
@@ -520,7 +563,8 @@
       "gb_pct": 41.82979740058221,
       "speed": 4.072287230227583,
       "fielding_skill": 110.58961257869655,
-      "bats": "L"
+      "bats": "L",
+      "id": "dda3c253-9988-4449-9d8a-0906e4d3d893"
     },
     {
       "name": "Tsuyoshi Takagi",
@@ -536,7 +580,8 @@
       "gb_pct": 39.09535230732736,
       "speed": 4.571788116350427,
       "fielding_skill": 99.59860756269173,
-      "bats": "L"
+      "bats": "L",
+      "id": "b7865f62-a140-4883-be1b-6147dd74633b"
     },
     {
       "name": "Kenji Endo",
@@ -551,7 +596,8 @@
       "gb_pct": 40.33146204809085,
       "speed": 4.206308640365212,
       "fielding_skill": 59.41470072997297,
-      "bats": "L"
+      "bats": "L",
+      "id": "cd9cc9f7-8300-4749-bf52-3d9d13369ba5"
     },
     {
       "name": "Yuki Endo",
@@ -565,7 +611,8 @@
       "gb_pct": 46.05821556781691,
       "speed": 4.5877261155846485,
       "fielding_skill": 92.64296844005658,
-      "bats": "R"
+      "bats": "R",
+      "id": "a331413b-1a4a-4ca8-8d24-038b14d6c599"
     },
     {
       "name": "Tsuyoshi Goto",
@@ -579,7 +626,8 @@
       "gb_pct": 41.8404019928099,
       "speed": 4.5707213413852585,
       "fielding_skill": 109.48687999630022,
-      "bats": "R"
+      "bats": "R",
+      "id": "fc2c9cc2-3d29-4d3b-9c22-529cd46bf3e4"
     },
     {
       "name": "Satoshi Matsumoto",
@@ -595,7 +643,8 @@
       "gb_pct": 52.64038535657397,
       "speed": 4.716582908765937,
       "fielding_skill": 64.9425637351813,
-      "bats": "R"
+      "bats": "R",
+      "id": "60871617-ab5a-4eea-b046-299f3d7e9980"
     },
     {
       "name": "Kazuki Fujii",
@@ -611,7 +660,8 @@
       "gb_pct": 49.2916176169938,
       "speed": 4.151702104920223,
       "fielding_skill": 93.08102431041475,
-      "bats": "L"
+      "bats": "L",
+      "id": "04f17bd8-5190-4826-a796-d2f5ea1b4908"
     },
     {
       "name": "Soichiro Yamashita",
@@ -627,7 +677,8 @@
       "gb_pct": 40.41046368394179,
       "speed": 4.400171226002921,
       "fielding_skill": 109.4917729962982,
-      "bats": "R"
+      "bats": "R",
+      "id": "4b903b25-c8db-432a-a3d3-926c1153ea65"
     },
     {
       "name": "Shota Ueda",
@@ -641,7 +692,8 @@
       "gb_pct": 45.713181428995576,
       "speed": 4.0765150208778005,
       "fielding_skill": 95.99858645459798,
-      "bats": "L"
+      "bats": "L",
+      "id": "788e3ddd-c62a-4f60-9803-750d336371b5"
     },
     {
       "name": "Akira Sato",
@@ -657,7 +709,8 @@
       "gb_pct": 44.573153024182254,
       "speed": 4.3190943942823985,
       "fielding_skill": 83.09801835098787,
-      "bats": "L"
+      "bats": "L",
+      "id": "ae189f3e-cf72-4611-b123-888a41118762"
     },
     {
       "name": "Shigeru Yamazaki",
@@ -673,7 +726,8 @@
       "gb_pct": 47.02024793649844,
       "speed": 4.186466769957036,
       "fielding_skill": 87.05898658854753,
-      "bats": "R"
+      "bats": "R",
+      "id": "bd06721b-69a3-4f00-8b90-370f1bad44f1"
     },
     {
       "name": "Kenji Hasegawa",
@@ -687,7 +741,8 @@
       "gb_pct": 43.869449277138735,
       "speed": 4.377876525455492,
       "fielding_skill": 113.13628139292283,
-      "bats": "L"
+      "bats": "L",
+      "id": "fce31300-3ef8-40d3-98c1-672beb17278d"
     },
     {
       "name": "Takumi Sakamoto",
@@ -701,7 +756,8 @@
       "gb_pct": 46.30191005655687,
       "speed": 4.286709806923692,
       "fielding_skill": 102.31002758358521,
-      "bats": "R"
+      "bats": "R",
+      "id": "0bc618d7-55a4-4be0-b17b-f735d13b0b8d"
     },
     {
       "name": "Jin Yamazaki",
@@ -716,7 +772,8 @@
       "gb_pct": 48.48850283957062,
       "speed": 4.385947657542488,
       "fielding_skill": 107.69464067683383,
-      "bats": "R"
+      "bats": "R",
+      "id": "f352737e-5f9e-4933-8a31-908bb81eca23"
     },
     {
       "name": "Akira Yamamoto",
@@ -731,7 +788,8 @@
       "gb_pct": 50.11452345286163,
       "speed": 4.1783064968687365,
       "fielding_skill": 100.5534256041398,
-      "bats": "L"
+      "bats": "L",
+      "id": "237170f3-4afb-40dd-ae35-e8ecfdbe71d7"
     },
     {
       "name": "Takuya Watanabe",
@@ -747,7 +805,8 @@
       "gb_pct": 53.43544691994546,
       "speed": 3.8312273374014763,
       "fielding_skill": 105.60715410045134,
-      "bats": "R"
+      "bats": "R",
+      "id": "2c16ba5f-ebfc-43e8-b150-c010c0a28b79"
     },
     {
       "name": "Naoki Takeuchi",
@@ -761,7 +820,8 @@
       "gb_pct": 61.83341931180182,
       "speed": 4.692105883220473,
       "fielding_skill": 71.20867462860643,
-      "bats": "L"
+      "bats": "L",
+      "id": "edf00aef-602e-4527-a387-c4d565db4d5d"
     },
     {
       "name": "Average Batter",
@@ -777,7 +837,8 @@
       ],
       "bats": "R",
       "speed": 4.3,
-      "fielding_skill": 100
+      "fielding_skill": 100,
+      "id": "b855ed97-6d8e-48f2-88b2-2b8ee2c08fb0"
     }
   ]
 }

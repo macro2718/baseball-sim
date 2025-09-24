@@ -403,13 +403,13 @@ export function initEventListeners(actions) {
     newOpt.value = '__new__';
     newOpt.textContent = '新規選手を作成';
     select.appendChild(newOpt);
-    players.forEach((name) => {
+    players.forEach((p) => {
       const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
+      opt.value = p.id; // use stable id
+      opt.textContent = p.name;
       select.appendChild(opt);
     });
-    const validValues = new Set(['', '__new__', ...players]);
+    const validValues = new Set(['', '__new__', ...players.map((p) => p.id)]);
     const targetValue = prevValue && validValues.has(prevValue) ? prevValue : '';
     select.value = targetValue;
     return players;
@@ -654,7 +654,7 @@ export function initEventListeners(actions) {
         return;
       }
       setPlayerBuilderFeedback('選手データを読み込み中...', 'info');
-      const result = await actions.fetchPlayerDefinition(selectValue);
+      const result = await actions.fetchPlayerDefinition(selectValue); // pass id
       const fetchedPlayer = result?.player || null;
       const fetchedRole = result?.role === 'pitcher' ? 'pitcher' : result?.role === 'batter' ? 'batter' : null;
       const currentRole = elements.playerEditorRole?.value || 'batter';
@@ -665,7 +665,18 @@ export function initEventListeners(actions) {
       }
       if (fetchedPlayer) {
         applyPlayerFormData(fetchedPlayer, roleToUse);
-        setPlayerBuilderFeedback('選手データを読み込みました。', 'info');
+        // Disable delete if referenced by any team
+        const hasRefs = Boolean(result?.hasReferences);
+        if (elements.playerBuilderDelete) {
+          elements.playerBuilderDelete.disabled = hasRefs;
+        }
+        if (hasRefs) {
+          const refs = Array.isArray(result?.referencedBy) ? result.referencedBy : [];
+          const list = refs.slice(0, 5).join(', ') + (refs.length > 5 ? ` 他${refs.length - 5}件` : '');
+          setPlayerBuilderFeedback(`この選手は以下のチームに含まれているため削除できません: ${list}`, 'warning');
+        } else {
+          setPlayerBuilderFeedback('選手データを読み込みました。', 'info');
+        }
       } else {
         clearPlayerForm(roleToUse);
         setPlayerBuilderFeedback('選手データの読み込みに失敗しました。', 'danger');
@@ -680,14 +691,18 @@ export function initEventListeners(actions) {
       if (!formData) {
         return;
       }
-      // If editing an existing player, capture the original name from the selector
-      const originalNameRaw = elements.playerEditorSelect?.value || '';
-      const originalName = originalNameRaw && originalNameRaw !== '__new__' ? originalNameRaw : null;
+      // If editing an existing player, capture the selected id and visible name
+      const selectEl = elements.playerEditorSelect;
+      const selectedValue = selectEl?.value || '';
+      const selectedText = selectEl?.selectedOptions?.[0]?.textContent || null;
+      const isEditing = selectedValue && selectedValue !== '__new__';
+      const playerId = isEditing ? selectedValue : null;
+      const originalName = isEditing ? selectedText : null;
       elements.playerBuilderSave.disabled = true;
       try {
-        const savedName = await actions.handlePlayerSave(formData, role, originalName);
-        if (savedName) {
-          await populatePlayerSelect(role, savedName);
+        const saved = await actions.handlePlayerSave(formData, role, originalName, playerId);
+        if (saved?.id) {
+          await populatePlayerSelect(role, saved.id);
           setPlayerBuilderFeedback('選手を保存しました。', 'success');
         }
       } catch (error) {
@@ -702,16 +717,23 @@ export function initEventListeners(actions) {
   if (elements.playerBuilderDelete) {
     elements.playerBuilderDelete.addEventListener('click', async () => {
       const role = elements.playerEditorRole?.value || 'batter';
-      const name = elements.playerEditorSelect?.value || '';
-      if (!name || name === '__new__') {
+      const selectEl = elements.playerEditorSelect;
+      const idValue = selectEl?.value || '';
+      const nameText = selectEl?.selectedOptions?.[0]?.textContent || '';
+      if (!idValue || idValue === '__new__') {
         setPlayerBuilderFeedback('削除する選手を選択してください。', 'danger');
         return;
       }
-      const confirmed = window.confirm(`選手 '${name}' を削除します。よろしいですか？`);
+      if (elements.playerBuilderDelete.disabled) {
+        // Should not happen due to disabled state, but double-guard.
+        setPlayerBuilderFeedback('この選手はチームで使用中のため削除できません。', 'warning');
+        return;
+      }
+      const confirmed = window.confirm(`選手 '${nameText}' を削除します。よろしいですか？`);
       if (!confirmed) return;
       elements.playerBuilderDelete.disabled = true;
       try {
-        await actions.handlePlayerDelete(name, role);
+        await actions.handlePlayerDelete(idValue, role, nameText);
         await populatePlayerSelect(role);
         clearPlayerForm(role);
         setPlayerBuilderFeedback('選手を削除しました。', 'success');
