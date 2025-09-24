@@ -416,6 +416,7 @@ function setTeamBuilderFeedback(message, level = 'info') {
 function ensureTeamBuilderState() {
   if (!stateCache.teamBuilder.form) {
     stateCache.teamBuilder.form = createDefaultTeamForm();
+    resetLineupPositionSelection();
   }
   if (!stateCache.teamBuilder.players) {
     stateCache.teamBuilder.players = {
@@ -440,6 +441,11 @@ function ensureTeamBuilderState() {
   }
   if (!stateCache.teamBuilder.selection) {
     stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
+  }
+  if (!stateCache.teamBuilder.positionSwap) {
+    stateCache.teamBuilder.positionSwap = { first: null };
+  } else if (!Number.isInteger(stateCache.teamBuilder.positionSwap.first)) {
+    stateCache.teamBuilder.positionSwap.first = null;
   }
   if (!stateCache.teamBuilder.catalog) {
     stateCache.teamBuilder.catalog = 'batters';
@@ -820,18 +826,124 @@ function getAvailablePositionsForSlot(slot) {
   return [...POSITION_CHOICES];
 }
 
-function cycleLineupPosition(index) {
+function resetLineupPositionSelection() {
+  if (!stateCache.teamBuilder.positionSwap) {
+    stateCache.teamBuilder.positionSwap = { first: null };
+    return;
+  }
+  stateCache.teamBuilder.positionSwap.first = null;
+}
+
+function swapLineupPositions(firstIndex, secondIndex) {
   const form = getTeamBuilderForm();
-  const slot = form?.lineup?.[index];
-  if (!slot) return;
-  const options = getAvailablePositionsForSlot(slot);
-  if (!options.length) return;
-  const current = String(slot.position || options[0]).toUpperCase();
-  const currentIndex = options.indexOf(current);
-  const next = options[(currentIndex + 1) % options.length];
-  slot.position = next;
+  const lineup = form?.lineup;
+  if (!Array.isArray(lineup) || lineup.length < 2) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+  if (
+    !Number.isInteger(firstIndex) ||
+    !Number.isInteger(secondIndex) ||
+    firstIndex === secondIndex
+  ) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+  if (
+    firstIndex < 0 ||
+    secondIndex < 0 ||
+    firstIndex >= lineup.length ||
+    secondIndex >= lineup.length
+  ) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+
+  const firstSlot = lineup[firstIndex];
+  const secondSlot = lineup[secondIndex];
+  if (!firstSlot || !secondSlot) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+
+  const firstPosition = (
+    firstSlot.position ||
+    DEFAULT_LINEUP_POSITIONS[firstIndex] ||
+    'DH'
+  ).toUpperCase();
+  const secondPosition = (
+    secondSlot.position ||
+    DEFAULT_LINEUP_POSITIONS[secondIndex] ||
+    'DH'
+  ).toUpperCase();
+
+  const firstEligible = getAvailablePositionsForSlot(firstSlot);
+  const secondEligible = getAvailablePositionsForSlot(secondSlot);
+  const firstHasPlayer = Boolean(firstSlot.player);
+  const secondHasPlayer = Boolean(secondSlot.player);
+
+  const firstCanCoverSecond = !firstHasPlayer || firstEligible.includes(secondPosition);
+  const secondCanCoverFirst = !secondHasPlayer || secondEligible.includes(firstPosition);
+
+  if (!firstCanCoverSecond || !secondCanCoverFirst) {
+    setTeamBuilderFeedback('選択した守備位置を入れ替えられません。', 'danger');
+    renderTeamBuilderView();
+    return;
+  }
+
+  firstSlot.position = secondPosition;
+  secondSlot.position = firstPosition;
+
+  if (!firstHasPlayer) {
+    firstSlot.eligible = [secondPosition];
+  }
+  if (!secondHasPlayer) {
+    secondSlot.eligible = [firstPosition];
+  }
+
   stateCache.teamBuilder.editorDirty = true;
+  resetLineupPositionSelection();
   renderTeamBuilderView();
+}
+
+function toggleLineupPositionSelection(index) {
+  ensureTeamBuilderState();
+  const form = getTeamBuilderForm();
+  const lineup = form?.lineup;
+  if (!Array.isArray(lineup) || !lineup.length) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+  const normalizedIndex = Number.isInteger(index) ? index : 0;
+  if (normalizedIndex < 0 || normalizedIndex >= lineup.length) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+
+  const currentSelection = stateCache.teamBuilder.positionSwap?.first;
+  if (
+    !Number.isInteger(currentSelection) ||
+    currentSelection < 0 ||
+    currentSelection >= lineup.length
+  ) {
+    stateCache.teamBuilder.positionSwap.first = normalizedIndex;
+    renderTeamBuilderView();
+    return;
+  }
+
+  if (currentSelection === normalizedIndex) {
+    resetLineupPositionSelection();
+    renderTeamBuilderView();
+    return;
+  }
+
+  swapLineupPositions(currentSelection, normalizedIndex);
 }
 
 function clearLineupSlot(index) {
@@ -1075,6 +1187,16 @@ function renderTeamBuilderLineup() {
   container.innerHTML = '';
   const form = getTeamBuilderForm();
   const selection = stateCache.teamBuilder.selection || { group: 'lineup', index: 0 };
+  const swapSelection = stateCache.teamBuilder.positionSwap;
+  const selectedPositionIndexRaw = Number.isInteger(swapSelection?.first)
+    ? swapSelection.first
+    : null;
+  const selectedPositionIndex =
+    selectedPositionIndexRaw != null &&
+    selectedPositionIndexRaw >= 0 &&
+    selectedPositionIndexRaw < form.lineup.length
+      ? selectedPositionIndexRaw
+      : null;
 
   form.lineup.forEach((slot, index) => {
     const row = document.createElement('div');
@@ -1090,10 +1212,14 @@ function renderTeamBuilderLineup() {
     const positionButton = document.createElement('button');
     positionButton.type = 'button';
     positionButton.className = 'defense-action-button lineup-position-button';
-    positionButton.dataset.builderAction = 'cycle-position';
+    positionButton.dataset.builderAction = 'select-position';
     positionButton.dataset.group = 'lineup';
     positionButton.dataset.index = String(index);
     positionButton.innerHTML = renderPositionToken(slot.position || '-', slot.player?.pitcher_type, 'position-token');
+    positionButton.setAttribute('aria-pressed', selectedPositionIndex === index ? 'true' : 'false');
+    if (selectedPositionIndex === index) {
+      positionButton.classList.add('selected');
+    }
 
     const playerButton = document.createElement('button');
     playerButton.type = 'button';
@@ -1381,6 +1507,17 @@ function renderTeamBuilderView() {
   if (stateCache.uiView !== 'team-builder') {
     return;
   }
+  const lineupLength = Array.isArray(stateCache.teamBuilder.form?.lineup)
+    ? stateCache.teamBuilder.form.lineup.length
+    : 0;
+  const selectedPositionIndex = stateCache.teamBuilder.positionSwap?.first;
+  if (
+    !Number.isInteger(selectedPositionIndex) ||
+    selectedPositionIndex < 0 ||
+    selectedPositionIndex >= lineupLength
+  ) {
+    resetLineupPositionSelection();
+  }
   if (elements.teamBuilderName) {
     const desired = stateCache.teamBuilder.form?.name || '';
     if (document.activeElement !== elements.teamBuilderName || elements.teamBuilderName.value !== desired) {
@@ -1447,6 +1584,7 @@ function createNewTeamTemplate() {
   stateCache.teamBuilder.lastSavedId = '__new__';
   stateCache.teamBuilder.editorDirty = false;
   setSelectionAndCatalog('lineup', 0);
+  resetLineupPositionSelection();
   setTeamBuilderFeedback('テンプレートを読み込みました。', 'info');
   renderTeamBuilderView();
 }
@@ -1561,6 +1699,7 @@ function applyTeamDataToForm(teamData) {
   stateCache.teamBuilder.form = form;
   setSelectionAndCatalog('lineup', 0);
   stateCache.teamBuilder.editorDirty = false;
+  resetLineupPositionSelection();
   relinkFormPlayers();
   renderTeamBuilderView();
 }
@@ -1757,8 +1896,8 @@ export function initEventListeners(actions) {
     const action = button.dataset.builderAction;
     const indexValue = Number.parseInt(button.dataset.index || '', 10);
     const index = Number.isNaN(indexValue) ? 0 : indexValue;
-    if (action === 'cycle-position') {
-      cycleLineupPosition(index);
+    if (action === 'select-position') {
+      toggleLineupPositionSelection(index);
       return;
     }
     if (action === 'clear-lineup') {
