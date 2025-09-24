@@ -17,6 +17,7 @@ import {
 import { showStatus } from '../ui/status.js';
 import { handleDefensePlayerClick, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
+import { applyAbilityColor, resetAbilityColor, ABILITY_COLOR_PRESETS } from '../ui/renderers.js';
 
 const BATTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 const PITCHER_TYPES = ['SP', 'RP'];
@@ -88,10 +89,11 @@ function formatNumber(value, digits = 0) {
   return num.toFixed(digits);
 }
 
-function createAbilityChip(label, value) {
+function createAbilityChip(label, value, metricKey = null) {
   const safeLabel = escapeHtml(label);
   const safeValue = escapeHtml(value);
-  return `<span class="ability-chip"><span class="label">${safeLabel}</span><span class="value">${safeValue}</span></span>`;
+  const metricAttr = metricKey ? ` data-metric="${escapeHtml(metricKey)}"` : '';
+  return `<span class="ability-chip"${metricAttr}><span class="label">${safeLabel}</span><span class="value">${safeValue}</span></span>`;
 }
 
 function getBatterAbilityChips(player) {
@@ -101,12 +103,12 @@ function getBatterAbilityChips(player) {
     chips.push(createAbilityChip('打席', player.bats));
   }
   const stats = player.stats || {};
-  chips.push(createAbilityChip('K%', formatPercent(stats.k_pct)));
-  chips.push(createAbilityChip('BB%', formatPercent(stats.bb_pct)));
-  chips.push(createAbilityChip('Hard%', formatPercent(stats.hard_pct)));
-  chips.push(createAbilityChip('GB%', formatPercent(stats.gb_pct)));
-  chips.push(createAbilityChip('Speed', formatNumber(stats.speed, 1)));
-  chips.push(createAbilityChip('Field', formatNumber(stats.fielding_skill, 0)));
+  chips.push(createAbilityChip('K%', formatPercent(stats.k_pct), 'k_pct'));
+  chips.push(createAbilityChip('BB%', formatPercent(stats.bb_pct), 'bb_pct'));
+  chips.push(createAbilityChip('Hard%', formatPercent(stats.hard_pct), 'hard_pct'));
+  chips.push(createAbilityChip('GB%', formatPercent(stats.gb_pct), 'gb_pct'));
+  chips.push(createAbilityChip('Speed', formatNumber(stats.speed, 1), 'speed'));
+  chips.push(createAbilityChip('Field', formatNumber(stats.fielding_skill, 0), 'fielding'));
   return chips;
 }
 
@@ -120,12 +122,34 @@ function getPitcherAbilityChips(player) {
     chips.push(createAbilityChip('Throws', player.throws));
   }
   const stats = player.stats || {};
-  chips.push(createAbilityChip('K%', formatPercent(stats.k_pct)));
-  chips.push(createAbilityChip('BB%', formatPercent(stats.bb_pct)));
-  chips.push(createAbilityChip('Hard%', formatPercent(stats.hard_pct)));
-  chips.push(createAbilityChip('GB%', formatPercent(stats.gb_pct)));
-  chips.push(createAbilityChip('Sta', formatNumber(stats.stamina, 0)));
+  chips.push(createAbilityChip('K%', formatPercent(stats.k_pct), 'k_pct'));
+  chips.push(createAbilityChip('BB%', formatPercent(stats.bb_pct), 'bb_pct'));
+  chips.push(createAbilityChip('Hard%', formatPercent(stats.hard_pct), 'hard_pct'));
+  chips.push(createAbilityChip('GB%', formatPercent(stats.gb_pct), 'gb_pct'));
+  chips.push(createAbilityChip('Sta', formatNumber(stats.stamina, 0), 'stamina'));
   return chips;
+}
+
+function colorizeAbilityChips(container, context = 'catalog') {
+  if (!container) return;
+  const chips = container.querySelectorAll('.ability-chip');
+  chips.forEach((chip) => {
+    const metric = chip.getAttribute('data-metric');
+    const valueEl = chip.querySelector('.value');
+    if (!valueEl) return;
+    const text = valueEl.textContent ?? '';
+    if (metric) {
+      let invert = false;
+      if (context === 'batter') {
+        invert = metric === 'k_pct' || metric === 'gb_pct';
+      } else if (context === 'pitcher') {
+        invert = metric === 'bb_pct' || metric === 'hard_pct';
+      }
+      applyAbilityColor(valueEl, metric, text, { ...ABILITY_COLOR_PRESETS.table, invert });
+    } else {
+      resetAbilityColor(valueEl);
+    }
+  });
 }
 
 function updateChipToggleState(button, selected) {
@@ -508,18 +532,19 @@ function applyRecordToLineupSlot(slot, record, positionOverride = null) {
     if (!eligible.includes('DH')) {
       eligible.push('DH');
     }
+    // Keep eligibility as a hint only; preserve user's desired position even if ineligible
     slot.eligible = eligible;
-    const desired = positionOverride ? String(positionOverride).toUpperCase() : String(slot.position || '').toUpperCase();
-    if (desired && eligible.includes(desired)) {
-      slot.position = desired;
-    } else if (eligible.length) {
-      slot.position = eligible[0];
-    } else {
-      slot.position = desired || 'DH';
-    }
+    const desired = positionOverride
+      ? String(positionOverride).toUpperCase()
+      : String(slot.position || '').toUpperCase();
+    slot.position = desired || slot.position || 'DH';
   } else {
+    // For pitchers, keep eligibility hint but preserve desired position
     slot.eligible = ['P'];
-    slot.position = 'P';
+    const desired = positionOverride
+      ? String(positionOverride).toUpperCase()
+      : String(slot.position || '').toUpperCase();
+    slot.position = desired || slot.position || 'P';
   }
 }
 
@@ -881,19 +906,9 @@ function swapLineupPositions(firstIndex, secondIndex) {
     'DH'
   ).toUpperCase();
 
-  const firstEligible = getAvailablePositionsForSlot(firstSlot);
-  const secondEligible = getAvailablePositionsForSlot(secondSlot);
+  // Always allow swapping positions regardless of eligibility
   const firstHasPlayer = Boolean(firstSlot.player);
   const secondHasPlayer = Boolean(secondSlot.player);
-
-  const firstCanCoverSecond = !firstHasPlayer || firstEligible.includes(secondPosition);
-  const secondCanCoverFirst = !secondHasPlayer || secondEligible.includes(firstPosition);
-
-  if (!firstCanCoverSecond || !secondCanCoverFirst) {
-    setTeamBuilderFeedback('選択した守備位置を入れ替えられません。', 'danger');
-    renderTeamBuilderView();
-    return;
-  }
 
   firstSlot.position = secondPosition;
   secondSlot.position = firstPosition;
@@ -1073,16 +1088,7 @@ function canAssignRecordToSelection(record, selection) {
   if (target === 'pitchers') {
     return record.role === 'pitcher';
   }
-  if (target === 'lineup') {
-    const form = getTeamBuilderForm();
-    const slot = form?.lineup?.[selection.index];
-    const position = slot?.position ? String(slot.position).toUpperCase() : null;
-    if (position === 'P') {
-      if (record.role === 'pitcher') return true;
-      return Array.isArray(record.eligible) && record.eligible.includes('P');
-    }
-    return record.role === 'batter';
-  }
+  // For lineup and bench, allow any player regardless of eligibility or position
   return true;
 }
 
@@ -1090,9 +1096,7 @@ function assignPlayerToLineup(index, record) {
   const form = getTeamBuilderForm();
   const slot = form?.lineup?.[index];
   if (!slot || !record) return;
-  if (record.role === 'pitcher' && slot.position !== 'P') {
-    slot.position = 'P';
-  }
+  // Do not force the position to 'P' for pitchers; preserve user's desired position
   const existing = findPlayerAssignment(record.id);
   if (existing && (existing.group !== 'lineup' || existing.index !== index)) {
     clearAssignmentAt(existing.group, existing.index);
@@ -1243,10 +1247,13 @@ function renderTeamBuilderLineup() {
 
     const abilityRow = document.createElement('div');
     abilityRow.className = 'chip-row';
-    const chips = slot.playerRole === 'pitcher' ? getPitcherAbilityChips(slot.player) : getBatterAbilityChips(slot.player);
+    const isPitcher = slot.playerRole === 'pitcher';
+    const chips = isPitcher ? getPitcherAbilityChips(slot.player) : getBatterAbilityChips(slot.player);
     abilityRow.innerHTML = chips.join('');
     if (chips.length) {
       meta.appendChild(abilityRow);
+      // Apply color coding to chip values
+      colorizeAbilityChips(abilityRow, isPitcher ? 'pitcher' : 'batter');
     }
 
     if (slot.playerName) {
@@ -1320,10 +1327,12 @@ function renderTeamBuilderBench() {
 
     const abilityRow = document.createElement('div');
     abilityRow.className = 'chip-row';
-    const chips = entry?.playerRole === 'pitcher' ? getPitcherAbilityChips(entry.player) : getBatterAbilityChips(entry.player);
+    const isPitcher = entry?.playerRole === 'pitcher';
+    const chips = isPitcher ? getPitcherAbilityChips(entry.player) : getBatterAbilityChips(entry.player);
     abilityRow.innerHTML = chips.join('');
     if (chips.length) {
       meta.appendChild(abilityRow);
+      colorizeAbilityChips(abilityRow, isPitcher ? 'pitcher' : 'batter');
     }
 
     button.appendChild(meta);
@@ -1387,6 +1396,7 @@ function renderTeamBuilderPitchers() {
     abilityRow.innerHTML = chips.join('');
     if (chips.length) {
       meta.appendChild(abilityRow);
+      colorizeAbilityChips(abilityRow, 'pitcher');
     }
 
     button.appendChild(meta);
@@ -1484,8 +1494,9 @@ function renderTeamBuilderCatalog() {
       meta.appendChild(positions);
       const abilityRow = document.createElement('div');
       abilityRow.className = 'chip-row';
-      abilityRow.innerHTML = getBatterAbilityChips(record).join('');
+  abilityRow.innerHTML = getBatterAbilityChips(record).join('');
       meta.appendChild(abilityRow);
+  colorizeAbilityChips(abilityRow, 'batter');
     } else {
       const roleInfo = document.createElement('div');
       roleInfo.className = 'player-positions';
@@ -1493,8 +1504,9 @@ function renderTeamBuilderCatalog() {
       meta.appendChild(roleInfo);
       const abilityRow = document.createElement('div');
       abilityRow.className = 'chip-row';
-      abilityRow.innerHTML = getPitcherAbilityChips(record).join('');
+  abilityRow.innerHTML = getPitcherAbilityChips(record).join('');
       meta.appendChild(abilityRow);
+  colorizeAbilityChips(abilityRow, 'pitcher');
     }
 
     card.appendChild(meta);
@@ -1575,6 +1587,32 @@ function buildTeamPayload() {
     .filter((nameValue) => nameValue);
 
   return { name, lineup, pitchers, bench };
+}
+
+function findLineupEligibilityConflicts() {
+  const form = getTeamBuilderForm();
+  const issues = [];
+  if (!form || !Array.isArray(form.lineup)) return issues;
+  form.lineup.forEach((slot, index) => {
+    if (!slot) return;
+    const pos = (slot.position || '').toString().toUpperCase();
+    const name = (slot.playerName || '').toString();
+    const player = slot.player;
+    if (!pos || !name || !player) return;
+    if (player.role === 'pitcher') {
+      if (pos !== 'P') {
+        issues.push(`${index + 1}番 ${name}: ${pos} は投手の守備適性外です`);
+      }
+    } else {
+      const eligible = Array.isArray(player.eligible)
+        ? player.eligible.map((p) => String(p).toUpperCase())
+        : [];
+      if (!eligible.includes(pos)) {
+        issues.push(`${index + 1}番 ${name}: ${pos} は守備適性外です`);
+      }
+    }
+  });
+  return issues;
 }
 
 function createNewTeamTemplate() {
@@ -2203,6 +2241,19 @@ export function initEventListeners(actions) {
 
   if (elements.teamBuilderSave) {
     elements.teamBuilderSave.addEventListener('click', async () => {
+      // Warn if lineup has positional eligibility conflicts
+      const conflicts = findLineupEligibilityConflicts();
+      if (conflicts.length) {
+        const list = conflicts.slice(0, 8).map((s) => `- ${s}`).join('\n');
+        const more = conflicts.length > 8 ? `\n他${conflicts.length - 8}件` : '';
+        const ok = window.confirm(
+          `守備適性に不一致があります。このまま保存しますか？\n\n${list}${more}`,
+        );
+        if (!ok) {
+          return;
+        }
+      }
+
       const teamPayload = buildTeamPayload();
       if (!teamPayload) {
         return;

@@ -839,6 +839,21 @@
       "speed": 100.0,
       "fielding_skill": 100,
       "id": "b855ed97-6d8e-48f2-88b2-2b8ee2c08fb0"
+    },
+    {
+      "name": "大谷翔平('24)",
+      "k_pct": 23.9,
+      "bb_pct": 15.2,
+      "hard_pct": 54.2,
+      "gb_pct": 42.6,
+      "eligible_positions": [
+        "RF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 115,
+      "fielding_skill": 100,
+      "id": "a00707e7-a901-4e7c-b289-2a89089da322"
     }
   ]
 }

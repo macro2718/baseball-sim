@@ -63,7 +63,7 @@ const ABILITY_METRIC_CONFIG = {
   stamina: { mean: 80, variation: 0.15, min: 30, max: 150 },
 };
 
-const ABILITY_COLOR_PRESETS = {
+export const ABILITY_COLOR_PRESETS = {
   table: Object.freeze({ emphasize: true, glowBase: 4.6, glowScale: 5.4 }),
   matchupPitcher: Object.freeze({ emphasize: true, glowBase: 3.1, glowScale: 4.6 }),
   matchupBatter: Object.freeze({ emphasize: false, glowBase: 2.4, glowScale: 3.8 }),
@@ -92,7 +92,7 @@ function parseAbilityNumeric(value) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function computeAbilityMetricStyling(metricKey, displayValue) {
+function computeAbilityMetricStyling(metricKey, displayValue, { invert = false } = {}) {
   const config = ABILITY_METRIC_CONFIG[metricKey];
   if (!config) {
     return null;
@@ -113,9 +113,12 @@ function computeAbilityMetricStyling(metricKey, displayValue) {
 
   const ratio = (numeric - lowerBound) / (upperBound - lowerBound);
   const clamped = Math.min(1, Math.max(0, ratio));
+  const mapped = invert ? 1 - clamped : clamped;
   const distance = Math.abs(clamped - 0.5) * 2;
 
-  const hue = 120 - clamped * 120;
+  // Default: low -> green (120), high -> red (0)
+  // Invert: low -> red, high -> green
+  const hue = 120 - mapped * 120;
   const saturationBase = config.saturationBase ?? 52;
   const saturationRange = config.saturationRange ?? 32;
   const saturation = Math.max(
@@ -141,7 +144,7 @@ function computeAbilityMetricStyling(metricKey, displayValue) {
   };
 }
 
-function resetAbilityColor(element) {
+export function resetAbilityColor(element) {
   element.classList.remove('ability-colorized');
   element.style.removeProperty('--ability-color');
   element.style.removeProperty('--ability-intensity');
@@ -151,7 +154,7 @@ function resetAbilityColor(element) {
   delete element.dataset.abilityMetric;
 }
 
-function applyAbilityColor(
+export function applyAbilityColor(
   element,
   metricKey,
   displayValue,
@@ -164,7 +167,7 @@ function applyAbilityColor(
     return;
   }
 
-  const styling = computeAbilityMetricStyling(metricKey, displayValue);
+  const styling = computeAbilityMetricStyling(metricKey, displayValue, { invert: Boolean(options.invert) });
   if (!styling) {
     resetAbilityColor(element);
     return;
@@ -1199,7 +1202,7 @@ function coalesceTraitValue(primary, fallback) {
   return normalizeTraitValue(fallback);
 }
 
-function setMatchupText(element, value, metricKey) {
+function setMatchupText(element, value, metricKey, extraOptions = undefined) {
   if (!element) return;
   const normalized = normalizeTraitValue(value);
   element.textContent = normalized;
@@ -1209,7 +1212,7 @@ function setMatchupText(element, value, metricKey) {
       element,
       metricKey,
       normalized,
-      ABILITY_COLOR_PRESETS.matchupPitcher,
+      { ...ABILITY_COLOR_PRESETS.matchupPitcher, ...(extraOptions || {}) },
     );
   } else {
     resetAbilityColor(element);
@@ -1334,10 +1337,10 @@ function renderUpcomingBatters(listEl, emptyEl, batters, battingTraits) {
     const statsContainer = li.querySelector('.matchup-batter-stats');
     if (statsContainer) {
       const stats = [
-        { label: 'K%', key: 'k_pct', value: coalesceTraitValue(player.k_pct, trait?.k_pct) },
-        { label: 'BB%', key: 'bb_pct', value: coalesceTraitValue(player.bb_pct, trait?.bb_pct) },
-        { label: 'Hard%', key: 'hard_pct', value: coalesceTraitValue(player.hard_pct, trait?.hard_pct) },
-        { label: 'GB%', key: 'gb_pct', value: coalesceTraitValue(player.gb_pct, trait?.gb_pct) },
+        { label: 'K%', key: 'k_pct', value: coalesceTraitValue(player.k_pct, trait?.k_pct), invert: true },
+        { label: 'BB%', key: 'bb_pct', value: coalesceTraitValue(player.bb_pct, trait?.bb_pct), invert: false },
+        { label: 'Hard%', key: 'hard_pct', value: coalesceTraitValue(player.hard_pct, trait?.hard_pct), invert: false },
+        { label: 'GB%', key: 'gb_pct', value: coalesceTraitValue(player.gb_pct, trait?.gb_pct), invert: true },
       ];
 
       stats.forEach((entry) => {
@@ -1356,7 +1359,7 @@ function renderUpcomingBatters(listEl, emptyEl, batters, battingTraits) {
           valueEl,
           entry.key,
           displayValue,
-          ABILITY_COLOR_PRESETS.matchupBatter,
+          { ...ABILITY_COLOR_PRESETS.matchupBatter, invert: Boolean(entry.invert) },
         );
 
         statWrap.appendChild(labelEl);
@@ -1405,8 +1408,8 @@ function updateMatchupPanel(gameState, teams) {
   setMatchupText(matchupPitcherType, pitcherDisplay.pitcher_type);
   setMatchupText(matchupPitcherThrows, pitcherDisplay.throws);
   setMatchupText(matchupPitcherK, pitcherDisplay.k_pct, 'k_pct');
-  setMatchupText(matchupPitcherBB, pitcherDisplay.bb_pct, 'bb_pct');
-  setMatchupText(matchupPitcherHard, pitcherDisplay.hard_pct, 'hard_pct');
+  setMatchupText(matchupPitcherBB, pitcherDisplay.bb_pct, 'bb_pct', { invert: true });
+  setMatchupText(matchupPitcherHard, pitcherDisplay.hard_pct, 'hard_pct', { invert: true });
   setMatchupText(matchupPitcherGB, pitcherDisplay.gb_pct, 'gb_pct');
 
   const batters = isActive ? buildUpcomingBatters(offenseTeam, gameState) : [];
@@ -2684,11 +2687,15 @@ export function updateAbilitiesPanel(state) {
           td.textContent = displayValue;
 
           if (ABILITY_METRIC_CONFIG[column.key]) {
+            const invert = (
+              (viewType === 'batting' && (column.key === 'k_pct' || column.key === 'gb_pct')) ||
+              (viewType === 'pitching' && (column.key === 'bb_pct' || column.key === 'hard_pct'))
+            );
             applyAbilityColor(
               td,
               column.key,
               displayValue,
-              ABILITY_COLOR_PRESETS.table,
+              { ...ABILITY_COLOR_PRESETS.table, invert },
             );
           }
 
