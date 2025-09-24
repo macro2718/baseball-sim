@@ -435,6 +435,9 @@ function ensureTeamBuilderState() {
     if (typeof players.loaded !== 'boolean') players.loaded = false;
     if (typeof players.loading !== 'boolean') players.loading = false;
   }
+  if (!('playersLoadingPromise' in stateCache.teamBuilder)) {
+    stateCache.teamBuilder.playersLoadingPromise = null;
+  }
   if (!stateCache.teamBuilder.selection) {
     stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
   }
@@ -1403,21 +1406,28 @@ async function ensureTeamBuilderPlayersLoaded(actions) {
   if (players.loaded) {
     return players;
   }
-  if (players.loading) {
-    return players;
+  if (stateCache.teamBuilder.playersLoadingPromise) {
+    return stateCache.teamBuilder.playersLoadingPromise;
   }
-  stateCache.teamBuilder.players.loading = true;
-  try {
-    const catalog = await actions.fetchPlayersCatalog();
-    applyPlayersCatalogData(catalog);
-    stateCache.teamBuilder.players.loaded = true;
-  } catch (error) {
-    stateCache.teamBuilder.players.loaded = false;
-    throw error;
-  } finally {
-    stateCache.teamBuilder.players.loading = false;
-  }
-  return stateCache.teamBuilder.players;
+
+  const loadPromise = (async () => {
+    stateCache.teamBuilder.players.loading = true;
+    try {
+      const catalog = await actions.fetchPlayersCatalog();
+      applyPlayersCatalogData(catalog);
+      stateCache.teamBuilder.players.loaded = true;
+      return stateCache.teamBuilder.players;
+    } catch (error) {
+      stateCache.teamBuilder.players.loaded = false;
+      throw error;
+    } finally {
+      stateCache.teamBuilder.players.loading = false;
+      stateCache.teamBuilder.playersLoadingPromise = null;
+    }
+  })();
+
+  stateCache.teamBuilder.playersLoadingPromise = loadPromise;
+  return loadPromise;
 }
 
 function applyTeamDataToForm(teamData) {

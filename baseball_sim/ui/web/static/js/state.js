@@ -18,6 +18,7 @@ export const stateCache = {
     editorDirty: false,
     form: null,
     players: { batters: [], pitchers: [], byId: {}, byName: {}, loaded: false, loading: false },
+    playersLoadingPromise: null,
     selection: { group: 'lineup', index: 0 },
     catalog: 'batters',
     searchTerm: '',
