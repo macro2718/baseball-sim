@@ -283,6 +283,77 @@ def create_routes(session: WebGameSession) -> Blueprint:
             pass
 
         return refs
+
+    @api_bp.get("/players/catalog")
+    def players_catalog() -> Dict[str, Any]:
+        data, mutated, players_path = _load_players_with_ids()
+        if mutated:
+            _save_players_data(data, players_path)
+
+        def safe_float(value: object) -> Optional[float]:
+            try:
+                if value is None or value == "":
+                    return None
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        def normalise_positions(raw_positions: object) -> list[str]:
+            positions: list[str] = []
+            if isinstance(raw_positions, list):
+                for pos in raw_positions:
+                    if not isinstance(pos, str):
+                        continue
+                    token = pos.strip().upper()
+                    if token and token not in positions:
+                        positions.append(token)
+            return positions
+
+        batters: list[dict[str, object]] = []
+        for record in data.get('batters', []) or []:
+            if not isinstance(record, dict):
+                continue
+            name = record.get('name')
+            pid = record.get('id')
+            if not name or not pid:
+                continue
+            batter_payload: dict[str, object] = {
+                'id': str(pid),
+                'name': str(name),
+                'bats': (record.get('bats') or '').strip().upper() or None,
+                'eligible_positions': normalise_positions(record.get('eligible_positions')),
+                'k_pct': safe_float(record.get('k_pct')),
+                'bb_pct': safe_float(record.get('bb_pct')),
+                'hard_pct': safe_float(record.get('hard_pct')),
+                'gb_pct': safe_float(record.get('gb_pct')),
+                'speed': safe_float(record.get('speed')),
+                'fielding_skill': safe_float(record.get('fielding_skill')),
+            }
+            batters.append(batter_payload)
+
+        pitchers: list[dict[str, object]] = []
+        for record in data.get('pitchers', []) or []:
+            if not isinstance(record, dict):
+                continue
+            name = record.get('name')
+            pid = record.get('id')
+            if not name or not pid:
+                continue
+            pitcher_payload: dict[str, object] = {
+                'id': str(pid),
+                'name': str(name),
+                'pitcher_type': (record.get('pitcher_type') or '').strip().upper() or None,
+                'throws': (record.get('throws') or '').strip().upper() or None,
+                'k_pct': safe_float(record.get('k_pct')),
+                'bb_pct': safe_float(record.get('bb_pct')),
+                'hard_pct': safe_float(record.get('hard_pct')),
+                'gb_pct': safe_float(record.get('gb_pct')),
+                'stamina': safe_float(record.get('stamina')),
+            }
+            pitchers.append(pitcher_payload)
+
+        return jsonify({'batters': batters, 'pitchers': pitchers})
+
     @api_bp.get("/players/list")
     def list_players() -> Dict[str, Any]:
         role = (request.args.get('role') or 'batter').strip().lower()

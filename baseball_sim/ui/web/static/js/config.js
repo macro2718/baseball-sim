@@ -21,6 +21,7 @@ export const CONFIG = {
       teamDetail: '/api/teams/library',
       // Player endpoints
       playersList: '/api/players/list',
+      playersCatalog: '/api/players/catalog',
       playerDetail: '/api/players/detail',
       playerSave: '/api/players/save',
       playerDelete: '/api/players/delete',

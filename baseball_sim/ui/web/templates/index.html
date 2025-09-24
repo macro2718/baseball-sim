@@ -150,7 +150,7 @@
             <div class="team-builder-header">
               <h2>チーム作成・編集</h2>
               <p>
-                JSON形式でチームの構成を編集します。保存すると選択リストに反映され、選択中のチームを更新した場合はデータが再読み込みされます。
+                作成済みの選手データからスターティングメンバー・ベンチ・投手陣を選択できます。保存すると選択リストに反映され、選択中のチームを更新した場合はデータが再読み込みされます。
               </p>
             </div>
             <div class="team-builder-controls">
@@ -160,13 +160,56 @@
                 <button id="team-builder-new" type="button">新規テンプレート</button>
               </div>
             </div>
-            <div class="team-builder-editor">
-              <textarea
-                id="team-editor-json"
-                rows="20"
-                spellcheck="false"
-                aria-label="チーム定義JSON"
-              ></textarea>
+            <div class="team-builder-layout">
+              <div class="team-builder-form">
+                <div class="form-field">
+                  <label for="team-builder-name">チーム名</label>
+                  <input id="team-builder-name" type="text" placeholder="例: Tokyo Aces" autocomplete="off" />
+                </div>
+                <div class="team-builder-roster">
+                  <section class="builder-section">
+                    <div class="section-heading">
+                      <h3>スターティングラインナップ</h3>
+                      <p>守備位置ボタンをクリックして切り替え、右側の選手カードを選択して割り当ててください。</p>
+                    </div>
+                    <div id="team-builder-lineup" class="defense-lineup"></div>
+                  </section>
+                  <section class="builder-section">
+                    <div class="section-heading section-heading-inline">
+                      <h3>ベンチ</h3>
+                      <div class="section-actions">
+                        <button type="button" id="team-builder-add-bench">枠を追加</button>
+                      </div>
+                    </div>
+                    <div id="team-builder-bench" class="defense-bench"></div>
+                  </section>
+                  <section class="builder-section">
+                    <div class="section-heading section-heading-inline">
+                      <h3>投手リスト</h3>
+                      <div class="section-actions">
+                        <button type="button" id="team-builder-add-pitcher">枠を追加</button>
+                      </div>
+                    </div>
+                    <div id="team-builder-pitchers" class="team-builder-pitchers"></div>
+                  </section>
+                </div>
+              </div>
+              <aside class="team-builder-player-panel">
+                <div class="player-panel-header">
+                  <div class="player-panel-title">
+                    <h3>選手リスト</h3>
+                    <p>タブで区分を切り替え、検索で絞り込んで割り当てたい選手を選択してください。</p>
+                  </div>
+                  <div class="player-panel-controls">
+                    <div class="tab-group" role="tablist" aria-label="選手カテゴリ">
+                      <button type="button" class="tab active" data-builder-catalog="batters" aria-pressed="true">野手</button>
+                      <button type="button" class="tab" data-builder-catalog="pitchers" aria-pressed="false">投手</button>
+                    </div>
+                    <input id="team-builder-search" type="search" placeholder="名前で検索" autocomplete="off" />
+                  </div>
+                </div>
+                <div id="team-builder-player-list" class="team-builder-player-list"></div>
+              </aside>
             </div>
             <div class="team-builder-actions">
               <button id="team-builder-save" class="primary" type="button">保存</button>

@@ -12,7 +12,16 @@ export const stateCache = {
   abilitiesView: { team: 'away', type: 'batting' },
   uiView: 'lobby',
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
-  teamBuilder: { currentTeamId: null, lastSavedId: null, editorDirty: false },
+  teamBuilder: {
+    currentTeamId: null,
+    lastSavedId: null,
+    editorDirty: false,
+    form: null,
+    players: { batters: [], pitchers: [], byId: {}, byName: {}, loaded: false, loading: false },
+    selection: { group: 'lineup', index: 0 },
+    catalog: 'batters',
+    searchTerm: '',
+  },
 };
 
 export function setUIView(view) {
