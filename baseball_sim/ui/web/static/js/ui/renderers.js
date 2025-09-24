@@ -2445,7 +2445,7 @@ function renderTeamBuilder(teamLibraryState) {
   }
 }
 
-function updateScreenVisibility() {
+export function updateScreenVisibility() {
   const view = stateCache.uiView;
   const showLobby = view === 'lobby';
   const showBuilder = view === 'team-builder';

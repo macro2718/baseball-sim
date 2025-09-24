@@ -8,7 +8,12 @@ import {
   toggleOffenseMenu,
 } from '../ui/menus.js';
 import { closeModal, openModal, resolveModal } from '../ui/modals.js';
-import { updateStatsPanel, updateAbilitiesPanel, render } from '../ui/renderers.js';
+import {
+  updateStatsPanel,
+  updateAbilitiesPanel,
+  render,
+  updateScreenVisibility,
+} from '../ui/renderers.js';
 import { showStatus } from '../ui/status.js';
 import { handleDefensePlayerClick, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 
@@ -61,6 +66,8 @@ function loadTeamTemplate() {
 function refreshView() {
   if (stateCache.data) {
     render(stateCache.data);
+  } else {
+    updateScreenVisibility();
   }
 }
 
