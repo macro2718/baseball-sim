@@ -686,7 +686,11 @@ class SessionStateBuilder:
             numeric = float(value)
         except (TypeError, ValueError):
             return "-"
-        return f"{numeric:.2f}秒"
+        if math.isnan(numeric):
+            return "-"
+        if numeric.is_integer():
+            return str(int(numeric))
+        return f"{numeric:.1f}"
 
     @staticmethod
     def _format_rating(value) -> str:

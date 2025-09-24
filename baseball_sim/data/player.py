@@ -17,7 +17,7 @@ class Player:
         self.k_pct = k_pct        # 三振率（0-100）
         self.bb_pct = bb_pct      # 四球率（0-100）
         self.hard_pct = hard_pct  # 強い打球を打つ確率（0-100）
-        self.speed = speed        # 走力（塁間移動時間、秒単位で3.8-4.8程度）
+        self.speed = speed        # 走力（評価値、100が平均で高いほど速い）
         self.gb_pct = gb_pct  # ゴロ率
         self.fielding_skill = fielding_skill  # 守備力（0-100）
         
@@ -93,7 +93,7 @@ class Player:
 class Pitcher(Player):
     def __init__(self, name, k_pct, bb_pct, hard_pct, gb_pct, stamina, throws="R", pitcher_type="SP"):
         # Player(name, eligible_positions, k_pct, bb_pct, hard_pct, speed, gb_pct, fielding_skill, bats)
-        super().__init__(name, ["P"], k_pct, bb_pct, hard_pct, 4.3, gb_pct, 70, throws)
+        super().__init__(name, ["P"], k_pct, bb_pct, hard_pct, 100.0, gb_pct, 70, throws)
         self.k_pct = k_pct      # 三振率（0-100）
         self.bb_pct = bb_pct    # 四球率（0-100）
         self.hard_pct = hard_pct  # 強い打球を打たれる確率（0-100）

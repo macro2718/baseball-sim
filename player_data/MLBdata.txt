@@ -31,5 +31,5 @@ k/BB 2.69
 "k_pct": 23.9,
 "bb_pct": 15.2,
 "hard_pct": 54.2,
-"speed": 4.3,
+"speed": 100,
 "gb_pct": 42.6,

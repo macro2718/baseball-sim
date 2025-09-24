@@ -58,7 +58,7 @@ const ABILITY_METRIC_CONFIG = {
   bb_pct: { mean: 8.5, variation: 0.15, min: 2.5 },
   hard_pct: { mean: 38.6, variation: 0.15, min: 18 },
   gb_pct: { mean: 44.6, variation: 0.15, min: 20 },
-  speed: { mean: 4.3, variation: 0.05, min: 3.3, max: 5.8 },
+  speed: { mean: 100, variation: 0.05, min: 74, max: 130 },
   fielding: { mean: 100, variation: 0.15, min: 40, max: 160 },
   stamina: { mean: 80, variation: 0.15, min: 30, max: 150 },
 };
@@ -557,7 +557,11 @@ function formatRunnerSpeed(info) {
   const raw = info.speed ?? info.runner_speed;
   const numeric = Number(raw);
   if (Number.isFinite(numeric)) {
-    return `${numeric.toFixed(2)}秒`;
+    const rounded = Number(numeric.toFixed(1));
+    if (Number.isInteger(rounded)) {
+      return `${rounded}`;
+    }
+    return `${rounded.toFixed(1)}`;
   }
   return null;
 }

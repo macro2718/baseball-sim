@@ -12,6 +12,9 @@ from baseball_sim.config import (
 from baseball_sim.infrastructure.logging_utils import logger
 
 
+AVERAGE_SPEED = BuntConstants.STANDARD_RUNNER_SPEED
+
+
 def clear_base(bases, base_index: int) -> None:
     """指定した塁の走者を取り除く。"""
     bases[base_index] = None
@@ -291,7 +294,7 @@ class BuntProcessor:
             return None, 0
 
         runner_speed = self._get_runner_speed(1)
-        if runner_speed < BuntConstants.FAST_RUNNER_SPEED:
+        if runner_speed > BuntConstants.FAST_RUNNER_SPEED:
             if random.random() < BuntConstants.HOME_IN_PROBABILITY_FAST_RUNNER:
                 return None, 1
 
@@ -303,7 +306,7 @@ class BuntProcessor:
             return None
 
         runner_speed = self._get_runner_speed(0)
-        if runner_speed < BuntConstants.VERY_FAST_RUNNER_SPEED:
+        if runner_speed > BuntConstants.VERY_FAST_RUNNER_SPEED:
             if new_bases[2] is None and random.random() < BuntConstants.TRIPLE_ADVANCE_PROBABILITY:
                 return 2
 
@@ -400,7 +403,7 @@ class BuntProcessor:
         base_success_rate = self._get_base_success_rate_by_bunt_type(bunt_type)
         
         # 走力による成功率調整
-        speed_factor = BuntConstants.STANDARD_RUNNER_SPEED / runner_speed
+        speed_factor = runner_speed / BuntConstants.STANDARD_RUNNER_SPEED
         speed_adjusted_rate = base_success_rate * speed_factor
         
         # アウトカウントによる成功率調整
@@ -626,15 +629,15 @@ class RunnerEngine:
         # 三塁走者の処理（状況に応じてホーム突入を判断）
         third_runner = bases[2]
         if third_runner is not None:
-            runner_speed = getattr(third_runner, "speed", 4.3)
+            runner_speed = getattr(third_runner, "speed", AVERAGE_SPEED)
             forced_home = bases[1] is not None
 
             # 強制進塁が無い場合のみ「突入しない」選択肢が生じる
-            attempt_probability = 0.85 * (4.3 / runner_speed)
+            attempt_probability = 0.85 * (runner_speed / AVERAGE_SPEED)
             attempt_probability = max(0.5, min(0.95, attempt_probability))
 
             if forced_home or random.random() < attempt_probability:
-                success_probability = 0.75 * (4.3 / runner_speed)
+                success_probability = 0.75 * (runner_speed / AVERAGE_SPEED)
                 success_probability = max(0.4, min(0.98, success_probability))
 
                 if random.random() < success_probability:
@@ -644,7 +647,7 @@ class RunnerEngine:
                         clear_base(bases, 2)
                         self.game_state.add_out()
                     else:
-                        out_probability = 0.45 * (runner_speed / 4.3)
+                        out_probability = 0.45 * (AVERAGE_SPEED / runner_speed)
                         out_probability = max(0.25, min(0.7, out_probability))
                         if random.random() < out_probability:
                             clear_base(bases, 2)
@@ -653,11 +656,11 @@ class RunnerEngine:
         # 二塁走者の処理（既存ロジック踏襲。走者でなく batter.speed を参照していた挙動を保持）
         if bases[1] is not None:
             run_probability = 0.65
-            run_probability *= (4.3 / batter.speed)
+            run_probability *= (batter.speed / AVERAGE_SPEED)
             if random.random() < run_probability:
                 runner = bases[1]
-                runner_speed = getattr(runner, "speed", getattr(batter, "speed", 4.3))
-                success_probability = 0.8 * (4.3 / runner_speed)
+                runner_speed = getattr(runner, "speed", getattr(batter, "speed", AVERAGE_SPEED))
+                success_probability = 0.8 * (runner_speed / AVERAGE_SPEED)
                 success_probability = max(0.3, min(0.95, success_probability))
                 if random.random() < success_probability:
                     runs += score_runner(bases, 1)
@@ -671,10 +674,10 @@ class RunnerEngine:
         if bases[0] is not None:
             runner = bases[0]
             advance_probability = 0.1
-            advance_probability *= (4.3 / batter.speed)
+            advance_probability *= (batter.speed / AVERAGE_SPEED)
             if bases[2] is None and random.random() < advance_probability:
-                runner_speed = getattr(runner, "speed", getattr(batter, "speed", 4.3))
-                success_probability = 0.7 * (4.3 / runner_speed)
+                runner_speed = getattr(runner, "speed", getattr(batter, "speed", AVERAGE_SPEED))
+                success_probability = 0.7 * (runner_speed / AVERAGE_SPEED)
                 success_probability = max(0.25, min(0.9, success_probability))
                 if random.random() < success_probability:
                     move_runner(bases, 0, 2)
@@ -701,11 +704,11 @@ class RunnerEngine:
 
         # 一塁走者の処理
         if bases[0] is not None:
-            run_probability = 0.2 * (4.3 / batter.speed)
+            run_probability = 0.2 * (batter.speed / AVERAGE_SPEED)
             if random.random() < run_probability:
                 runner = bases[0]
-                runner_speed = getattr(runner, "speed", getattr(batter, "speed", 4.3))
-                success_probability = 0.75 * (4.3 / runner_speed)
+                runner_speed = getattr(runner, "speed", getattr(batter, "speed", AVERAGE_SPEED))
+                success_probability = 0.75 * (runner_speed / AVERAGE_SPEED)
                 success_probability = max(0.35, min(0.98, success_probability))
                 if random.random() < success_probability:
                     runs += score_runner(bases, 0)
@@ -726,12 +729,12 @@ class RunnerEngine:
         bases = self.game_state.bases
         runs = score_all_runners(bases)
 
-        batter_speed = getattr(batter, "speed", 4.3)
-        attempt_probability = 0.12 * (4.3 / batter_speed)
+        batter_speed = getattr(batter, "speed", AVERAGE_SPEED)
+        attempt_probability = 0.12 * (batter_speed / AVERAGE_SPEED)
         attempt_probability = max(0.05, min(0.3, attempt_probability))
 
         if random.random() < attempt_probability:
-            success_probability = 0.55 * (4.3 / batter_speed)
+            success_probability = 0.55 * (batter_speed / AVERAGE_SPEED)
             success_probability = max(0.25, min(0.85, success_probability))
             if random.random() < success_probability:
                 runs += 1
@@ -783,7 +786,7 @@ class RunnerEngine:
             return "bases_loaded"
 
     def _handle_dp_with_zero_outs(self, batter, runner_situation) -> Tuple[int, str]:
-        dp_probability = 0.4 * (batter.speed / 4.3)
+        dp_probability = 0.4 * (AVERAGE_SPEED / batter.speed)
         if random.random() < dp_probability:
             # ダブルプレー成功
             runs_scored = self._execute_double_play(runner_situation)
@@ -799,7 +802,7 @@ class RunnerEngine:
             return self._handle_force_out_only(batter, runner_situation)
 
     def _handle_dp_with_one_out(self, batter, runner_situation) -> Tuple[int, str]:
-        dp_probability = 0.35 * (batter.speed / 4.3)
+        dp_probability = 0.35 * (AVERAGE_SPEED / batter.speed)
         if random.random() < dp_probability:
             # ダブルプレー成功 - イニング終了（点は入らない）
             runs_scored = 0
@@ -955,12 +958,12 @@ class RunnerEngine:
             # 二塁走者のタッチアップ進塁判定
             second_runner = bases[1]
             if second_runner is not None and bases[2] is None and outs_available > 0:
-                second_speed = getattr(second_runner, "speed", 4.3) or 4.3
-                attempt_probability = 0.45 * depth_factor * (4.3 / second_speed)
+                second_speed = getattr(second_runner, "speed", AVERAGE_SPEED) or AVERAGE_SPEED
+                attempt_probability = 0.45 * depth_factor * (second_speed / AVERAGE_SPEED)
                 attempt_probability = max(0.0, min(0.8, attempt_probability))
                 attempt_roll = random.random()
                 if attempt_roll < attempt_probability:
-                    success_probability = 0.65 * depth_factor * (4.3 / second_speed)
+                    success_probability = 0.65 * depth_factor * (second_speed / AVERAGE_SPEED)
                     success_probability = max(0.2, min(0.9, success_probability))
                     if random.random() < success_probability:
                         move_runner(bases, 1, 2)
@@ -971,7 +974,7 @@ class RunnerEngine:
                         if outs_available <= 0:
                             return runs
                 else:
-                    leave_early_probability = 0.05 * (4.3 / second_speed)
+                    leave_early_probability = 0.05 * (second_speed / AVERAGE_SPEED)
                     leave_early_probability = max(0.0, min(0.25, leave_early_probability))
                     if random.random() < leave_early_probability:
                         clear_base(bases, 1)
@@ -983,12 +986,12 @@ class RunnerEngine:
             # 一塁走者のタッチアップ進塁判定
             first_runner = bases[0]
             if first_runner is not None and bases[1] is None and outs_available > 0:
-                first_speed = getattr(first_runner, "speed", 4.3) or 4.3
-                attempt_probability = 0.3 * depth_factor * (4.3 / first_speed)
+                first_speed = getattr(first_runner, "speed", AVERAGE_SPEED) or AVERAGE_SPEED
+                attempt_probability = 0.3 * depth_factor * (first_speed / AVERAGE_SPEED)
                 attempt_probability = max(0.0, min(0.65, attempt_probability))
                 attempt_roll = random.random()
                 if attempt_roll < attempt_probability:
-                    success_probability = 0.55 * depth_factor * (4.3 / first_speed)
+                    success_probability = 0.55 * depth_factor * (first_speed / AVERAGE_SPEED)
                     success_probability = max(0.15, min(0.85, success_probability))
                     if random.random() < success_probability:
                         move_runner(bases, 0, 1)
@@ -999,7 +1002,7 @@ class RunnerEngine:
                         if outs_available <= 0:
                             return runs
                 else:
-                    leave_early_probability = 0.04 * (4.3 / first_speed)
+                    leave_early_probability = 0.04 * (first_speed / AVERAGE_SPEED)
                     leave_early_probability = max(0.0, min(0.2, leave_early_probability))
                     if random.random() < leave_early_probability:
                         clear_base(bases, 0)

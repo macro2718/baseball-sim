@@ -30,7 +30,7 @@ const DEFAULT_PLAYER_TEMPLATES = {
     bb_pct: 8.5,
     hard_pct: 38.6,
     gb_pct: 44.6,
-    speed: 4.3,
+    speed: 100,
     fielding_skill: 100,
   },
   pitcher: {
@@ -105,7 +105,7 @@ function getBatterAbilityChips(player) {
   chips.push(createAbilityChip('BB%', formatPercent(stats.bb_pct)));
   chips.push(createAbilityChip('Hard%', formatPercent(stats.hard_pct)));
   chips.push(createAbilityChip('GB%', formatPercent(stats.gb_pct)));
-  chips.push(createAbilityChip('Speed', formatNumber(stats.speed, 2)));
+  chips.push(createAbilityChip('Speed', formatNumber(stats.speed, 1)));
   chips.push(createAbilityChip('Field', formatNumber(stats.fielding_skill, 0)));
   return chips;
 }
