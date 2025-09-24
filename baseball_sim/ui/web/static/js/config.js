@@ -17,11 +17,13 @@ export const CONFIG = {
       reloadTeams: '/api/teams/reload',
       teamSelect: '/api/teams/library/select',
       teamSave: '/api/teams/library/save',
+      teamDelete: '/api/teams/library/delete',
       teamDetail: '/api/teams/library',
       // Player endpoints
       playersList: '/api/players/list',
       playerDetail: '/api/players/detail',
       playerSave: '/api/players/save',
+      playerDelete: '/api/players/delete',
       health: '/api/health',
     },
   },

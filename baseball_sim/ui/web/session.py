@@ -224,6 +224,38 @@ class WebGameSession:
         state = self.build_state()
         return saved_id, state
 
+    def delete_team_definition(self, team_id: str) -> Dict[str, Any]:
+        """Delete a stored team definition and refresh state if needed."""
+        if not team_id:
+            raise GameSessionError("チームIDを指定してください。")
+
+        # Capture whether the team is currently active before deletion
+        previously_active_ids = {self._home_team_id, self._away_team_id}
+
+        try:
+            selection = self._team_library.delete_team(team_id)
+        except TeamLibraryError as exc:
+            raise GameSessionError(str(exc)) from exc
+
+        # Update local cached selection
+        self._home_team_id = selection.get("home")
+        self._away_team_id = selection.get("away")
+
+        # If the deleted team was active, force reload and reset game state
+        if team_id in previously_active_ids:
+            # ensure_selection_valid would already have adjusted IDs, but just in case
+            self.ensure_teams(force_reload=True)
+            self.game_state = None
+            self._log.clear()
+            self._game_over_announced = False
+            self._action_block_reason = None
+        else:
+            # Even if not active, refresh description and keep things in sync
+            self.ensure_teams(force_reload=False)
+
+        self._notifications.publish("success", f"Team '{team_id}' を削除しました。")
+        return self.build_state()
+
     # ------------------------------------------------------------------
     # Gameplay actions
     # ------------------------------------------------------------------

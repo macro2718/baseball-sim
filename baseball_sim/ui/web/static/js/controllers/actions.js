@@ -279,6 +279,24 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleTeamDelete(teamId) {
+    if (!teamId) {
+      showStatus('削除するチームを選択してください。', 'danger');
+      return null;
+    }
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.teamDelete, {
+        method: 'POST',
+        body: JSON.stringify({ team_id: teamId }),
+      });
+      render(payload);
+      return teamId;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
   async function fetchPlayersList(role) {
     const endpoint = `${CONFIG.api.endpoints.playersList}?role=${encodeURIComponent(role || 'batter')}`;
     try {
@@ -319,6 +337,28 @@ export function createGameActions(render) {
     }
   }
 
+  async function handlePlayerDelete(name, role) {
+    if (!name) {
+      showStatus('削除する選手を選択してください。', 'danger');
+      return null;
+    }
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playerDelete, {
+        method: 'POST',
+        body: JSON.stringify({ name, role }),
+      });
+      if (payload?.state) {
+        render(payload.state);
+      } else {
+        render(payload);
+      }
+      return name;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
   return {
     handleStart,
     handleReloadTeams,
@@ -337,5 +377,7 @@ export function createGameActions(render) {
     fetchPlayersList,
     fetchPlayerDefinition,
     handlePlayerSave,
+    handleTeamDelete,
+    handlePlayerDelete,
   };
 }

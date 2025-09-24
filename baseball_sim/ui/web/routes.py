@@ -160,6 +160,18 @@ def create_routes(session: WebGameSession) -> Blueprint:
             return create_error_response(str(exc), session)
         return jsonify({"team_id": saved_id, "state": state})
 
+    @api_bp.post("/teams/library/delete")
+    def delete_team_definition() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        team_id = payload.get("team_id")
+        if not isinstance(team_id, str) or not team_id.strip():
+            return create_error_response("削除するチームIDを指定してください。", session)
+        try:
+            state = session.delete_team_definition(team_id.strip())
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     # ------------------------- Players API -------------------------
     @api_bp.get("/players/list")
     def list_players() -> Dict[str, Any]:
@@ -224,6 +236,52 @@ def create_routes(session: WebGameSession) -> Blueprint:
         # 保存後、チームに影響は基本なしだが、stateを返してUIを再同期
         state = session.build_state()
         return jsonify({"name": player['name'], "role": role, "state": state})
+
+    @api_bp.post("/players/delete")
+    def player_delete() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        name = (payload.get('name') or '').strip()
+        role = (payload.get('role') or '').strip().lower()
+        if not name:
+            return create_error_response("削除する選手名を指定してください。", session)
+        players_path = path_manager.get_players_data_path()
+        data = FileUtils.safe_json_load(players_path, default={"batters": [], "pitchers": []})
+        if not isinstance(data, dict):
+            data = {"batters": [], "pitchers": []}
+        data.setdefault('batters', [])
+        data.setdefault('pitchers', [])
+
+        def remove_by_name(items, target_name):
+            removed = False
+            output = []
+            for p in items:
+                if isinstance(p, dict) and p.get('name') == target_name:
+                    removed = True
+                else:
+                    output.append(p)
+            return removed, output
+
+        removed_any = False
+        if role in ('batter', 'pitcher'):
+            key = 'pitchers' if role == 'pitcher' else 'batters'
+            removed_any, data[key] = remove_by_name(list(data[key]), name)
+        else:
+            removed_bat, new_bat = remove_by_name(list(data['batters']), name)
+            removed_pit, new_pit = remove_by_name(list(data['pitchers']), name)
+            data['batters'] = new_bat
+            data['pitchers'] = new_pit
+            removed_any = removed_bat or removed_pit
+
+        if not removed_any:
+            return create_error_response("指定された選手は見つかりません。", session)
+
+        if not FileUtils.safe_json_save(data, players_path):
+            return create_error_response("選手データの保存に失敗しました。", session)
+
+        # Note: Teams that reference this player are not auto-updated here.
+        # Frontend can warn users or they can update team JSON accordingly.
+        state = session.build_state()
+        return jsonify({"deleted": name, "state": state})
 
     @api_bp.get("/health")
     def health() -> Dict[str, Any]:

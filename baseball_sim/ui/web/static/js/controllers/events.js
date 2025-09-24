@@ -413,6 +413,50 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.playerBuilderDelete) {
+    elements.playerBuilderDelete.addEventListener('click', async () => {
+      const role = elements.playerEditorRole?.value || 'batter';
+      const name = elements.playerEditorSelect?.value || '';
+      if (!name || name === '__new__') {
+        setPlayerBuilderFeedback('削除する選手を選択してください。', 'danger');
+        return;
+      }
+      const confirmed = window.confirm(`選手 '${name}' を削除します。よろしいですか？`);
+      if (!confirmed) return;
+      elements.playerBuilderDelete.disabled = true;
+      try {
+        await actions.handlePlayerDelete(name, role);
+        if (elements.playerEditorJson) elements.playerEditorJson.value = '';
+        if (elements.playerEditorSelect) {
+          const players = await actions.fetchPlayersList(role);
+          const select = elements.playerEditorSelect;
+          select.innerHTML = '';
+          const ph = document.createElement('option');
+          ph.value = '';
+          ph.textContent = '選手を選択';
+          select.appendChild(ph);
+          const newOpt = document.createElement('option');
+          newOpt.value = '__new__';
+          newOpt.textContent = '新規選手を作成';
+          select.appendChild(newOpt);
+          players.forEach((pname) => {
+            const opt = document.createElement('option');
+            opt.value = pname;
+            opt.textContent = pname;
+            select.appendChild(opt);
+          });
+          select.value = '';
+        }
+        setPlayerBuilderFeedback('選手を削除しました。', 'success');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';
+        setPlayerBuilderFeedback(message, 'danger');
+      } finally {
+        elements.playerBuilderDelete.disabled = false;
+      }
+    });
+  }
+
   if (elements.teamEditorJson) {
     elements.teamEditorJson.addEventListener('input', () => {
       stateCache.teamBuilder.editorDirty = true;
@@ -452,6 +496,38 @@ export function initEventListeners(actions) {
         setTeamBuilderFeedback(message, 'danger');
       } finally {
         elements.teamBuilderSave.disabled = false;
+      }
+    });
+  }
+
+  if (elements.teamBuilderDelete) {
+    elements.teamBuilderDelete.addEventListener('click', async () => {
+      const teamId = stateCache.teamBuilder.currentTeamId;
+      if (!teamId) {
+        setTeamBuilderFeedback('削除するチームを選択してください。', 'danger');
+        return;
+      }
+      const confirmed = window.confirm(`チーム '${teamId}' を削除します。よろしいですか？`);
+      if (!confirmed) return;
+      elements.teamBuilderDelete.disabled = true;
+      try {
+        await actions.handleTeamDelete(teamId);
+        if (elements.teamEditorJson) {
+          elements.teamEditorJson.value = '';
+        }
+        stateCache.teamBuilder.currentTeamId = null;
+        stateCache.teamBuilder.lastSavedId = null;
+        stateCache.teamBuilder.editorDirty = false;
+        setTeamBuilderFeedback('チームを削除しました。', 'success');
+        setUIView('team-builder');
+        if (stateCache.data) {
+          render(stateCache.data);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'チームの削除に失敗しました。';
+        setTeamBuilderFeedback(message, 'danger');
+      } finally {
+        elements.teamBuilderDelete.disabled = false;
       }
     });
   }

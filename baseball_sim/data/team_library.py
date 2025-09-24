@@ -217,6 +217,31 @@ class TeamLibrary:
         self._write_team_file(candidate_id, normalised, overwrite=True)
         return candidate_id
 
+    def delete_team(self, team_id: str) -> Dict[str, Optional[str]]:
+        """Delete a team definition JSON by its identifier.
+
+        Returns the updated selection mapping. Raises TeamLibraryError on failure.
+        """
+        if not team_id:
+            raise TeamLibraryError("チームIDを指定してください。")
+
+        target_path = self._directory / f"{team_id}.json"
+        if not target_path.is_file():
+            raise TeamLibraryError(f"チーム '{team_id}' のファイルが見つかりません。")
+
+        try:
+            target_path.unlink()
+        except OSError as exc:
+            raise TeamLibraryError(f"チーム '{team_id}' の削除に失敗しました。") from exc
+
+        # Ensure selection remains valid after deletion
+        selection = self.ensure_selection_valid()
+        # Return normalized Optional[str] selection for convenience
+        return {
+            "home": selection.get("home"),
+            "away": selection.get("away"),
+        }
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
