@@ -287,17 +287,6 @@
       "id": "b1e9203d-1eab-4e26-a52f-7c11b145bcf2"
     },
     {
-      "name": "average pitcher",
-      "pitcher_type": "SP",
-      "throws": "R",
-      "k_pct": 22.8,
-      "bb_pct": 8.5,
-      "hard_pct": 38.6,
-      "gb_pct": 44.6,
-      "stamina": 80,
-      "id": "d3d29026-3a03-45c1-9aed-7ff977833342"
-    },
-    {
       "bb_pct": 8.5,
       "gb_pct": 44.6,
       "hard_pct": 38.6,

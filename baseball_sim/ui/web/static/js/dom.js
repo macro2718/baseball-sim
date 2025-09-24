@@ -58,6 +58,7 @@ export const elements = {
   teamDeleteSelect: document.getElementById('team-delete-select'),
   teamDeleteConfirm: document.getElementById('team-delete-confirm'),
   teamDeleteFeedback: document.getElementById('team-delete-feedback'),
+  teamDeleteHome: document.getElementById('team-delete-home'),
   // Player builder elements
   playerEditorRole: document.getElementById('player-editor-role'),
   playerRoleButtons: Array.from(document.querySelectorAll('[data-role-choice]')),
@@ -86,6 +87,7 @@ export const elements = {
   playerDeleteSelect: document.getElementById('player-delete-select'),
   playerDeleteConfirm: document.getElementById('player-delete-confirm'),
   playerDeleteFeedback: document.getElementById('player-delete-feedback'),
+  playerDeleteHome: document.getElementById('player-delete-home'),
   logPanel: document.getElementById('log-panel'),
   logContainer: document.getElementById('log-entries'),
   scoreboard: document.getElementById('scoreboard'),

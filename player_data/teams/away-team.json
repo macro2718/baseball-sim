@@ -1,14 +1,5 @@
 {
-  "bench": [
-    "Average Batter",
-    "Shigeru Yamazaki",
-    "Kenji Hasegawa",
-    "Takumi Sakamoto",
-    "Jin Yamazaki",
-    "Akira Yamamoto",
-    "Takuya Watanabe",
-    "Naoki Takeuchi"
-  ],
+  "name": "Default Away Team",
   "lineup": [
     {
       "name": "Tsuyoshi Takagi",
@@ -47,7 +38,6 @@
       "position": "DH"
     }
   ],
-  "name": "Away Team",
   "pitchers": [
     "Yosuke Fukuda",
     "Akira Murakami",
@@ -62,5 +52,15 @@
     "Naoki Hayashi",
     "Ichiro Hayashi",
     "Soichiro Sakamoto"
+  ],
+  "bench": [
+    "Average Batter",
+    "Shigeru Yamazaki",
+    "Kenji Hasegawa",
+    "Takumi Sakamoto",
+    "Jin Yamazaki",
+    "Akira Yamamoto",
+    "Takuya Watanabe",
+    "Naoki Takeuchi"
   ]
 }

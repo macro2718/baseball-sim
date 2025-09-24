@@ -1931,7 +1931,21 @@ function renderTeamBuilderCatalog() {
     return;
   }
   const catalog = stateCache.teamBuilder.catalog === 'pitchers' ? 'pitchers' : 'batters';
-  const list = Array.isArray(players[catalog]) ? players[catalog] : [];
+  let list = Array.isArray(players[catalog]) ? players[catalog] : [];
+  // Exclude players already assigned in the lineup from the selectable list
+  try {
+    const form = getTeamBuilderForm();
+    const lineupIds = new Set(
+      (form?.lineup || [])
+        .map((slot) => (slot && slot.playerId ? String(slot.playerId) : null))
+        .filter((id) => id)
+    );
+    if (lineupIds.size > 0) {
+      list = list.filter((record) => record && !lineupIds.has(String(record.id)));
+    }
+  } catch (_) {
+    // noop – fall back to unfiltered list if anything goes wrong
+  }
   const term = (stateCache.teamBuilder.searchTerm || '').trim().toLowerCase();
   const filtered = term
     ? list.filter((record) => record.name && record.name.toLowerCase().includes(term))
@@ -1947,9 +1961,8 @@ function renderTeamBuilderCatalog() {
   const playerSwapSource = stateCache.teamBuilder.playerSwap?.source;
   filtered.forEach((record) => {
     const assignment = findPlayerAssignment(record.id);
-    if (assignment?.group === 'lineup') {
-      return;
-    }
+    // Lineup players are already filtered out above; keep this guard for safety
+    if (assignment?.group === 'lineup') return;
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'builder-player-card';
@@ -2297,232 +2310,6 @@ export function initEventListeners(actions) {
     return players;
   }
 
-  function setTeamDeleteFeedback(message, level = 'info') {
-    const feedback = elements.teamDeleteFeedback;
-    if (!feedback) return;
-    feedback.textContent = message || '';
-    feedback.classList.remove('danger', 'success', 'info', 'warning');
-    if (message) {
-      feedback.classList.add(level);
-      feedback.dataset.level = level;
-    } else {
-      feedback.removeAttribute('data-level');
-    }
-  }
-
-  function updateTeamDeleteOptions() {
-    const select = elements.teamDeleteSelect;
-    const confirm = elements.teamDeleteConfirm;
-    if (!select) {
-      return { hasTeams: false };
-    }
-    const teams = Array.isArray(stateCache.teamLibrary?.teams) ? stateCache.teamLibrary.teams : [];
-    select.innerHTML = '';
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = teams.length ? '削除するチームを選択' : 'チームが登録されていません';
-    select.appendChild(placeholder);
-    teams.forEach((team) => {
-      const id = team?.id != null ? String(team.id) : '';
-      if (!id) {
-        return;
-      }
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = team?.name ? String(team.name) : id;
-      select.appendChild(option);
-    });
-    select.value = '';
-    select.disabled = !teams.length;
-    if (confirm) {
-      confirm.disabled = true;
-    }
-    return { hasTeams: teams.length > 0 };
-  }
-
-  function handleTeamDeleteSelectionChange() {
-    const select = elements.teamDeleteSelect;
-    const confirm = elements.teamDeleteConfirm;
-    if (!select) {
-      return;
-    }
-    const value = select.value;
-    if (confirm) {
-      confirm.disabled = !value;
-    }
-    if (!elements.teamDeleteFeedback) {
-      return;
-    }
-    if (!value) {
-      if (select.disabled) {
-        const hasTeams = select.options.length > 1;
-        if (!hasTeams) {
-          setTeamDeleteFeedback('削除できるチームがありません。', 'warning');
-        }
-        return;
-      }
-      const hasTeams = select.options.length > 1;
-      if (hasTeams) {
-        setTeamDeleteFeedback('削除するチームを選択してください。', 'info');
-      } else {
-        setTeamDeleteFeedback('削除できるチームがありません。', 'warning');
-      }
-      return;
-    }
-    const label = select.selectedOptions?.[0]?.textContent || value;
-    setTeamDeleteFeedback(`チーム「${label}」を削除できます。この操作は取り消せません。`, 'warning');
-  }
-
-  const playerDeleteCache = {
-    batter: { players: [], loaded: false, promise: null },
-    pitcher: { players: [], loaded: false, promise: null },
-  };
-
-  function setPlayerDeleteFeedback(message, level = 'info') {
-    const feedback = elements.playerDeleteFeedback;
-    if (!feedback) return;
-    feedback.textContent = message || '';
-    feedback.classList.remove('danger', 'success', 'info', 'warning');
-    if (message) {
-      feedback.classList.add(level);
-      feedback.dataset.level = level;
-    } else {
-      feedback.removeAttribute('data-level');
-    }
-  }
-
-  function populatePlayerDeleteSelect(players) {
-    const select = elements.playerDeleteSelect;
-    const confirm = elements.playerDeleteConfirm;
-    if (!select) {
-      return;
-    }
-    const list = Array.isArray(players) ? players : [];
-    select.innerHTML = '';
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = list.length ? '削除する選手を選択' : '選手が登録されていません';
-    select.appendChild(placeholder);
-    list.forEach((player) => {
-      const id = player?.id != null ? String(player.id) : '';
-      if (!id) {
-        return;
-      }
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = player?.name ? String(player.name) : id;
-      select.appendChild(option);
-    });
-    select.value = '';
-    select.disabled = !list.length;
-    if (confirm) {
-      confirm.disabled = true;
-    }
-  }
-
-  async function ensurePlayerDeleteOptions(role, { forceReload = false } = {}) {
-    const normalizedRole = role === 'pitcher' ? 'pitcher' : 'batter';
-    const cache = playerDeleteCache[normalizedRole];
-    if (forceReload) {
-      cache.loaded = false;
-      cache.promise = null;
-    }
-    if (cache.loaded && !forceReload) {
-      populatePlayerDeleteSelect(cache.players);
-      handlePlayerDeleteSelectionChange();
-      return cache.players;
-    }
-    if (cache.promise) {
-      await cache.promise;
-      populatePlayerDeleteSelect(cache.players);
-      handlePlayerDeleteSelectionChange();
-      return cache.players;
-    }
-    const select = elements.playerDeleteSelect;
-    const confirm = elements.playerDeleteConfirm;
-    if (select) {
-      select.disabled = true;
-      select.innerHTML = '';
-      const loadingOption = document.createElement('option');
-      loadingOption.value = '';
-      loadingOption.textContent = '読み込み中...';
-      select.appendChild(loadingOption);
-      select.value = '';
-    }
-    if (confirm) {
-      confirm.disabled = true;
-    }
-    setPlayerDeleteFeedback('選手リストを読み込み中です...', 'info');
-    const loadPromise = (async () => {
-      try {
-        const players = await actions.fetchPlayersList(normalizedRole);
-        const list = Array.isArray(players) ? players : [];
-        cache.players = list;
-        cache.loaded = true;
-        populatePlayerDeleteSelect(list);
-        handlePlayerDeleteSelectionChange();
-        return list;
-      } catch (error) {
-        cache.players = [];
-        cache.loaded = false;
-        const message =
-          error instanceof Error ? error.message : '選手リストの取得に失敗しました。';
-        if (select) {
-          select.innerHTML = '';
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = '選手を選択';
-          select.appendChild(placeholder);
-          select.value = '';
-          select.disabled = true;
-        }
-        if (confirm) {
-          confirm.disabled = true;
-        }
-        setPlayerDeleteFeedback(message, 'danger');
-        return [];
-      } finally {
-        cache.promise = null;
-      }
-    })();
-    cache.promise = loadPromise;
-    const players = await loadPromise;
-    return players;
-  }
-
-  function handlePlayerDeleteSelectionChange() {
-    const select = elements.playerDeleteSelect;
-    const confirm = elements.playerDeleteConfirm;
-    if (!select) {
-      return;
-    }
-    const value = select.value;
-    if (confirm) {
-      confirm.disabled = !value;
-    }
-    if (!elements.playerDeleteFeedback) {
-      return;
-    }
-    if (!value) {
-      if (select.disabled) {
-        const hasOptions = select.options.length > 1;
-        if (!hasOptions) {
-          setPlayerDeleteFeedback('削除できる選手がいません。', 'warning');
-        }
-        return;
-      }
-      const hasOptions = select.options.length > 1;
-      if (hasOptions) {
-        setPlayerDeleteFeedback('削除する選手を選択してください。', 'info');
-      } else {
-        setPlayerDeleteFeedback('削除できる選手がいません。', 'warning');
-      }
-      return;
-    }
-    const label = select.selectedOptions?.[0]?.textContent || value;
-    setPlayerDeleteFeedback(`選手「${label}」を削除できます。この操作は取り消せません。`, 'warning');
-  }
-
   updatePlayerRoleUI(elements.playerEditorRole?.value || 'batter');
 
   elements.startButton.addEventListener('click', () => actions.handleStart(false));
@@ -2538,6 +2325,80 @@ export function initEventListeners(actions) {
   }
   if (elements.openOffenseButton) {
     elements.openOffenseButton.addEventListener('click', toggleOffenseMenu);
+  }
+  // Open team/player delete modals from lobby
+  if (elements.openTeamDelete) {
+    elements.openTeamDelete.addEventListener('click', () => {
+      // Populate team delete select from current team library
+      const select = elements.teamDeleteSelect;
+      const feedback = elements.teamDeleteFeedback;
+      if (feedback) feedback.textContent = '';
+      if (select) {
+        const teams = (stateCache.teamLibrary?.teams || []).slice();
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'チームを選択';
+        select.appendChild(placeholder);
+        teams.forEach((t) => {
+          if (!t || !t.id) return;
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = t.name || t.id;
+          select.appendChild(opt);
+        });
+        select.value = '';
+      }
+      openModal('team-delete');
+    });
+  }
+  if (elements.openPlayerDelete) {
+    elements.openPlayerDelete.addEventListener('click', async () => {
+      const roleSel = elements.playerDeleteRole;
+      const listSel = elements.playerDeleteSelect;
+      const feedback = elements.playerDeleteFeedback;
+      if (feedback) feedback.textContent = '';
+      const role = roleSel?.value || 'batter';
+      if (listSel) {
+        listSel.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '選手を選択';
+        listSel.appendChild(placeholder);
+        try {
+          const players = await actions.fetchPlayersList(role);
+          players.forEach((p) => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            listSel.appendChild(opt);
+          });
+          listSel.value = '';
+        } catch (e) {
+          if (feedback) feedback.textContent = e instanceof Error ? e.message : '選手リストの取得に失敗しました。';
+        }
+      }
+      openModal('player-delete');
+    });
+  }
+
+  // "ホームに戻る" buttons inside delete modals
+  if (elements.teamDeleteHome) {
+    elements.teamDeleteHome.addEventListener('click', () => {
+      // Close modal and go back to lobby
+      const modal = elements.teamDeleteModal;
+      if (modal) closeModal(modal);
+      setUIView('lobby');
+      refreshView();
+    });
+  }
+  if (elements.playerDeleteHome) {
+    elements.playerDeleteHome.addEventListener('click', () => {
+      const modal = elements.playerDeleteModal;
+      if (modal) closeModal(modal);
+      setUIView('lobby');
+      refreshView();
+    });
   }
   if (elements.offensePinchMenuButton) {
     elements.offensePinchMenuButton.addEventListener('click', () => openModal('offense'));
@@ -2594,140 +2455,6 @@ export function initEventListeners(actions) {
         // エラーハンドリングはhandleTeamSelection内で行われる
       } finally {
         elements.enterTitleButton.disabled = false;
-      }
-    });
-  }
-
-  if (elements.openTeamDelete) {
-    elements.openTeamDelete.addEventListener('click', () => {
-      updateTeamDeleteOptions();
-      handleTeamDeleteSelectionChange();
-      openModal('team-delete');
-      if (elements.teamDeleteSelect && !elements.teamDeleteSelect.disabled) {
-        elements.teamDeleteSelect.focus();
-      }
-    });
-  }
-
-  if (elements.teamDeleteSelect) {
-    elements.teamDeleteSelect.addEventListener('change', () => {
-      handleTeamDeleteSelectionChange();
-    });
-  }
-
-  if (elements.teamDeleteConfirm) {
-    elements.teamDeleteConfirm.addEventListener('click', async () => {
-      const select = elements.teamDeleteSelect;
-      if (!select) {
-        return;
-      }
-      const teamId = select.value;
-      const teamLabel = select.selectedOptions?.[0]?.textContent || teamId;
-      if (!teamId) {
-        setTeamDeleteFeedback('削除するチームを選択してください。', 'danger');
-        return;
-      }
-      const confirmed = window.confirm(`チーム「${teamLabel}」を削除します。よろしいですか？`);
-      if (!confirmed) {
-        return;
-      }
-      elements.teamDeleteConfirm.disabled = true;
-      select.disabled = true;
-      setTeamDeleteFeedback('チームを削除しています...', 'info');
-      try {
-        await actions.handleTeamDelete(teamId);
-        if (stateCache.teamBuilder.currentTeamId === teamId) {
-          stateCache.teamBuilder.currentTeamId = null;
-          stateCache.teamBuilder.lastSavedId = null;
-          stateCache.teamBuilder.editorDirty = false;
-          stateCache.teamBuilder.form = createDefaultTeamForm();
-          setSelectionAndCatalog('lineup', 0);
-          resetLineupPositionSelection();
-          clearPlayerSwapSelection();
-          captureTeamBuilderSnapshot(stateCache.teamBuilder.form);
-          renderTeamBuilderView();
-          setTeamBuilderFeedback('チームを削除しました。', 'success');
-        }
-        updateTeamDeleteOptions();
-        setTeamDeleteFeedback(`チーム「${teamLabel}」を削除しました。`, 'success');
-        showStatus('チームを削除しました。', 'success');
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'チームの削除に失敗しました。';
-        setTeamDeleteFeedback(message, 'danger');
-      } finally {
-        select.disabled = select.options.length <= 1;
-        elements.teamDeleteConfirm.disabled = !select.value;
-      }
-    });
-  }
-
-  if (elements.openPlayerDelete) {
-    elements.openPlayerDelete.addEventListener('click', async () => {
-      if (elements.playerDeleteRole) {
-        elements.playerDeleteRole.value = 'batter';
-      }
-      openModal('player-delete');
-      try {
-        await ensurePlayerDeleteOptions('batter');
-      } catch (error) {
-        // エラー処理は ensurePlayerDeleteOptions 内で行われる
-      }
-      if (elements.playerDeleteSelect && !elements.playerDeleteSelect.disabled) {
-        elements.playerDeleteSelect.focus();
-      }
-    });
-  }
-
-  if (elements.playerDeleteRole) {
-    elements.playerDeleteRole.addEventListener('change', async (event) => {
-      const value = event.target.value === 'pitcher' ? 'pitcher' : 'batter';
-      try {
-        await ensurePlayerDeleteOptions(value);
-      } catch (error) {
-        // エラー処理は ensurePlayerDeleteOptions 内で行われる
-      }
-    });
-  }
-
-  if (elements.playerDeleteSelect) {
-    elements.playerDeleteSelect.addEventListener('change', () => {
-      handlePlayerDeleteSelectionChange();
-    });
-  }
-
-  if (elements.playerDeleteConfirm) {
-    elements.playerDeleteConfirm.addEventListener('click', async () => {
-      const select = elements.playerDeleteSelect;
-      if (!select) {
-        return;
-      }
-      const playerId = select.value;
-      if (!playerId) {
-        setPlayerDeleteFeedback('削除する選手を選択してください。', 'danger');
-        return;
-      }
-      const roleValue = elements.playerDeleteRole?.value === 'pitcher' ? 'pitcher' : 'batter';
-      const label = select.selectedOptions?.[0]?.textContent || playerId;
-      const confirmed = window.confirm(`選手「${label}」を削除します。よろしいですか？`);
-      if (!confirmed) {
-        return;
-      }
-      elements.playerDeleteConfirm.disabled = true;
-      select.disabled = true;
-      setPlayerDeleteFeedback('選手を削除しています...', 'info');
-      try {
-        await actions.handlePlayerDelete(playerId, roleValue, label);
-        await ensureTeamBuilderPlayersLoaded(actions, true);
-        await ensurePlayerDeleteOptions(roleValue, { forceReload: true });
-        setPlayerDeleteFeedback(`選手「${label}」を削除しました。`, 'success');
-        showStatus('選手を削除しました。', 'success');
-      } catch (error) {
-        const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';
-        setPlayerDeleteFeedback(message, 'danger');
-      } finally {
-        const hasOptions = select.options.length > 1;
-        select.disabled = !hasOptions;
-        elements.playerDeleteConfirm.disabled = !select.value;
       }
     });
   }
@@ -3077,10 +2804,13 @@ export function initEventListeners(actions) {
         applyPlayerFormData(fetchedPlayer, roleToUse);
         // Disable delete if referenced by any team
         const hasRefs = Boolean(result?.hasReferences);
+        if (elements.playerBuilderDelete) {
+          elements.playerBuilderDelete.disabled = hasRefs;
+        }
         if (hasRefs) {
           const refs = Array.isArray(result?.referencedBy) ? result.referencedBy : [];
           const list = refs.slice(0, 5).join(', ') + (refs.length > 5 ? ` 他${refs.length - 5}件` : '');
-          setPlayerBuilderFeedback(`この選手は以下のチームに含まれています: ${list}`);
+          setPlayerBuilderFeedback(`この選手は以下のチームに含まれているため削除できません: ${list}`, 'warning');
         } else {
           setPlayerBuilderFeedback('選手データを読み込みました。', 'info');
         }
@@ -3119,6 +2849,38 @@ export function initEventListeners(actions) {
         setPlayerBuilderFeedback(message, 'danger');
       } finally {
         elements.playerBuilderSave.disabled = false;
+      }
+    });
+  }
+
+  if (elements.playerBuilderDelete) {
+    elements.playerBuilderDelete.addEventListener('click', async () => {
+      const role = elements.playerEditorRole?.value || 'batter';
+      const selectEl = elements.playerEditorSelect;
+      const idValue = selectEl?.value || '';
+      const nameText = selectEl?.selectedOptions?.[0]?.textContent || '';
+      if (!idValue || idValue === '__new__') {
+        setPlayerBuilderFeedback('削除する選手を選択してください。', 'danger');
+        return;
+      }
+      if (elements.playerBuilderDelete.disabled) {
+        // Should not happen due to disabled state, but double-guard.
+        setPlayerBuilderFeedback('この選手はチームで使用中のため削除できません。', 'warning');
+        return;
+      }
+      const confirmed = window.confirm(`選手 '${nameText}' を削除します。よろしいですか？`);
+      if (!confirmed) return;
+      elements.playerBuilderDelete.disabled = true;
+      try {
+        await actions.handlePlayerDelete(idValue, role, nameText);
+        await populatePlayerSelect(role);
+        clearPlayerForm(role);
+        setPlayerBuilderFeedback('選手を削除しました。', 'success');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';
+        setPlayerBuilderFeedback(message, 'danger');
+      } finally {
+        elements.playerBuilderDelete.disabled = false;
       }
     });
   }
@@ -3173,23 +2935,173 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.teamBuilderDelete) {
+    elements.teamBuilderDelete.addEventListener('click', async () => {
+      const teamId = stateCache.teamBuilder.currentTeamId;
+      if (!teamId) {
+        setTeamBuilderFeedback('削除するチームを選択してください。', 'danger');
+        return;
+      }
+      const confirmed = window.confirm(`チーム '${teamId}' を削除します。よろしいですか？`);
+      if (!confirmed) return;
+      elements.teamBuilderDelete.disabled = true;
+      try {
+        await actions.handleTeamDelete(teamId);
+        stateCache.teamBuilder.currentTeamId = null;
+        stateCache.teamBuilder.lastSavedId = null;
+        stateCache.teamBuilder.editorDirty = false;
+        stateCache.teamBuilder.form = createDefaultTeamForm();
+        setSelectionAndCatalog('lineup', 0);
+        resetLineupPositionSelection();
+        clearPlayerSwapSelection();
+        captureTeamBuilderSnapshot(stateCache.teamBuilder.form);
+        if (elements.teamEditorSelect) {
+          elements.teamEditorSelect.value = '';
+        }
+        renderTeamBuilderView();
+        setTeamBuilderFeedback('チームを削除しました。', 'success');
+        setUIView('team-builder');
+        if (stateCache.data) {
+          render(stateCache.data);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'チームの削除に失敗しました。';
+        setTeamBuilderFeedback(message, 'danger');
+      } finally {
+        elements.teamBuilderDelete.disabled = false;
+      }
+    });
+  }
+
   elements.modalCloseButtons.forEach((button) => {
     const target = button.dataset.close;
     button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
   });
 
-  ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'team-delete', 'player-delete'].forEach(
-    (name) => {
-      const modal = resolveModal(name);
-      if (modal) {
-        modal.addEventListener('click', (event) => {
-          if (event.target === modal) {
-            closeModal(modal);
-          }
-        });
+  ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'team-delete', 'player-delete'].forEach((name) => {
+    const modal = resolveModal(name);
+    if (modal) {
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeModal(modal);
+        }
+      });
+    }
+  });
+
+  // Team delete confirm
+  if (elements.teamDeleteConfirm) {
+    elements.teamDeleteConfirm.addEventListener('click', async () => {
+      const select = elements.teamDeleteSelect;
+      const feedback = elements.teamDeleteFeedback;
+      const teamId = select?.value || '';
+      if (!teamId) {
+        if (feedback) feedback.textContent = '削除するチームを選択してください。';
+        return;
       }
-    },
-  );
+      elements.teamDeleteConfirm.disabled = true;
+      try {
+        await actions.handleTeamDelete(teamId);
+        if (feedback) feedback.textContent = 'チームを削除しました。';
+        // Refresh the list from updated state
+        if (select) {
+          const teams = (stateCache.teamLibrary?.teams || []).slice();
+          select.innerHTML = '';
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = 'チームを選択';
+          select.appendChild(placeholder);
+          teams.forEach((t) => {
+            if (!t || !t.id) return;
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name || t.id;
+            select.appendChild(opt);
+          });
+          select.value = '';
+        }
+      } catch (error) {
+        if (feedback) {
+          const message = error instanceof Error ? error.message : 'チームの削除に失敗しました。';
+          feedback.textContent = message;
+        }
+      } finally {
+        elements.teamDeleteConfirm.disabled = false;
+      }
+    });
+  }
+
+  // Player delete role change -> repopulate list
+  if (elements.playerDeleteRole) {
+    elements.playerDeleteRole.addEventListener('change', async () => {
+      const role = elements.playerDeleteRole.value || 'batter';
+      const select = elements.playerDeleteSelect;
+      const feedback = elements.playerDeleteFeedback;
+      if (feedback) feedback.textContent = '';
+      if (select) {
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '選手を選択';
+        select.appendChild(placeholder);
+        try {
+          const players = await actions.fetchPlayersList(role);
+          players.forEach((p) => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            select.appendChild(opt);
+          });
+          select.value = '';
+        } catch (e) {
+          if (feedback) feedback.textContent = e instanceof Error ? e.message : '選手リストの取得に失敗しました。';
+        }
+      }
+    });
+  }
+
+  // Player delete confirm
+  if (elements.playerDeleteConfirm) {
+    elements.playerDeleteConfirm.addEventListener('click', async () => {
+      const role = elements.playerDeleteRole?.value || 'batter';
+      const select = elements.playerDeleteSelect;
+      const feedback = elements.playerDeleteFeedback;
+      const playerId = select?.value || '';
+      const nameText = select?.selectedOptions?.[0]?.textContent || '';
+      if (!playerId) {
+        if (feedback) feedback.textContent = '削除する選手を選択してください。';
+        return;
+      }
+      elements.playerDeleteConfirm.disabled = true;
+      try {
+        await actions.handlePlayerDelete(playerId, role, nameText);
+        if (feedback) feedback.textContent = '選手を削除しました。';
+        // Repopulate list for current role
+        const players = await actions.fetchPlayersList(role);
+        if (select) {
+          select.innerHTML = '';
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = '選手を選択';
+          select.appendChild(placeholder);
+          players.forEach((p) => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            select.appendChild(opt);
+          });
+          select.value = '';
+        }
+      } catch (error) {
+        if (feedback) {
+          const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';
+          feedback.textContent = message;
+        }
+      } finally {
+        elements.playerDeleteConfirm.disabled = false;
+      }
+    });
+  }
 
   if (elements.offenseMenu) {
     document.addEventListener('click', (event) => {
@@ -3272,7 +3184,7 @@ export function initEventListeners(actions) {
     if (event.key === 'Escape') {
       hideOffenseMenu();
       hideDefenseMenu();
-      ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
+      ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'team-delete', 'player-delete'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);
