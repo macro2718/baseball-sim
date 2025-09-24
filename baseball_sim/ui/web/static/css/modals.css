@@ -89,6 +89,19 @@
   overflow-y: auto;
 }
 
+.modal .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal .form-field label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
 .modal-footer {
   padding: 0 28px 28px;
   display: flex;
@@ -102,6 +115,29 @@
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.7;
+}
+
+.modal-feedback {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.modal-feedback.success {
+  color: var(--success);
+}
+
+.modal-feedback.danger {
+  color: var(--danger);
+}
+
+.modal-feedback.warning {
+  color: var(--warning);
+}
+
+.modal-feedback.info {
+  color: var(--text-muted);
 }
 
 .current-batter {

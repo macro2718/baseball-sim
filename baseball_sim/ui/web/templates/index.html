@@ -117,6 +117,8 @@
               <button id="open-match" class="primary">試合</button>
               <button id="open-team-builder">チーム作成/編集</button>
               <button id="open-player-builder">選手作成/編集</button>
+              <button id="open-team-delete" class="danger">チーム削除</button>
+              <button id="open-player-delete" class="danger">選手削除</button>
             </div>
           </div>
         </section>
@@ -248,7 +250,6 @@
             <div class="team-builder-actions">
               <button id="team-builder-save" class="primary" type="button">保存</button>
               <button id="team-builder-reset" type="button">リセット</button>
-              <button id="team-builder-delete" type="button">削除</button>
               <button id="team-builder-back" type="button">ホームに戻る</button>
             </div>
             <div
@@ -414,7 +415,6 @@
             </div>
             <div class="team-builder-actions">
               <button id="player-builder-save" class="primary" type="button">保存</button>
-              <button id="player-builder-delete" type="button">削除</button>
               <button id="player-builder-back" type="button">ホームに戻る</button>
             </div>
             <div
@@ -683,6 +683,59 @@
       <footer class="app-footer">
         <small>&copy; 2024 Baseball Simulation</small>
       </footer>
+    </div>
+
+    <div class="modal hidden" id="team-delete-modal" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="team-delete-title">
+        <div class="modal-header">
+          <h3 id="team-delete-title">チーム削除</h3>
+          <button type="button" class="modal-close" data-close="team-delete-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">削除するチームを選択してください。この操作は取り消せません。</p>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="team-delete-select">チーム</label>
+              <select id="team-delete-select" class="team-select"></select>
+            </div>
+          </div>
+          <p class="modal-feedback" id="team-delete-feedback"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="team-delete-confirm" class="danger">削除する</button>
+          <button type="button" class="modal-close" data-close="team-delete-modal">キャンセル</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="player-delete-modal" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="player-delete-title">
+        <div class="modal-header">
+          <h3 id="player-delete-title">選手削除</h3>
+          <button type="button" class="modal-close" data-close="player-delete-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">削除する選手の種別と名前を選択してください。この操作は取り消せません。</p>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="player-delete-role">種別</label>
+              <select id="player-delete-role" class="team-select">
+                <option value="batter">野手</option>
+                <option value="pitcher">投手</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="player-delete-select">選手</label>
+              <select id="player-delete-select" class="team-select"></select>
+            </div>
+          </div>
+          <p class="modal-feedback" id="player-delete-feedback"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="player-delete-confirm" class="danger">削除する</button>
+          <button type="button" class="modal-close" data-close="player-delete-modal">キャンセル</button>
+        </div>
+      </div>
     </div>
 
     <div class="modal hidden" id="offense-modal" aria-hidden="true">

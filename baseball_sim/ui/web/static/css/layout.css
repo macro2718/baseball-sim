@@ -899,6 +899,15 @@ button.primary {
     0 0 18px rgba(192, 132, 252, 0.25);
 }
 
+button.danger {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.88), rgba(185, 28, 28, 0.82));
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fff5f5;
+  box-shadow:
+    0 22px 44px rgba(127, 29, 29, 0.45),
+    0 0 18px rgba(248, 113, 113, 0.25);
+}
+
 button:hover:not(:disabled) {
   transform: translateY(-2px);
   background: rgba(13, 19, 37, 0.78);
@@ -915,6 +924,14 @@ button.primary:hover:not(:disabled) {
     0 0 24px rgba(192, 132, 252, 0.45);
 }
 
+button.danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.96), rgba(153, 27, 27, 0.92));
+  border-color: rgba(248, 113, 113, 0.75);
+  box-shadow:
+    0 26px 52px rgba(127, 29, 29, 0.55),
+    0 0 24px rgba(248, 113, 113, 0.35);
+}
+
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -928,6 +945,10 @@ button:focus-visible {
 
 button.primary:focus-visible {
   box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.4);
+}
+
+button.danger:focus-visible {
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.4);
 }
 
 .toolbar {
