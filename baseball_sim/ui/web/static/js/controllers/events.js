@@ -739,37 +739,67 @@ function refreshView() {
   }
 }
 
+function setSelectionAndCatalog(group, index) {
+  ensureTeamBuilderState();
+  const normalizedGroup = group === 'pitchers' ? 'pitchers' : group === 'bench' ? 'bench' : 'lineup';
+  const normalizedIndex = Number.isInteger(index) ? index : 0;
+  stateCache.teamBuilder.selection = { group: normalizedGroup, index: normalizedIndex };
+  const desiredCatalog = normalizedGroup === 'pitchers' ? 'pitchers' : 'batters';
+  if (stateCache.teamBuilder.catalog !== desiredCatalog) {
+    stateCache.teamBuilder.catalog = desiredCatalog;
+  }
+}
+
 function selectTeamBuilderSlot(group, index) {
   ensureTeamBuilderState();
   const form = stateCache.teamBuilder.form;
-  let normalizedGroup = group;
-  let normalizedIndex = index;
-  if (group === 'bench') {
-    if (!Array.isArray(form.bench) || !form.bench.length) {
-      normalizedGroup = 'lineup';
+  let normalizedGroup = group === 'bench' || group === 'pitchers' ? group : 'lineup';
+  let normalizedIndex = Number.isInteger(index) ? index : 0;
+  if (normalizedGroup === 'bench') {
+    const benchLength = Array.isArray(form.bench) ? form.bench.length : 0;
+    if (!benchLength) {
       normalizedIndex = 0;
-    }
-  } else if (group === 'pitchers') {
-    if (!Array.isArray(form.pitchers) || !form.pitchers.length) {
-      normalizedGroup = 'lineup';
+    } else if (normalizedIndex < 0) {
       normalizedIndex = 0;
+    } else if (normalizedIndex >= benchLength) {
+      normalizedIndex = benchLength - 1;
     }
-  }
-  if (normalizedGroup === 'lineup') {
+  } else if (normalizedGroup === 'pitchers') {
+    const pitcherLength = Array.isArray(form.pitchers) ? form.pitchers.length : 0;
+    if (!pitcherLength) {
+      normalizedIndex = 0;
+    } else if (normalizedIndex < 0) {
+      normalizedIndex = 0;
+    } else if (normalizedIndex >= pitcherLength) {
+      normalizedIndex = pitcherLength - 1;
+    }
+  } else {
+    normalizedGroup = 'lineup';
     if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex >= form.lineup.length) {
       normalizedIndex = 0;
     }
-  } else if (normalizedGroup === 'bench') {
-    if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex >= form.bench.length) {
-      normalizedIndex = 0;
-    }
-  } else if (normalizedGroup === 'pitchers') {
-    if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex >= form.pitchers.length) {
-      normalizedIndex = 0;
-    }
   }
-  stateCache.teamBuilder.selection = { group: normalizedGroup, index: normalizedIndex };
+  setSelectionAndCatalog(normalizedGroup, normalizedIndex);
   renderTeamBuilderView();
+}
+
+function focusRosterForCatalog(catalog) {
+  ensureTeamBuilderState();
+  const target = catalog === 'pitchers' ? 'pitchers' : 'batters';
+  const selection = stateCache.teamBuilder.selection || { group: 'lineup', index: 0 };
+  if (target === 'pitchers') {
+    const index =
+      selection.group === 'pitchers' && Number.isInteger(selection.index) ? selection.index : 0;
+    selectTeamBuilderSlot('pitchers', index);
+    return;
+  }
+  if (selection.group === 'bench') {
+    selectTeamBuilderSlot('bench', selection.index);
+    return;
+  }
+  const index =
+    selection.group === 'lineup' && Number.isInteger(selection.index) ? selection.index : 0;
+  selectTeamBuilderSlot('lineup', index);
 }
 
 function getAvailablePositionsForSlot(slot) {
@@ -838,10 +868,16 @@ function removeBenchSlot(index) {
   stateCache.teamBuilder.editorDirty = true;
   if (stateCache.teamBuilder.selection?.group === 'bench') {
     if (!form.bench.length) {
-      stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
-    } else if (stateCache.teamBuilder.selection.index >= form.bench.length) {
-      stateCache.teamBuilder.selection.index = form.bench.length - 1;
+      setSelectionAndCatalog('lineup', 0);
+      renderTeamBuilderView();
+      return;
     }
+    const currentIndex = Number.isInteger(stateCache.teamBuilder.selection.index)
+      ? stateCache.teamBuilder.selection.index
+      : 0;
+    const nextIndex = Math.min(Math.max(currentIndex, 0), form.bench.length - 1);
+    selectTeamBuilderSlot('bench', nextIndex);
+    return;
   }
   renderTeamBuilderView();
 }
@@ -852,11 +888,14 @@ function removePitcherSlot(index) {
   form.pitchers.splice(index, 1);
   stateCache.teamBuilder.editorDirty = true;
   if (stateCache.teamBuilder.selection?.group === 'pitchers') {
-    if (!form.pitchers.length) {
-      stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
-    } else if (stateCache.teamBuilder.selection.index >= form.pitchers.length) {
-      stateCache.teamBuilder.selection.index = form.pitchers.length - 1;
-    }
+    const currentIndex = Number.isInteger(stateCache.teamBuilder.selection.index)
+      ? stateCache.teamBuilder.selection.index
+      : 0;
+    const nextIndex = form.pitchers.length
+      ? Math.min(Math.max(currentIndex, 0), form.pitchers.length - 1)
+      : 0;
+    selectTeamBuilderSlot('pitchers', nextIndex);
+    return;
   }
   renderTeamBuilderView();
 }
@@ -947,7 +986,7 @@ function assignPlayerToLineup(index, record) {
     clearAssignmentAt(existing.group, existing.index);
   }
   applyRecordToLineupSlot(slot, record, slot.position);
-  stateCache.teamBuilder.selection = { group: 'lineup', index };
+  setSelectionAndCatalog('lineup', index);
   stateCache.teamBuilder.editorDirty = true;
   setTeamBuilderFeedback(`${record.name} を${slot.position || 'DH'}に割り当てました。`, 'success');
   renderTeamBuilderView();
@@ -969,7 +1008,7 @@ function assignPlayerToBench(index, record) {
   entry.player = record;
   entry.playerRole = record.role;
   entry.eligible = record.role === 'pitcher' ? ['P'] : [...(record.eligible || [])];
-  stateCache.teamBuilder.selection = { group: 'bench', index };
+  setSelectionAndCatalog('bench', index);
   stateCache.teamBuilder.editorDirty = true;
   setTeamBuilderFeedback(`${record.name} をベンチ枠に追加しました。`, 'success');
   renderTeamBuilderView();
@@ -994,7 +1033,7 @@ function assignPlayerToPitchers(index, record) {
   entry.playerName = record.name;
   entry.player = record;
   entry.playerRole = record.role;
-  stateCache.teamBuilder.selection = { group: 'pitchers', index };
+  setSelectionAndCatalog('pitchers', index);
   stateCache.teamBuilder.editorDirty = true;
   setTeamBuilderFeedback(`${record.name} を投手リストに追加しました。`, 'success');
   renderTeamBuilderView();
@@ -1249,6 +1288,17 @@ function updateCatalogButtons() {
   });
 }
 
+function updateRosterPanels() {
+  const active = stateCache.teamBuilder.catalog === 'pitchers' ? 'pitchers' : 'batters';
+  elements.teamBuilderRosterPanels?.forEach((panel) => {
+    if (!panel) return;
+    const value = panel.dataset.rosterPanel === 'pitchers' ? 'pitchers' : 'batters';
+    const isActive = value === active;
+    panel.classList.toggle('hidden', !isActive);
+    panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+  });
+}
+
 function renderTeamBuilderCatalog() {
   const panel = elements.teamBuilderPlayerPanel;
   if (!panel) return;
@@ -1344,6 +1394,7 @@ function renderTeamBuilderView() {
     }
   }
   updateCatalogButtons();
+  updateRosterPanels();
   renderTeamBuilderLineup();
   renderTeamBuilderBench();
   renderTeamBuilderPitchers();
@@ -1395,7 +1446,7 @@ function createNewTeamTemplate() {
   stateCache.teamBuilder.currentTeamId = null;
   stateCache.teamBuilder.lastSavedId = '__new__';
   stateCache.teamBuilder.editorDirty = false;
-  stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
+  setSelectionAndCatalog('lineup', 0);
   setTeamBuilderFeedback('テンプレートを読み込みました。', 'info');
   renderTeamBuilderView();
 }
@@ -1508,7 +1559,7 @@ function applyTeamDataToForm(teamData) {
   }
 
   stateCache.teamBuilder.form = form;
-  stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
+  setSelectionAndCatalog('lineup', 0);
   stateCache.teamBuilder.editorDirty = false;
   relinkFormPlayers();
   renderTeamBuilderView();
@@ -1786,12 +1837,7 @@ export function initEventListeners(actions) {
   elements.teamBuilderCatalogButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const catalog = button.dataset.builderCatalog === 'pitchers' ? 'pitchers' : 'batters';
-      if (stateCache.teamBuilder.catalog === catalog) {
-        return;
-      }
-      stateCache.teamBuilder.catalog = catalog;
-      updateCatalogButtons();
-      renderTeamBuilderCatalog();
+      focusRosterForCatalog(catalog);
     });
   });
 
@@ -1832,7 +1878,7 @@ export function initEventListeners(actions) {
         stateCache.teamBuilder.lastSavedId = null;
         stateCache.teamBuilder.editorDirty = false;
         stateCache.teamBuilder.form = createDefaultTeamForm();
-        stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
+        setSelectionAndCatalog('lineup', 0);
         renderTeamBuilderView();
         setTeamBuilderFeedback('編集するチームを選択してください。', 'info');
         return;
@@ -2068,7 +2114,7 @@ export function initEventListeners(actions) {
         stateCache.teamBuilder.lastSavedId = null;
         stateCache.teamBuilder.editorDirty = false;
         stateCache.teamBuilder.form = createDefaultTeamForm();
-        stateCache.teamBuilder.selection = { group: 'lineup', index: 0 };
+        setSelectionAndCatalog('lineup', 0);
         if (elements.teamEditorSelect) {
           elements.teamEditorSelect.value = '';
         }

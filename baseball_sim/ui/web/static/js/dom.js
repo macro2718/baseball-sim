@@ -40,6 +40,7 @@ export const elements = {
   teamBuilderLineup: document.getElementById('team-builder-lineup'),
   teamBuilderBench: document.getElementById('team-builder-bench'),
   teamBuilderPitchers: document.getElementById('team-builder-pitchers'),
+  teamBuilderRosterPanels: Array.from(document.querySelectorAll('[data-roster-panel]')),
   teamBuilderAddBench: document.getElementById('team-builder-add-bench'),
   teamBuilderAddPitcher: document.getElementById('team-builder-add-pitcher'),
   teamBuilderPlayerPanel: document.getElementById('team-builder-player-list'),

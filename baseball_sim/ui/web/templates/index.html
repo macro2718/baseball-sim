@@ -167,31 +167,65 @@
                   <input id="team-builder-name" type="text" placeholder="例: Tokyo Aces" autocomplete="off" />
                 </div>
                 <div class="team-builder-roster">
-                  <section class="builder-section">
-                    <div class="section-heading">
-                      <h3>スターティングラインナップ</h3>
-                      <p>守備位置ボタンをクリックして切り替え、右側の選手カードを選択して割り当ててください。</p>
-                    </div>
-                    <div id="team-builder-lineup" class="defense-lineup"></div>
-                  </section>
-                  <section class="builder-section">
-                    <div class="section-heading section-heading-inline">
-                      <h3>ベンチ</h3>
-                      <div class="section-actions">
-                        <button type="button" id="team-builder-add-bench">枠を追加</button>
+                  <div class="team-builder-roster-tabs tab-group" role="tablist" aria-label="ロスター区分">
+                    <button
+                      type="button"
+                      class="tab active"
+                      data-builder-catalog="batters"
+                      aria-pressed="true"
+                    >
+                      野手
+                    </button>
+                    <button
+                      type="button"
+                      class="tab"
+                      data-builder-catalog="pitchers"
+                      aria-pressed="false"
+                    >
+                      投手
+                    </button>
+                  </div>
+                  <div
+                    id="team-builder-roster-batters"
+                    class="builder-roster-panel"
+                    data-roster-panel="batters"
+                    aria-hidden="false"
+                  >
+                    <section class="builder-section">
+                      <div class="section-heading">
+                        <h3>スターティングラインナップ</h3>
+                        <p>
+                          守備位置ボタンをクリックして切り替え、右側の選手カードを選択して割り当ててください。
+                        </p>
                       </div>
-                    </div>
-                    <div id="team-builder-bench" class="defense-bench"></div>
-                  </section>
-                  <section class="builder-section">
-                    <div class="section-heading section-heading-inline">
-                      <h3>投手リスト</h3>
-                      <div class="section-actions">
-                        <button type="button" id="team-builder-add-pitcher">枠を追加</button>
+                      <div id="team-builder-lineup" class="defense-lineup"></div>
+                    </section>
+                    <section class="builder-section">
+                      <div class="section-heading section-heading-inline">
+                        <h3>ベンチ</h3>
+                        <div class="section-actions">
+                          <button type="button" id="team-builder-add-bench">枠を追加</button>
+                        </div>
                       </div>
-                    </div>
-                    <div id="team-builder-pitchers" class="team-builder-pitchers"></div>
-                  </section>
+                      <div id="team-builder-bench" class="defense-bench"></div>
+                    </section>
+                  </div>
+                  <div
+                    id="team-builder-roster-pitchers"
+                    class="builder-roster-panel hidden"
+                    data-roster-panel="pitchers"
+                    aria-hidden="true"
+                  >
+                    <section class="builder-section">
+                      <div class="section-heading section-heading-inline">
+                        <h3>投手リスト</h3>
+                        <div class="section-actions">
+                          <button type="button" id="team-builder-add-pitcher">枠を追加</button>
+                        </div>
+                      </div>
+                      <div id="team-builder-pitchers" class="team-builder-pitchers"></div>
+                    </section>
+                  </div>
                 </div>
               </div>
               <aside class="team-builder-player-panel">

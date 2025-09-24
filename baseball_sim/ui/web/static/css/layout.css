@@ -230,6 +230,16 @@
 .team-builder-roster {
   display: flex;
   flex-direction: column;
+  gap: 20px;
+}
+
+.team-builder-roster-tabs {
+  align-self: flex-start;
+}
+
+.builder-roster-panel {
+  display: flex;
+  flex-direction: column;
   gap: 26px;
 }
 
