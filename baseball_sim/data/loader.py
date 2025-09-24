@@ -67,34 +67,49 @@ class DataLoader:
             team.add_player_to_bench(players_dict[player_name])
 
     @classmethod
-    def create_teams_from_data(cls) -> Tuple[Team, Team]:
+    def create_teams_from_data(
+        cls,
+        *,
+        home_team_override: Dict | None = None,
+        away_team_override: Dict | None = None,
+    ) -> Tuple[Team, Team]:
         """JSONデータからチームを作成"""
         # パス管理
         player_data_path = path_manager.get_players_data_path()
         team_data_path = path_manager.get_teams_data_path()
-        
+
         # JSONからデータを読み込む
         player_data = cls.load_json_data(player_data_path)
         team_data = cls.load_json_data(team_data_path)
-        
+        if not isinstance(team_data, dict):
+            raise ValueError("Team data file is invalid or missing required structure.")
+
+        home_team_data = home_team_override or team_data.get("home_team")
+        away_team_data = away_team_override or team_data.get("away_team")
+
+        if not isinstance(home_team_data, dict):
+            raise ValueError("Home team data could not be loaded.")
+        if not isinstance(away_team_data, dict):
+            raise ValueError("Away team data could not be loaded.")
+
         # チームの作成
-        home_team = Team(team_data["home_team"]["name"])
-        away_team = Team(team_data["away_team"]["name"])
-        
+        home_team = Team(home_team_data["name"])
+        away_team = Team(away_team_data["name"])
+
         # 選手辞書の作成
         players_dict = cls.create_players_dict(player_data)
-        
+
         # 投手陣の設定
-        cls.setup_team_pitchers(home_team, team_data["home_team"], players_dict)
-        cls.setup_team_pitchers(away_team, team_data["away_team"], players_dict)
-        
+        cls.setup_team_pitchers(home_team, home_team_data, players_dict)
+        cls.setup_team_pitchers(away_team, away_team_data, players_dict)
+
         # ラインナップの設定
-        home_errors = cls.setup_team_lineup(home_team, team_data["home_team"], players_dict)
-        away_errors = cls.setup_team_lineup(away_team, team_data["away_team"], players_dict)
-        
+        home_errors = cls.setup_team_lineup(home_team, home_team_data, players_dict)
+        away_errors = cls.setup_team_lineup(away_team, away_team_data, players_dict)
+
         # ベンチの設定
-        cls.setup_team_bench(home_team, team_data["home_team"], players_dict)
-        cls.setup_team_bench(away_team, team_data["away_team"], players_dict)
+        cls.setup_team_bench(home_team, home_team_data, players_dict)
+        cls.setup_team_bench(away_team, away_team_data, players_dict)
         
         # ラインナップの妥当性チェック
         print(f"\n=== Validating lineups ===")

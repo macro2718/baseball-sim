@@ -126,6 +126,38 @@ def create_routes(session: WebGameSession) -> Blueprint:
         state = session.reload_teams()
         return jsonify(state)
 
+    @api_bp.post("/teams/library/select")
+    def select_team_files() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        home_id = payload.get("home") or ""
+        away_id = payload.get("away") or ""
+        try:
+            state = session.update_team_selection(str(home_id), str(away_id))
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
+    @api_bp.get("/teams/library/<team_id>")
+    def get_team_definition(team_id: str) -> Dict[str, Any]:
+        try:
+            team_data = session.get_team_definition(team_id)
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify({"team_id": team_id, "team": team_data})
+
+    @api_bp.post("/teams/library/save")
+    def save_team_definition() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        team_id = payload.get("team_id")
+        team_payload = payload.get("team")
+        if not isinstance(team_payload, dict):
+            return create_error_response("チームデータの形式が不正です。", session)
+        try:
+            saved_id, state = session.save_team_definition(team_id, team_payload)
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify({"team_id": saved_id, "state": state})
+
     @api_bp.get("/health")
     def health() -> Dict[str, Any]:
         return jsonify({"status": "ok"})

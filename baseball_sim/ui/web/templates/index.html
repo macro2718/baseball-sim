@@ -109,7 +109,67 @@
 
       <main class="app-main">
 
-        <section id="title-screen" class="screen">
+        <section id="lobby-screen" class="screen">
+          <div class="title-card lobby-card">
+            <h2>チームセレクション</h2>
+            <p class="lobby-description">
+              試合で使用するホームチームとアウェイチームを選択してください。
+            </p>
+            <div class="team-selection-grid">
+              <div class="team-selection-field">
+                <label for="lobby-away-team">アウェイチーム</label>
+                <select id="lobby-away-team" class="team-select"></select>
+              </div>
+              <div class="team-selection-field">
+                <label for="lobby-home-team">ホームチーム</label>
+                <select id="lobby-home-team" class="team-select"></select>
+              </div>
+            </div>
+            <p class="title-hint" id="lobby-hint"></p>
+            <div class="title-actions">
+              <button id="enter-title" class="primary">試合へ</button>
+              <button id="open-team-builder">チーム作成</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="team-builder-screen" class="screen hidden">
+          <div class="title-card team-builder-card">
+            <div class="team-builder-header">
+              <h2>チーム作成・編集</h2>
+              <p>
+                JSON形式でチームの構成を編集します。保存すると選択リストに反映され、選択中のチームを更新した場合はデータが再読み込みされます。
+              </p>
+            </div>
+            <div class="team-builder-controls">
+              <label for="team-editor-select">編集するチーム</label>
+              <div class="team-builder-select-row">
+                <select id="team-editor-select"></select>
+                <button id="team-builder-new" type="button">新規テンプレート</button>
+              </div>
+            </div>
+            <div class="team-builder-editor">
+              <textarea
+                id="team-editor-json"
+                rows="20"
+                spellcheck="false"
+                aria-label="チーム定義JSON"
+              ></textarea>
+            </div>
+            <div class="team-builder-actions">
+              <button id="team-builder-save" class="primary" type="button">保存</button>
+              <button id="team-builder-back" type="button">チーム選択に戻る</button>
+            </div>
+            <div
+              id="team-builder-feedback"
+              class="team-builder-feedback"
+              role="status"
+              aria-live="polite"
+            ></div>
+          </div>
+        </section>
+
+        <section id="title-screen" class="screen hidden">
           <div class="title-card">
             <h2>チーム状況</h2>
             <div class="team-status-grid">
@@ -128,6 +188,7 @@
             <div class="title-actions">
               <button id="start-game" class="primary">ゲーム開始</button>
               <button id="reload-teams">データ再読込</button>
+              <button id="back-to-lobby">チーム選択</button>
             </div>
           </div>
         </section>

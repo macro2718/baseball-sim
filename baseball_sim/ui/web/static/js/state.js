@@ -10,7 +10,19 @@ export const stateCache = {
   currentBatterIndex: null,
   statsView: { team: 'away', type: 'batting' },
   abilitiesView: { team: 'away', type: 'batting' },
+  uiView: 'lobby',
+  teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
+  teamBuilder: { currentTeamId: null, lastSavedId: null, editorDirty: false },
 };
+
+export function setUIView(view) {
+  if (!view) return;
+  stateCache.uiView = view;
+}
+
+export function getUIView() {
+  return stateCache.uiView;
+}
 
 export function normalizePositionKey(position) {
   if (!position) return null;

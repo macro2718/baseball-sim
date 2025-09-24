@@ -93,6 +93,8 @@ class FilePaths:
     BATTING_MODEL = "batting_model.joblib"
     NN_MODEL = "trained_model_NN.pth"
     DEFAULT_SIMULATION_OUTPUT = "simulation_results.txt"
+    TEAM_LIBRARY_DIR = "teams"
+    TEAM_SELECTION_JSON = "team_selection.json"
 
 # UI関連定数
 class UIConstants:

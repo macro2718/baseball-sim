@@ -2194,19 +2194,17 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   updateDefenseAlignment(gameState, teams);
   updateBatterAlignment(gameState, teams);
   const isActiveGame = Boolean(gameState && gameState.active);
-  setInsightsVisibility(isActiveGame);
+  const showGameView = stateCache.uiView === 'game';
+  setInsightsVisibility(isActiveGame && showGameView);
 
   if (!isActiveGame) {
     resetPlayAnimation();
     resetFieldResultDisplay();
-    elements.gameScreen.classList.add('hidden');
-    elements.titleScreen.classList.remove('hidden');
-    updateScoreboard(gameState, teams);
-    updateOutsIndicator(0);
+    updateScoreboard(gameState || {}, teams || {});
+    updateOutsIndicator(gameState?.outs ?? 0);
     elements.actionWarning.textContent = '';
     elements.swingButton.disabled = true;
     elements.buntButton.disabled = true;
-    // Ensure batter overlay is hidden when inactive
     if (elements.batterAlignment) {
       elements.batterAlignment.innerHTML = '';
       elements.batterAlignment.classList.add('hidden');
@@ -2226,10 +2224,14 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     return;
   }
 
-  elements.titleScreen.classList.add('hidden');
-  elements.gameScreen.classList.remove('hidden');
-
   updateScoreboard(gameState, teams);
+
+  if (!showGameView) {
+    updateMatchupPanel(gameState, teams);
+    updateLog(log || []);
+    return;
+  }
+
   elements.situationText.textContent = gameState.situation || '';
   elements.halfIndicator.textContent = `${gameState.half_label} ${gameState.inning}`;
   updateOutsIndicator(gameState.outs);
@@ -2323,6 +2325,145 @@ export function renderTitle(titleState) {
 
   elements.titleHint.textContent = titleState.hint || '';
   elements.startButton.disabled = !titleState.ready;
+}
+
+function populateSelect(select, options, { placeholder, selected, fallback }) {
+  if (!select) return;
+  const previousValue = select.value;
+  select.innerHTML = '';
+
+  const placeholderOption = document.createElement('option');
+  placeholderOption.value = '';
+  placeholderOption.textContent = placeholder ?? '選択してください';
+  select.appendChild(placeholderOption);
+
+  options.forEach((option) => {
+    const opt = document.createElement('option');
+    opt.value = option.value;
+    opt.textContent = option.label;
+    select.appendChild(opt);
+  });
+
+  const availableValues = new Set(options.map((option) => option.value));
+  let target = selected;
+  if (!target || !availableValues.has(target)) {
+    if (availableValues.has(previousValue)) {
+      target = previousValue;
+    } else if (fallback && availableValues.has(fallback)) {
+      target = fallback;
+    } else {
+      target = '';
+    }
+  }
+  select.value = target || '';
+}
+
+function renderLobby(teamLibraryState) {
+  if (!teamLibraryState) {
+    teamLibraryState = {};
+  }
+  const teams = Array.isArray(teamLibraryState.teams) ? teamLibraryState.teams : [];
+  const selection = teamLibraryState.selection || {};
+  const homeSelect = elements.lobbyHomeSelect;
+  const awaySelect = elements.lobbyAwaySelect;
+  const optionList = teams.map((team) => ({
+    value: team.id,
+    label: team.name || team.id,
+  }));
+
+  const fallbackHome = optionList.length > 0 ? optionList[0].value : '';
+  if (homeSelect) {
+    populateSelect(homeSelect, optionList, {
+      placeholder: 'チームを選択',
+      selected: selection.home,
+      fallback: fallbackHome,
+    });
+  }
+
+  if (awaySelect) {
+    populateSelect(awaySelect, optionList, {
+      placeholder: 'チームを選択',
+      selected: selection.away,
+      fallback: optionList.length > 1 ? optionList[1].value : fallbackHome,
+    });
+  }
+
+  if (elements.lobbyHint) {
+    elements.lobbyHint.textContent = teamLibraryState.hint || '';
+  }
+
+  if (elements.enterTitleButton) {
+    const canStart = Boolean(homeSelect?.value && awaySelect?.value);
+    elements.enterTitleButton.disabled = !canStart;
+  }
+}
+
+function renderTeamBuilder(teamLibraryState) {
+  const select = elements.teamEditorSelect;
+  if (!select) return;
+
+  const teams = Array.isArray(teamLibraryState?.teams) ? teamLibraryState.teams : [];
+  const previousValue = select.value;
+  let desiredValue = previousValue;
+  if (!stateCache.teamBuilder.editorDirty) {
+    desiredValue =
+      stateCache.teamBuilder.lastSavedId || stateCache.teamBuilder.currentTeamId || previousValue;
+  }
+
+  select.innerHTML = '';
+
+  const placeholderOption = document.createElement('option');
+  placeholderOption.value = '';
+  placeholderOption.textContent = 'チームを選択';
+  select.appendChild(placeholderOption);
+
+  const newOption = document.createElement('option');
+  newOption.value = '__new__';
+  newOption.textContent = '新規チームを作成';
+  select.appendChild(newOption);
+
+  teams.forEach((team) => {
+    const option = document.createElement('option');
+    option.value = team.id;
+    option.textContent = team.name || team.id;
+    select.appendChild(option);
+  });
+
+  const validValues = new Set(['', '__new__', ...teams.map((team) => team.id)]);
+  if (!desiredValue || !validValues.has(desiredValue)) {
+    desiredValue = '';
+  }
+  select.value = desiredValue;
+
+  if (!stateCache.teamBuilder.editorDirty) {
+    if (desiredValue && desiredValue !== '__new__') {
+      stateCache.teamBuilder.currentTeamId = desiredValue;
+    } else {
+      stateCache.teamBuilder.currentTeamId = null;
+    }
+    stateCache.teamBuilder.lastSavedId = null;
+  }
+}
+
+function updateScreenVisibility() {
+  const view = stateCache.uiView;
+  const showLobby = view === 'lobby';
+  const showBuilder = view === 'team-builder';
+  const showTitle = view === 'title';
+  const showGame = view === 'game';
+
+  if (elements.lobbyScreen) {
+    elements.lobbyScreen.classList.toggle('hidden', !showLobby);
+  }
+  if (elements.teamBuilderScreen) {
+    elements.teamBuilderScreen.classList.toggle('hidden', !showBuilder);
+  }
+  if (elements.titleScreen) {
+    elements.titleScreen.classList.toggle('hidden', !showTitle);
+  }
+  if (elements.gameScreen) {
+    elements.gameScreen.classList.toggle('hidden', !showGame);
+  }
 }
 
 export function updateStatsPanel(state) {
@@ -2556,9 +2697,28 @@ export function updateAbilitiesPanel(state) {
 export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;
+
+  const teamLibraryState = data.team_library || {};
+  stateCache.teamLibrary = {
+    teams: Array.isArray(teamLibraryState.teams) ? teamLibraryState.teams : [],
+    selection: teamLibraryState.selection || { home: null, away: null },
+    ready: Boolean(teamLibraryState.ready),
+    hint: teamLibraryState.hint || '',
+    active: teamLibraryState.active || { home: null, away: null },
+  };
+
+  if (data.game?.active) {
+    stateCache.uiView = 'game';
+  } else if (stateCache.uiView === 'game') {
+    stateCache.uiView = 'title';
+  }
+
   setStatusMessage(data.notification);
+  renderLobby(stateCache.teamLibrary);
+  renderTeamBuilder(stateCache.teamLibrary);
   renderTitle(data.title);
   renderGame(data.game, data.teams, data.log, previousData?.game || null);
   updateStatsPanel(data);
   updateAbilitiesPanel(data);
+  updateScreenVisibility();
 }

@@ -129,6 +129,136 @@
   color: var(--accent);
 }
 
+.lobby-card .title-actions {
+  margin-top: 28px;
+}
+
+.lobby-description {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.team-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.team-selection-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.team-select {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  padding: 12px 14px;
+  background: rgba(7, 12, 24, 0.88);
+  color: var(--text);
+  font-size: 15px;
+  appearance: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-select:focus-visible {
+  outline: none;
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2);
+}
+
+.team-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.team-builder-card {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.team-builder-header p {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.team-builder-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-builder-select-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.team-builder-select-row select {
+  flex: 1;
+}
+
+.team-builder-editor textarea {
+  width: 100%;
+  min-height: 320px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(7, 12, 24, 0.9);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 18px;
+  resize: vertical;
+}
+
+.team-builder-editor textarea:focus-visible {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.6);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.24);
+}
+
+.team-builder-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.team-builder-actions button {
+  min-width: 140px;
+}
+
+.team-builder-feedback {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.team-builder-feedback.success {
+  color: #d1fae5;
+}
+
+.team-builder-feedback.danger {
+  color: #fecaca;
+}
+
+.team-builder-feedback.info {
+  color: #bae6fd;
+}
+
 .team-status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

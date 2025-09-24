@@ -1,0 +1,65 @@
+{
+  "name": "Home Team",
+  "pitchers": [
+    "Sho Nakajima",
+    "Masaru Inoue",
+    "Takashi Ito",
+    "Yuki Yamashita",
+    "Takeshi Sato",
+    "Takumi Miura",
+    "Tadashi Nakamura",
+    "Takuya Nakajima",
+    "Takuya Fukuda",
+    "Yu Okada",
+    "Yu Takahashi",
+    "Naoki Arai",
+    "Yusuke Fujii"
+  ],
+  "lineup": [
+    {
+      "name": "Hiroshi Matsumoto",
+      "position": "C"
+    },
+    {
+      "name": "Ryo Kimura",
+      "position": "1B"
+    },
+    {
+      "name": "Akira Matsuda",
+      "position": "2B"
+    },
+    {
+      "name": "Satoshi Ishikawa",
+      "position": "3B"
+    },
+    {
+      "name": "Keisuke Miura",
+      "position": "SS"
+    },
+    {
+      "name": "Kenta Ishikawa",
+      "position": "LF"
+    },
+    {
+      "name": "Daiki Yamashita",
+      "position": "CF"
+    },
+    {
+      "name": "Tadashi Matsumoto",
+      "position": "RF"
+    },
+    {
+      "name": "Sho Maeda",
+      "position": "DH"
+    }
+  ],
+  "bench": [
+    "Dai Fujii",
+    "Kazuki Sato",
+    "Yuji Hayashi",
+    "Koji Sato",
+    "Soichiro Fukuda",
+    "Takashi Yamazaki",
+    "Takashi Endo"
+  ]
+}
