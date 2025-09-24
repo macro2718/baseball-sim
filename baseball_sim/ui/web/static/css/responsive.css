@@ -1,5 +1,18 @@
 /* Responsive overrides */
 @media (max-width: 600px) {
+  .player-builder-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .player-editor-form {
+    padding: 18px;
+  }
+
+  .chip-toggle {
+    flex: 1 1 calc(50% - 6px);
+  }
+
   .bases {
     --field-size: clamp(240px, 80vw, 320px);
     margin: 32px auto 0;
@@ -33,6 +46,21 @@
 }
 
 @media (max-width: 960px) {
+  .player-builder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .player-selector-panel {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .player-selector-panel .selector-group,
+  .player-selector-panel .selector-actions {
+    flex: 1 1 240px;
+  }
+
   .game-layout {
     grid-template-columns: 1fr;
   }

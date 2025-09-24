@@ -38,37 +38,37 @@ const DEFAULT_TEAM_TEMPLATE = JSON.stringify(
   2
 );
 
+const BATTER_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+const PITCHER_TYPES = ['SP', 'RP'];
+
 const DEFAULT_PLAYER_TEMPLATES = {
-  batter: JSON.stringify(
-    {
-      name: 'New Batter',
-      eligible_positions: ['LF', 'CF', 'RF', 'DH'],
-      bats: 'R',
-      k_pct: 22.8,
-      bb_pct: 8.5,
-      hard_pct: 38.6,
-      gb_pct: 44.6,
-      speed: 4.3,
-      fielding_skill: 100,
-    },
-    null,
-    2,
-  ),
-  pitcher: JSON.stringify(
-    {
-      name: 'New Pitcher',
-      pitcher_type: 'SP',
-      throws: 'R',
-      k_pct: 22.8,
-      bb_pct: 8.5,
-      hard_pct: 38.6,
-      gb_pct: 44.6,
-      stamina: 80,
-    },
-    null,
-    2,
-  ),
+  batter: {
+    name: 'New Batter',
+    eligible_positions: ['LF', 'CF', 'RF', 'DH'],
+    bats: 'R',
+    k_pct: 22.8,
+    bb_pct: 8.5,
+    hard_pct: 38.6,
+    gb_pct: 44.6,
+    speed: 4.3,
+    fielding_skill: 100,
+  },
+  pitcher: {
+    name: 'New Pitcher',
+    pitcher_type: 'SP',
+    throws: 'R',
+    k_pct: 22.8,
+    bb_pct: 8.5,
+    hard_pct: 38.6,
+    gb_pct: 44.6,
+    stamina: 80,
+  },
 };
+
+function clonePlayerTemplate(role = 'batter') {
+  const template = DEFAULT_PLAYER_TEMPLATES[role] || DEFAULT_PLAYER_TEMPLATES.batter;
+  return JSON.parse(JSON.stringify(template));
+}
 
 function setPlayerBuilderFeedback(message, level = 'info') {
   if (!elements.playerBuilderFeedback) return;
@@ -83,10 +83,272 @@ function setPlayerBuilderFeedback(message, level = 'info') {
   }
 }
 
+function updateChipToggleState(button, selected) {
+  if (!button) return;
+  if (selected) {
+    button.classList.add('active');
+    button.setAttribute('aria-pressed', 'true');
+  } else {
+    button.classList.remove('active');
+    button.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function setSelectedPositions(positions) {
+  const selectedSet = new Set((positions || []).map((pos) => String(pos).toUpperCase()));
+  elements.playerPositionButtons?.forEach((button) => {
+    const key = String(button.dataset.positionOption || '').toUpperCase();
+    updateChipToggleState(button, selectedSet.has(key));
+  });
+}
+
+function getSelectedPositions() {
+  return (elements.playerPositionButtons || [])
+    .filter((button) => button.classList.contains('active'))
+    .map((button) => String(button.dataset.positionOption || '').toUpperCase())
+    .filter(Boolean);
+}
+
+function setSelectedPitcherType(type) {
+  const normalized = typeof type === 'string' ? type.toUpperCase() : '';
+  let matched = false;
+  elements.playerPitcherTypeButtons?.forEach((button, index) => {
+    const key = String(button.dataset.pitcherType || '').toUpperCase();
+    const shouldSelect = key === normalized;
+    updateChipToggleState(button, shouldSelect);
+    if (shouldSelect) {
+      matched = true;
+    }
+    if (!normalized && index === 0 && !matched) {
+      updateChipToggleState(button, true);
+      matched = true;
+    }
+  });
+  if (!matched && elements.playerPitcherTypeButtons?.length) {
+    const [first] = elements.playerPitcherTypeButtons;
+    updateChipToggleState(first, true);
+    return String(first.dataset.pitcherType || 'SP').toUpperCase();
+  }
+  const active = elements.playerPitcherTypeButtons?.find((button) => button.classList.contains('active'));
+  return active ? String(active.dataset.pitcherType || '').toUpperCase() : null;
+}
+
+function getSelectedPitcherType() {
+  const active = elements.playerPitcherTypeButtons?.find((button) => button.classList.contains('active'));
+  return active ? String(active.dataset.pitcherType || '').toUpperCase() : null;
+}
+
+function updatePlayerRoleUI(role = 'batter') {
+  const normalized = role === 'pitcher' ? 'pitcher' : 'batter';
+  if (elements.playerEditorRole) {
+    elements.playerEditorRole.value = normalized;
+  }
+  elements.playerRoleButtons?.forEach((button) => {
+    const value = String(button.dataset.roleChoice || '').toLowerCase();
+    const isActive = value === normalized;
+    updateChipToggleState(button, isActive);
+  });
+  elements.playerRoleSections?.forEach((section) => {
+    const roles = (section.dataset.roleSection || '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    const shouldShow = !roles.length || roles.includes(normalized);
+    section.classList.toggle('hidden', !shouldShow);
+    if (shouldShow) {
+      section.removeAttribute('aria-hidden');
+    } else {
+      section.setAttribute('aria-hidden', 'true');
+    }
+  });
+  const enablePositions = normalized === 'batter';
+  elements.playerPositionButtons?.forEach((button) => {
+    button.disabled = !enablePositions;
+    if (!enablePositions) {
+      updateChipToggleState(button, false);
+    }
+  });
+  const enablePitcher = normalized === 'pitcher';
+  elements.playerPitcherTypeButtons?.forEach((button) => {
+    button.disabled = !enablePitcher;
+    if (!enablePitcher) {
+      updateChipToggleState(button, false);
+    }
+  });
+  return normalized;
+}
+
+function clearPlayerForm(role = 'batter') {
+  if (elements.playerEditorName) elements.playerEditorName.value = '';
+  if (elements.playerEditorKPct) elements.playerEditorKPct.value = '';
+  if (elements.playerEditorBBPct) elements.playerEditorBBPct.value = '';
+  if (elements.playerEditorHardPct) elements.playerEditorHardPct.value = '';
+  if (elements.playerEditorGBPct) elements.playerEditorGBPct.value = '';
+  setSelectedPositions([]);
+  const normalized = role === 'pitcher' ? 'pitcher' : 'batter';
+  if (normalized === 'batter') {
+    if (elements.playerEditorBats) elements.playerEditorBats.value = 'R';
+    if (elements.playerEditorSpeed) elements.playerEditorSpeed.value = '';
+    if (elements.playerEditorFielding) elements.playerEditorFielding.value = '';
+  } else {
+    if (elements.playerEditorThrows) elements.playerEditorThrows.value = 'R';
+    if (elements.playerEditorStamina) elements.playerEditorStamina.value = '';
+    setSelectedPitcherType('SP');
+  }
+}
+
+function setInputValue(input, value) {
+  if (!input) return;
+  if (value === null || value === undefined || value === '') {
+    input.value = '';
+    return;
+  }
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    input.value = String(numeric);
+  } else {
+    input.value = String(value);
+  }
+}
+
+function applyPlayerFormData(player, role = 'batter') {
+  const normalized = updatePlayerRoleUI(role);
+  if (!player) {
+    clearPlayerForm(normalized);
+    return;
+  }
+  if (elements.playerEditorName) elements.playerEditorName.value = player.name || '';
+  setInputValue(elements.playerEditorKPct, player.k_pct);
+  setInputValue(elements.playerEditorBBPct, player.bb_pct);
+  setInputValue(elements.playerEditorHardPct, player.hard_pct);
+  setInputValue(elements.playerEditorGBPct, player.gb_pct);
+  if (normalized === 'batter') {
+    if (elements.playerEditorBats) {
+      elements.playerEditorBats.value = player.bats || 'R';
+    }
+    setInputValue(elements.playerEditorSpeed, player.speed);
+    setInputValue(elements.playerEditorFielding, player.fielding_skill);
+    const eligible = Array.isArray(player.eligible_positions)
+      ? player.eligible_positions
+      : Array.isArray(player.eligible)
+      ? player.eligible
+      : [];
+    const filtered = eligible
+      .map((pos) => String(pos).toUpperCase())
+      .filter((pos) => pos && pos !== 'DH');
+    setSelectedPositions(filtered);
+  } else {
+    if (elements.playerEditorThrows) {
+      elements.playerEditorThrows.value = player.throws || 'R';
+    }
+    setInputValue(elements.playerEditorStamina, player.stamina);
+    const type = typeof player.pitcher_type === 'string' ? player.pitcher_type.toUpperCase() : 'SP';
+    setSelectedPitcherType(PITCHER_TYPES.includes(type) ? type : 'SP');
+  }
+}
+
+function readNumberField(input, label, { allowEmpty = false } = {}) {
+  if (!input) return { value: null };
+  const raw = String(input.value ?? '').trim();
+  if (!raw) {
+    if (allowEmpty) {
+      return { value: null };
+    }
+    return { error: `${label}を入力してください。` };
+  }
+  const value = Number.parseFloat(raw);
+  if (Number.isNaN(value)) {
+    return { error: `${label}には数値を入力してください。` };
+  }
+  return { value };
+}
+
+function getPlayerFormData(role = 'batter') {
+  const normalized = role === 'pitcher' ? 'pitcher' : 'batter';
+  const name = elements.playerEditorName?.value?.trim() || '';
+  if (!name) {
+    setPlayerBuilderFeedback('名前を入力してください。', 'danger');
+    return null;
+  }
+
+  const kPct = readNumberField(elements.playerEditorKPct, 'K%');
+  if (kPct.error) {
+    setPlayerBuilderFeedback(kPct.error, 'danger');
+    return null;
+  }
+  const bbPct = readNumberField(elements.playerEditorBBPct, 'BB%');
+  if (bbPct.error) {
+    setPlayerBuilderFeedback(bbPct.error, 'danger');
+    return null;
+  }
+  const hardPct = readNumberField(elements.playerEditorHardPct, 'Hard%');
+  if (hardPct.error) {
+    setPlayerBuilderFeedback(hardPct.error, 'danger');
+    return null;
+  }
+  const gbPct = readNumberField(elements.playerEditorGBPct, 'GB%');
+  if (gbPct.error) {
+    setPlayerBuilderFeedback(gbPct.error, 'danger');
+    return null;
+  }
+
+  const baseData = {
+    name,
+    k_pct: kPct.value,
+    bb_pct: bbPct.value,
+    hard_pct: hardPct.value,
+    gb_pct: gbPct.value,
+  };
+
+  if (normalized === 'batter') {
+    const speed = readNumberField(elements.playerEditorSpeed, 'Speed');
+    if (speed.error) {
+      setPlayerBuilderFeedback(speed.error, 'danger');
+      return null;
+    }
+    const fielding = readNumberField(elements.playerEditorFielding, 'Fielding');
+    if (fielding.error) {
+      setPlayerBuilderFeedback(fielding.error, 'danger');
+      return null;
+    }
+    const selectedPositions = getSelectedPositions();
+    const uniquePositions = Array.from(
+      new Set(
+        selectedPositions.filter((pos) => BATTER_POSITIONS.includes(pos)).map((pos) => pos.toUpperCase()),
+      ),
+    );
+    const positionsWithDh = Array.from(new Set([...uniquePositions, 'DH']));
+    return {
+      ...baseData,
+      eligible_positions: positionsWithDh,
+      bats: elements.playerEditorBats?.value || 'R',
+      speed: speed.value,
+      fielding_skill: fielding.value,
+    };
+  }
+
+  const stamina = readNumberField(elements.playerEditorStamina, 'Stamina');
+  if (stamina.error) {
+    setPlayerBuilderFeedback(stamina.error, 'danger');
+    return null;
+  }
+  const type = getSelectedPitcherType();
+  if (!type) {
+    setPlayerBuilderFeedback('投手タイプを選択してください。', 'danger');
+    return null;
+  }
+  return {
+    ...baseData,
+    pitcher_type: type,
+    throws: elements.playerEditorThrows?.value || 'R',
+    stamina: stamina.value,
+  };
+}
+
 function loadPlayerTemplate(role = 'batter') {
-  if (!elements.playerEditorJson) return;
-  const tpl = DEFAULT_PLAYER_TEMPLATES[role] || DEFAULT_PLAYER_TEMPLATES.batter;
-  elements.playerEditorJson.value = tpl;
+  const normalized = updatePlayerRoleUI(role);
+  const template = clonePlayerTemplate(normalized);
+  applyPlayerFormData(template, normalized);
   if (elements.playerEditorSelect) {
     elements.playerEditorSelect.value = '__new__';
   }
@@ -127,6 +389,34 @@ function refreshView() {
 }
 
 export function initEventListeners(actions) {
+  async function populatePlayerSelect(role, desiredValue) {
+    const select = elements.playerEditorSelect;
+    if (!select) return [];
+    const players = await actions.fetchPlayersList(role);
+    const prevValue = desiredValue ?? select.value;
+    select.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '選手を選択';
+    select.appendChild(placeholder);
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new__';
+    newOpt.textContent = '新規選手を作成';
+    select.appendChild(newOpt);
+    players.forEach((name) => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    const validValues = new Set(['', '__new__', ...players]);
+    const targetValue = prevValue && validValues.has(prevValue) ? prevValue : '';
+    select.value = targetValue;
+    return players;
+  }
+
+  updatePlayerRoleUI(elements.playerEditorRole?.value || 'batter');
+
   elements.startButton.addEventListener('click', () => actions.handleStart(false));
   elements.reloadTeams.addEventListener('click', actions.handleReloadTeams);
   elements.restartButton.addEventListener('click', () => actions.handleStart(true));
@@ -220,29 +510,13 @@ export function initEventListeners(actions) {
       setUIView('player-builder');
       refreshView();
       setPlayerBuilderFeedback('区分と選手を選択するか、新規作成してください。', 'info');
+      const role = updatePlayerRoleUI(elements.playerEditorRole?.value || 'batter');
+      clearPlayerForm(role);
+      if (elements.playerEditorSelect) {
+        elements.playerEditorSelect.value = '';
+      }
       (async () => {
-        const role = elements.playerEditorRole?.value || 'batter';
-        const players = await actions.fetchPlayersList(role);
-        const select = elements.playerEditorSelect;
-        if (select) {
-          const prev = select.value;
-          select.innerHTML = '';
-          const ph = document.createElement('option');
-          ph.value = '';
-          ph.textContent = '選手を選択';
-          select.appendChild(ph);
-          const newOpt = document.createElement('option');
-          newOpt.value = '__new__';
-          newOpt.textContent = '新規選手を作成';
-          select.appendChild(newOpt);
-          players.forEach((name) => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            select.appendChild(opt);
-          });
-          select.value = prev && players.includes(prev) ? prev : '';
-        }
+        await populatePlayerSelect(role);
       })();
     });
   }
@@ -317,38 +591,51 @@ export function initEventListeners(actions) {
     });
   }
 
-  if (elements.playerEditorRole) {
-    elements.playerEditorRole.addEventListener('change', () => {
-      // 切替時は選手一覧を再取得し、テンプレートを表示
-      if (elements.playerEditorSelect) {
-        elements.playerEditorSelect.value = '';
-      }
-      if (elements.playerEditorJson) {
-        elements.playerEditorJson.value = '';
-      }
-      setPlayerBuilderFeedback('区分が変更されました。選手を選ぶかテンプレートを作成してください。', 'info');
-      (async () => {
-        const role = elements.playerEditorRole?.value || 'batter';
-        const players = await actions.fetchPlayersList(role);
-        const select = elements.playerEditorSelect;
-        if (select) {
-          select.innerHTML = '';
-          const ph = document.createElement('option');
-          ph.value = '';
-          ph.textContent = '選手を選択';
-          select.appendChild(ph);
-          const newOpt = document.createElement('option');
-          newOpt.value = '__new__';
-          newOpt.textContent = '新規選手を作成';
-          select.appendChild(newOpt);
-          players.forEach((name) => {
-            const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = name;
-            select.appendChild(opt);
-          });
+  if (elements.playerRoleButtons?.length) {
+    elements.playerRoleButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const value = String(button.dataset.roleChoice || '').toLowerCase();
+        const normalized = value === 'pitcher' ? 'pitcher' : 'batter';
+        if (elements.playerEditorRole?.value === normalized) {
+          return;
         }
-      })();
+        updatePlayerRoleUI(normalized);
+        clearPlayerForm(normalized);
+        if (elements.playerEditorSelect) {
+          elements.playerEditorSelect.value = '';
+        }
+        setPlayerBuilderFeedback('区分が変更されました。選手を選ぶかテンプレートを作成してください。', 'info');
+        (async () => {
+          await populatePlayerSelect(normalized);
+        })();
+      });
+    });
+  }
+
+  if (elements.playerPositionButtons?.length) {
+    elements.playerPositionButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const role = elements.playerEditorRole?.value || 'batter';
+        if (role !== 'batter' || button.disabled) {
+          return;
+        }
+        const isActive = button.classList.contains('active');
+        updateChipToggleState(button, !isActive);
+      });
+    });
+  }
+
+  if (elements.playerPitcherTypeButtons?.length) {
+    elements.playerPitcherTypeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const role = elements.playerEditorRole?.value || 'batter';
+        if (role !== 'pitcher' || button.disabled) {
+          return;
+        }
+        elements.playerPitcherTypeButtons.forEach((btn) => {
+          updateChipToggleState(btn, btn === button);
+        });
+      });
     });
   }
 
@@ -361,47 +648,43 @@ export function initEventListeners(actions) {
         return;
       }
       if (!selectValue) {
-        if (elements.playerEditorJson) elements.playerEditorJson.value = '';
+        const role = elements.playerEditorRole?.value || 'batter';
+        clearPlayerForm(role);
         setPlayerBuilderFeedback('編集する選手を選択してください。', 'info');
         return;
       }
       setPlayerBuilderFeedback('選手データを読み込み中...', 'info');
-      const player = await actions.fetchPlayerDefinition(selectValue);
-      if (player && elements.playerEditorJson) {
-        elements.playerEditorJson.value = JSON.stringify(player, null, 2);
+      const result = await actions.fetchPlayerDefinition(selectValue);
+      const fetchedPlayer = result?.player || null;
+      const fetchedRole = result?.role === 'pitcher' ? 'pitcher' : result?.role === 'batter' ? 'batter' : null;
+      const currentRole = elements.playerEditorRole?.value || 'batter';
+      const roleToUse = fetchedRole || currentRole;
+      if (fetchedRole && fetchedRole !== currentRole) {
+        updatePlayerRoleUI(fetchedRole);
+        await populatePlayerSelect(fetchedRole, selectValue);
+      }
+      if (fetchedPlayer) {
+        applyPlayerFormData(fetchedPlayer, roleToUse);
         setPlayerBuilderFeedback('選手データを読み込みました。', 'info');
       } else {
+        clearPlayerForm(roleToUse);
         setPlayerBuilderFeedback('選手データの読み込みに失敗しました。', 'danger');
       }
     });
   }
 
-  if (elements.playerEditorJson) {
-    elements.playerEditorJson.addEventListener('input', () => {
-      // reserved for dirty flag if needed
-    });
-  }
-
   if (elements.playerBuilderSave) {
     elements.playerBuilderSave.addEventListener('click', async () => {
-      if (!elements.playerEditorJson) return;
-      const raw = elements.playerEditorJson.value;
-      let parsed;
-      try {
-        parsed = JSON.parse(raw);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'JSONを解析できません。';
-        setPlayerBuilderFeedback(`JSONの構文エラー: ${message}`, 'danger');
+      const role = elements.playerEditorRole?.value || 'batter';
+      const formData = getPlayerFormData(role);
+      if (!formData) {
         return;
       }
-      const role = elements.playerEditorRole?.value || 'batter';
       elements.playerBuilderSave.disabled = true;
       try {
-        const savedName = await actions.handlePlayerSave(parsed, role);
+        const savedName = await actions.handlePlayerSave(formData, role);
         if (savedName) {
-          if (elements.playerEditorSelect) {
-            elements.playerEditorSelect.value = savedName;
-          }
+          await populatePlayerSelect(role, savedName);
           setPlayerBuilderFeedback('選手を保存しました。', 'success');
         }
       } catch (error) {
@@ -426,27 +709,8 @@ export function initEventListeners(actions) {
       elements.playerBuilderDelete.disabled = true;
       try {
         await actions.handlePlayerDelete(name, role);
-        if (elements.playerEditorJson) elements.playerEditorJson.value = '';
-        if (elements.playerEditorSelect) {
-          const players = await actions.fetchPlayersList(role);
-          const select = elements.playerEditorSelect;
-          select.innerHTML = '';
-          const ph = document.createElement('option');
-          ph.value = '';
-          ph.textContent = '選手を選択';
-          select.appendChild(ph);
-          const newOpt = document.createElement('option');
-          newOpt.value = '__new__';
-          newOpt.textContent = '新規選手を作成';
-          select.appendChild(newOpt);
-          players.forEach((pname) => {
-            const opt = document.createElement('option');
-            opt.value = pname;
-            opt.textContent = pname;
-            select.appendChild(opt);
-          });
-          select.value = '';
-        }
+        await populatePlayerSelect(role);
+        clearPlayerForm(role);
         setPlayerBuilderFeedback('選手を削除しました。', 'success');
       } catch (error) {
         const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';

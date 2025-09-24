@@ -313,10 +313,16 @@ export function createGameActions(render) {
     const endpoint = `${CONFIG.api.endpoints.playerDetail}?name=${encodeURIComponent(name)}`;
     try {
       const payload = await apiRequest(endpoint);
-      return payload?.player || null;
+      if (payload && typeof payload === 'object') {
+        return {
+          player: payload.player || null,
+          role: payload.role || null,
+        };
+      }
+      return { player: null, role: null };
     } catch (error) {
       handleApiError(error, render);
-      return null;
+      return { player: null, role: null };
     }
   }
 

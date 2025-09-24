@@ -259,6 +259,199 @@
   color: #bae6fd;
 }
 
+.player-builder-card {
+  gap: 16px;
+}
+
+.player-builder-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.player-selector-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(7, 12, 24, 0.66);
+  padding: 18px;
+  backdrop-filter: blur(6px);
+}
+
+.selector-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+
+.selector-hint {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.selector-actions {
+  margin-top: auto;
+}
+
+.player-selector-panel select {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  padding: 10px 12px;
+  font-size: 14px;
+  background: rgba(15, 23, 42, 0.7);
+  color: var(--text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-selector-panel select:focus-visible {
+  outline: none;
+  border-color: rgba(125, 211, 252, 0.65);
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.25);
+}
+
+.chip-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.55);
+  color: var(--text);
+  padding: 6px 16px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.chip-toggle:hover {
+  border-color: rgba(96, 165, 250, 0.6);
+}
+
+.chip-toggle:focus-visible {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.chip-toggle.active,
+.chip-toggle[aria-pressed='true'] {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(56, 189, 248, 0.28));
+  border-color: rgba(125, 211, 252, 0.75);
+  color: #e0f2fe;
+}
+
+.chip-toggle:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.player-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(7, 12, 24, 0.72);
+  padding: 22px 24px;
+}
+
+.player-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.player-form-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.player-form-section p {
+  margin: 0;
+}
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-header p {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.player-editor-form .form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.player-editor-form .form-grid.two-col {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.player-editor-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-editor-form .form-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.86);
+}
+
+.player-editor-form .form-field input,
+.player-editor-form .form-field select {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.player-editor-form .form-field input:focus-visible,
+.player-editor-form .form-field select:focus-visible {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.7);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 10px;
+}
+
+.toggle-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+}
+
 .team-status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
