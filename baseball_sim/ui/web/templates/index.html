@@ -183,38 +183,156 @@
         </section>
 
         <section id="player-builder-screen" class="screen hidden">
-          <div class="title-card team-builder-card">
+          <div class="title-card team-builder-card player-builder-card">
             <div class="team-builder-header">
               <h2>選手作成・編集</h2>
               <p>
-                野手または投手を選択し、ステータスを編集して保存します。保存すると <code>players.json</code> に反映されます。
+                区分を選択し、名前やステータスを入力するだけで選手データを編集できます。保存すると
+                <code>players.json</code> に反映されます。
               </p>
             </div>
-            <div class="team-builder-controls">
-              <div class="team-builder-select-row" style="gap: 12px; align-items: end; flex-wrap: wrap;">
-                <div>
-                  <label for="player-editor-role">区分</label>
-                  <select id="player-editor-role">
-                    <option value="batter">野手</option>
-                    <option value="pitcher">投手</option>
-                  </select>
+            <div class="player-builder-layout">
+              <aside class="player-selector-panel" id="player-selector-panel">
+                <div class="selector-group">
+                  <span class="selector-label">区分</span>
+                  <div class="chip-toggle-group" role="radiogroup" aria-label="区分選択">
+                    <input id="player-editor-role" type="hidden" value="batter" />
+                    <button
+                      type="button"
+                      class="chip-toggle active"
+                      data-role-choice="batter"
+                      aria-pressed="true"
+                    >
+                      野手
+                    </button>
+                    <button
+                      type="button"
+                      class="chip-toggle"
+                      data-role-choice="pitcher"
+                      aria-pressed="false"
+                    >
+                      投手
+                    </button>
+                  </div>
                 </div>
-                <div style="flex: 1 1 300px;">
-                  <label for="player-editor-select">編集する選手</label>
+                <div class="selector-group">
+                  <label class="selector-label" for="player-editor-select">選手</label>
                   <select id="player-editor-select"></select>
+                  <p class="selector-hint">既存の選手を読み込むか、新規作成を選んでください。</p>
                 </div>
-                <div>
+                <div class="selector-actions">
                   <button id="player-builder-new" type="button">新規テンプレート</button>
                 </div>
-              </div>
-            </div>
-            <div class="team-builder-editor">
-              <textarea
-                id="player-editor-json"
-                rows="20"
-                spellcheck="false"
-                aria-label="選手定義JSON"
-              ></textarea>
+              </aside>
+
+              <form id="player-editor-form" class="player-editor-form" autocomplete="off">
+                <div class="player-form-section">
+                  <h3>基本情報</h3>
+                  <div class="form-grid two-col">
+                    <div class="form-field">
+                      <label for="player-editor-name">名前</label>
+                      <input id="player-editor-name" type="text" placeholder="例: Taro Yamada" />
+                    </div>
+                    <div class="form-field" data-role-section="batter">
+                      <label for="player-editor-bats">打席</label>
+                      <select id="player-editor-bats">
+                        <option value="R">右</option>
+                        <option value="L">左</option>
+                        <option value="S">両打</option>
+                      </select>
+                    </div>
+                    <div class="form-field" data-role-section="pitcher">
+                      <label for="player-editor-throws">利き腕</label>
+                      <select id="player-editor-throws">
+                        <option value="R">右</option>
+                        <option value="L">左</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="player-form-section" data-role-section="batter">
+                  <div class="section-header">
+                    <h3>守備ポジション</h3>
+                    <p>DHは自動で付与されます。該当する守備位置を選択してください。</p>
+                  </div>
+                  <div class="toggle-grid" role="group" aria-label="守備ポジション">
+                    <button type="button" class="chip-toggle" data-position-option="C" aria-pressed="false">
+                      C
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="1B" aria-pressed="false">
+                      1B
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="2B" aria-pressed="false">
+                      2B
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="3B" aria-pressed="false">
+                      3B
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="SS" aria-pressed="false">
+                      SS
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="LF" aria-pressed="false">
+                      LF
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="CF" aria-pressed="false">
+                      CF
+                    </button>
+                    <button type="button" class="chip-toggle" data-position-option="RF" aria-pressed="false">
+                      RF
+                    </button>
+                  </div>
+                </div>
+
+                <div class="player-form-section" data-role-section="pitcher">
+                  <div class="section-header">
+                    <h3>役割</h3>
+                    <p>SP（先発）またはRP（救援）から選択してください。</p>
+                  </div>
+                  <div class="toggle-grid compact" role="radiogroup" aria-label="投手タイプ">
+                    <button type="button" class="chip-toggle" data-pitcher-type="SP" aria-pressed="false">
+                      SP
+                    </button>
+                    <button type="button" class="chip-toggle" data-pitcher-type="RP" aria-pressed="false">
+                      RP
+                    </button>
+                  </div>
+                </div>
+
+                <div class="player-form-section">
+                  <h3>パフォーマンス</h3>
+                  <div class="form-grid two-col">
+                    <div class="form-field">
+                      <label for="player-editor-k">K%</label>
+                      <input id="player-editor-k" type="number" step="0.1" inputmode="decimal" />
+                    </div>
+                    <div class="form-field">
+                      <label for="player-editor-bb">BB%</label>
+                      <input id="player-editor-bb" type="number" step="0.1" inputmode="decimal" />
+                    </div>
+                    <div class="form-field">
+                      <label for="player-editor-hard">Hard%</label>
+                      <input id="player-editor-hard" type="number" step="0.1" inputmode="decimal" />
+                    </div>
+                    <div class="form-field">
+                      <label for="player-editor-gb">GB%</label>
+                      <input id="player-editor-gb" type="number" step="0.1" inputmode="decimal" />
+                    </div>
+                    <div class="form-field" data-role-section="batter">
+                      <label for="player-editor-speed">Speed</label>
+                      <input id="player-editor-speed" type="number" step="0.01" inputmode="decimal" />
+                    </div>
+                    <div class="form-field" data-role-section="batter">
+                      <label for="player-editor-fielding">Fielding</label>
+                      <input id="player-editor-fielding" type="number" step="1" inputmode="decimal" />
+                    </div>
+                    <div class="form-field" data-role-section="pitcher">
+                      <label for="player-editor-stamina">Stamina</label>
+                      <input id="player-editor-stamina" type="number" step="1" inputmode="decimal" />
+                    </div>
+                  </div>
+                </div>
+              </form>
             </div>
             <div class="team-builder-actions">
               <button id="player-builder-save" class="primary" type="button">保存</button>
