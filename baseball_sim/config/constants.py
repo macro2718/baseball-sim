@@ -12,10 +12,10 @@ MAX_EXTRA_INNINGS = 12
 # バント処理用定数
 class BuntConstants:
     """バント処理に使用する定数"""
-    # 走力関連（秒）
-    STANDARD_RUNNER_SPEED = 4.3
-    FAST_RUNNER_SPEED = 4.0
-    VERY_FAST_RUNNER_SPEED = 3.8
+    # 走力関連（評価値、100が平均）
+    STANDARD_RUNNER_SPEED = 100.0
+    FAST_RUNNER_SPEED = 107.5
+    VERY_FAST_RUNNER_SPEED = 113.2
     
     # 成功確率
     SACRIFICE_BUNT_SUCCESS_RATE = 0.75  # 75%（より現実的な値）

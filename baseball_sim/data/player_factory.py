@@ -23,7 +23,7 @@ class PlayerFactory:
         "bb_pct": 8.5,             # BB%（四球率）
         "hard_pct": 38.6,          # Hard%（強い打球の割合）
         "gb_pct": 44.6,            # GB%（ゴロ打率）
-        "speed": 4.3,              # 走力（塁間走速、秒）
+        "speed": 100.0,            # 走力（評価値、100が平均）
         "fielding_skill": 100      # 守備力
     }
     
