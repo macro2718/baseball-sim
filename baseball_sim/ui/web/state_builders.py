@@ -41,11 +41,13 @@ class SessionStateBuilder:
     ) -> Tuple[Dict[str, object], Optional[str]]:
         title = self._build_title_state()
         teams = self._build_teams_state()
+        team_library = self._build_team_library_state()
         game, updated_reason = self._build_game_state(teams, action_block_reason)
 
         payload: Dict[str, object] = {
             "title": title,
             "teams": teams,
+            "team_library": team_library,
             "game": game,
             "log": list(log_entries),
             "notification": notification.to_dict() if notification else None,
@@ -100,6 +102,22 @@ class SessionStateBuilder:
             "valid": valid,
             "message": message,
             "errors": errors,
+        }
+
+    def _build_team_library_state(self) -> Dict[str, object]:
+        if hasattr(self._session, "get_team_library_state"):
+            try:
+                state = self._session.get_team_library_state()
+            except Exception:  # pragma: no cover - defensive fallback
+                state = None
+            if isinstance(state, dict):
+                return state
+        return {
+            "teams": [],
+            "selection": {"home": None, "away": None},
+            "ready": False,
+            "hint": "チームデータを読み込めませんでした。",
+            "active": {"home": None, "away": None},
         }
 
     # ------------------------------------------------------------------

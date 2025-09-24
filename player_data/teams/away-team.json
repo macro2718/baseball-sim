@@ -1,0 +1,65 @@
+{
+  "name": "Away Team",
+  "pitchers": [
+    "Yosuke Fukuda",
+    "Akira Murakami",
+    "Yuki Ota",
+    "Ryota Yamazaki",
+    "Ryota Yamamoto",
+    "Kazuo Ogawa",
+    "Yu Kimura",
+    "Yuji Matsumoto",
+    "Tatsuya Yamamoto",
+    "Yosuke Ito",
+    "Naoki Hayashi",
+    "Ichiro Hayashi",
+    "Soichiro Sakamoto"
+  ],
+  "lineup": [
+    {
+      "name": "Tsuyoshi Takagi",
+      "position": "C"
+    },
+    {
+      "name": "Kenji Endo",
+      "position": "1B"
+    },
+    {
+      "name": "Yuki Endo",
+      "position": "2B"
+    },
+    {
+      "name": "Tsuyoshi Goto",
+      "position": "3B"
+    },
+    {
+      "name": "Satoshi Matsumoto",
+      "position": "SS"
+    },
+    {
+      "name": "Kazuki Fujii",
+      "position": "LF"
+    },
+    {
+      "name": "Soichiro Yamashita",
+      "position": "CF"
+    },
+    {
+      "name": "Shota Ueda",
+      "position": "RF"
+    },
+    {
+      "name": "Akira Sato",
+      "position": "DH"
+    }
+  ],
+  "bench": [
+    "Shigeru Yamazaki",
+    "Kenji Hasegawa",
+    "Takumi Sakamoto",
+    "Jin Yamazaki",
+    "Akira Yamamoto",
+    "Takuya Watanabe",
+    "Naoki Takeuchi"
+  ]
+}

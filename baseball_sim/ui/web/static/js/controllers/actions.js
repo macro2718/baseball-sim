@@ -1,6 +1,11 @@
 import { CONFIG } from '../config.js';
 import { elements } from '../dom.js';
-import { stateCache, resetDefenseSelection, getDefensePlanInvalidAssignments } from '../state.js';
+import {
+  stateCache,
+  resetDefenseSelection,
+  getDefensePlanInvalidAssignments,
+  setUIView,
+} from '../state.js';
 import { apiRequest } from '../services/apiClient.js';
 import { renderDefensePanel, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 import { showStatus } from '../ui/status.js';
@@ -44,6 +49,7 @@ export function createGameActions(render) {
   async function handleReturnToTitle() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameStop, { method: 'POST' });
+      setUIView('title');
       render(payload);
     } catch (error) {
       handleApiError(error, render);
@@ -229,6 +235,50 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleTeamSelection(homeId, awayId) {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.teamSelect, {
+        method: 'POST',
+        body: JSON.stringify({ home: homeId, away: awayId }),
+      });
+      setUIView('title');
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
+  async function fetchTeamDefinition(teamId) {
+    if (!teamId) return null;
+    const endpoint = `${CONFIG.api.endpoints.teamDetail}/${encodeURIComponent(teamId)}`;
+    try {
+      const payload = await apiRequest(endpoint);
+      return payload?.team || null;
+    } catch (error) {
+      handleApiError(error, render);
+      return null;
+    }
+  }
+
+  async function handleTeamSave(teamId, teamData) {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.teamSave, {
+        method: 'POST',
+        body: JSON.stringify({ team_id: teamId, team: teamData }),
+      });
+      if (payload?.state) {
+        render(payload.state);
+      } else {
+        render(payload);
+      }
+      return payload?.team_id ?? teamId ?? null;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
   return {
     handleStart,
     handleReloadTeams,
@@ -241,5 +291,8 @@ export function createGameActions(render) {
     handleDefenseReset,
     handlePitcherChange,
     loadInitialState,
+    handleTeamSelection,
+    fetchTeamDefinition,
+    handleTeamSave,
   };
 }

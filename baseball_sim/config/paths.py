@@ -54,14 +54,25 @@ class PathManager:
         if filename:
             return os.path.join(models_dir, filename)
         return models_dir
-    
+
     def get_players_data_path(self) -> str:
         """選手データファイルのパスを取得"""
         return self.get_data_path(FilePaths.PLAYERS_JSON)
-    
+
     def get_teams_data_path(self) -> str:
         """チームデータファイルのパスを取得"""
         return self.get_data_path(FilePaths.TEAMS_JSON)
+
+    def get_team_library_path(self, filename: str | None = None) -> str:
+        """1チームごとのデータファイルを格納するディレクトリのパスを取得"""
+        teams_dir = os.path.join(self.base_dir, "player_data", FilePaths.TEAM_LIBRARY_DIR)
+        if filename:
+            return os.path.join(teams_dir, filename)
+        return teams_dir
+
+    def get_team_selection_path(self) -> str:
+        """選択されたチーム情報を保存するファイルのパスを取得"""
+        return self.get_data_path(FilePaths.TEAM_SELECTION_JSON)
     
     def get_batting_model_path(self) -> str:
         """打撃モデルファイルのパスを取得"""

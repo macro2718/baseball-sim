@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from baseball_sim.config import GameResults, setup_project_environment
 from baseball_sim.data.loader import DataLoader
+from baseball_sim.data.team_library import TeamLibrary, TeamLibraryError
 from baseball_sim.gameplay.game import GameState
 from baseball_sim.gameplay.substitutions import SubstitutionManager
 
@@ -35,6 +36,11 @@ class WebGameSession:
         self._state_builder = SessionStateBuilder(self)
         self._game_over_announced = False
         self._action_block_reason: Optional[str] = None
+        self._team_library = TeamLibrary()
+        self._team_library.ensure_initialized()
+        selection = self._team_library.ensure_selection_valid()
+        self._home_team_id = selection.get("home")
+        self._away_team_id = selection.get("away")
         self.ensure_teams()
 
     # ------------------------------------------------------------------
@@ -46,7 +52,36 @@ class WebGameSession:
         """Load teams from disk if they are missing or a reload is requested."""
 
         if force_reload or self.home_team is None or self.away_team is None:
-            self.home_team, self.away_team = DataLoader.create_teams_from_data()
+            selection = self._team_library.ensure_selection_valid()
+            self._home_team_id = selection.get("home")
+            self._away_team_id = selection.get("away")
+
+            if not self._home_team_id or not self._away_team_id:
+                self.home_team = None
+                self.away_team = None
+                return self.home_team, self.away_team
+
+            try:
+                home_source = self._team_library.load_team(self._home_team_id)
+                away_source = self._team_library.load_team(self._away_team_id)
+            except TeamLibraryError as exc:
+                self.home_team = None
+                self.away_team = None
+                self._notifications.publish("danger", str(exc))
+                return self.home_team, self.away_team
+
+            try:
+                self.home_team, self.away_team = DataLoader.create_teams_from_data(
+                    home_team_override=home_source,
+                    away_team_override=away_source,
+                )
+            except Exception as exc:
+                self.home_team = None
+                self.away_team = None
+                self._notifications.publish(
+                    "danger", f"Failed to load teams: {exc}"
+                )
+                return self.home_team, self.away_team
         return self.home_team, self.away_team
 
     def start_new_game(self, reload_teams: bool = False) -> Dict[str, Any]:
@@ -104,6 +139,90 @@ class WebGameSession:
         self._action_block_reason = None
         self._notifications.publish("info", "Team data reloaded.")
         return self.build_state()
+
+    def get_team_library_state(self) -> Dict[str, object]:
+        """Return metadata about available teams and current selection."""
+
+        selection = self._team_library.ensure_selection_valid()
+        self._home_team_id = selection.get("home")
+        self._away_team_id = selection.get("away")
+        state = self._team_library.describe()
+        state["active"] = {
+            "home": self._home_team_id,
+            "away": self._away_team_id,
+        }
+        state["active_names"] = {
+            "home": getattr(self.home_team, "name", None),
+            "away": getattr(self.away_team, "name", None),
+        }
+        state["ready"] = bool(self.home_team and self.away_team) and state.get("ready", False)
+        return state
+
+    def update_team_selection(self, home_id: str, away_id: str) -> Dict[str, Any]:
+        """Persist newly selected teams and reload data if necessary."""
+
+        if not home_id or not away_id:
+            raise GameSessionError("ホーム・アウェイ両方のチームを選択してください。")
+
+        try:
+            selection = self._team_library.set_selection(home_id, away_id)
+        except TeamLibraryError as exc:
+            raise GameSessionError(str(exc)) from exc
+
+        self._home_team_id = selection.get("home")
+        self._away_team_id = selection.get("away")
+
+        self.ensure_teams(force_reload=True)
+        self.game_state = None
+        self._log.clear()
+        self._game_over_announced = False
+        self._action_block_reason = None
+
+        if self.home_team and self.away_team:
+            self._notifications.publish(
+                "info",
+                f"Teams selected: {self.away_team.name} @ {self.home_team.name}",
+            )
+        return self.build_state()
+
+    def get_team_definition(self, team_id: str) -> Dict[str, object]:
+        """Fetch a stored team definition for editing."""
+
+        if not team_id:
+            raise GameSessionError("チームIDを指定してください。")
+        try:
+            return self._team_library.load_team(team_id)
+        except TeamLibraryError as exc:
+            raise GameSessionError(str(exc)) from exc
+
+    def save_team_definition(
+        self, team_id: Optional[str], team_data: Dict[str, object]
+    ) -> Tuple[str, Dict[str, Any]]:
+        """Create or update a team definition and return the new identifier."""
+
+        try:
+            saved_id = self._team_library.save_team(team_id, team_data)
+        except TeamLibraryError as exc:
+            raise GameSessionError(str(exc)) from exc
+
+        selection = self._team_library.ensure_selection_valid()
+        self._home_team_id = selection.get("home")
+        self._away_team_id = selection.get("away")
+
+        needs_reload = saved_id in {self._home_team_id, self._away_team_id}
+        if needs_reload:
+            self.ensure_teams(force_reload=True)
+            self.game_state = None
+            self._log.clear()
+            self._game_over_announced = False
+            self._action_block_reason = None
+
+        team_name = str(team_data.get("name", saved_id))
+        level = "info" if needs_reload else "success"
+        self._notifications.publish(level, f"Team '{team_name}' saved.")
+
+        state = self.build_state()
+        return saved_id, state
 
     # ------------------------------------------------------------------
     # Gameplay actions
