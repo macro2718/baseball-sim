@@ -284,6 +284,71 @@ def create_routes(session: WebGameSession) -> Blueprint:
 
         return refs
 
+    def _rename_player_in_team(team_obj: dict, old_name: str, new_name: str) -> bool:
+        if not isinstance(team_obj, dict):
+            return False
+        if not old_name or not new_name or old_name == new_name:
+            return False
+
+        changed = False
+
+        lineup = team_obj.get('lineup')
+        if isinstance(lineup, list):
+            for entry in lineup:
+                if isinstance(entry, dict) and entry.get('name') == old_name:
+                    entry['name'] = new_name
+                    changed = True
+
+        bench = team_obj.get('bench')
+        if isinstance(bench, list):
+            for index, entry in enumerate(bench):
+                if isinstance(entry, str) and entry == old_name:
+                    bench[index] = new_name
+                    changed = True
+                elif isinstance(entry, dict) and entry.get('name') == old_name:
+                    entry['name'] = new_name
+                    changed = True
+
+        pitchers = team_obj.get('pitchers')
+        if isinstance(pitchers, list):
+            for index, entry in enumerate(pitchers):
+                if isinstance(entry, str) and entry == old_name:
+                    pitchers[index] = new_name
+                    changed = True
+        return changed
+
+    def _rename_player_references(old_name: str, new_name: str) -> None:
+        if not old_name or not new_name or old_name == new_name:
+            return
+
+        try:
+            teams_path = path_manager.get_teams_data_path()
+            teams_data = FileUtils.safe_json_load(teams_path, default=None)
+        except Exception:
+            teams_data = None
+
+        if isinstance(teams_data, dict):
+            updated = False
+            for key in ('home_team', 'away_team'):
+                team_obj = teams_data.get(key)
+                if isinstance(team_obj, dict) and _rename_player_in_team(team_obj, old_name, new_name):
+                    updated = True
+            if updated:
+                FileUtils.safe_json_save(teams_data, teams_path)
+
+        teams_dir = path_manager.get_team_library_path()
+        if os.path.isdir(teams_dir):
+            for fname in os.listdir(teams_dir):
+                if not fname.lower().endswith('.json'):
+                    continue
+                fpath = os.path.join(teams_dir, fname)
+                try:
+                    team_obj = FileUtils.safe_json_load(fpath, default=None)
+                except Exception:
+                    continue
+                if isinstance(team_obj, dict) and _rename_player_in_team(team_obj, old_name, new_name):
+                    FileUtils.safe_json_save(team_obj, fpath)
+
     @api_bp.get("/players/catalog")
     def players_catalog() -> Dict[str, Any]:
         data, mutated, players_path = _load_players_with_ids()
@@ -430,6 +495,7 @@ def create_routes(session: WebGameSession) -> Blueprint:
         existing_player = None
         existing_role_key = None
         existing_index: Optional[int] = None
+        previous_name: Optional[str] = None
         if player_id:
             existing_player, existing_role_key, existing_index = _find_player_by_id(data, player_id)
         elif original_name:
@@ -441,6 +507,8 @@ def create_routes(session: WebGameSession) -> Blueprint:
                         break
                 if existing_player:
                     break
+        if isinstance(existing_player, dict):
+            previous_name = existing_player.get('name')
 
         # Ensure the player has an id (reuse existing if present)
         if existing_player and existing_player.get('id'):
@@ -469,6 +537,16 @@ def create_routes(session: WebGameSession) -> Blueprint:
         if mutated or True:
             if not _save_players_data(data, players_path):
                 return create_error_response("選手データの保存に失敗しました。", session)
+
+        name_changed = bool(previous_name and previous_name != player.get('name'))
+        if previous_name:
+            try:
+                if name_changed:
+                    _rename_player_references(previous_name, player.get('name'))
+            except Exception:
+                # Failing to update team references should not abort the save operation
+                pass
+            session.ensure_teams(force_reload=True)
 
         # 保存後、stateを返してUIを再同期
         state = session.build_state()

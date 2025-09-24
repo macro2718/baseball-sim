@@ -48,6 +48,7 @@ export const elements = {
   teamBuilderSearch: document.getElementById('team-builder-search'),
   teamBuilderSave: document.getElementById('team-builder-save'),
   teamBuilderDelete: document.getElementById('team-builder-delete'),
+  teamBuilderReset: document.getElementById('team-builder-reset'),
   teamBuilderNew: document.getElementById('team-builder-new'),
   teamBuilderBack: document.getElementById('team-builder-back'),
   teamBuilderFeedback: document.getElementById('team-builder-feedback'),
