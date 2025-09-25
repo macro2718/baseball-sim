@@ -15,6 +15,9 @@ import {
   getLineupPositionKey,
   canBenchPlayerCoverPosition,
   normalizePositionKey,
+  setPinchRunContext,
+  setPinchRunSelectedBase,
+  getPinchRunSelectedBase,
 } from '../state.js';
 import {
   escapeHtml,
@@ -1553,6 +1556,203 @@ function updateCurrentBatterCard(cardEl, batter) {
   `;
 }
 
+function updatePinchRunCurrentCard(cardEl, baseOption) {
+  if (!cardEl) return;
+  if (!baseOption || !baseOption.occupied) {
+    cardEl.innerHTML = '<p class="pitcher-card-empty pinch-card-empty">代走対象の走者がいません。</p>';
+    return;
+  }
+
+  const baseLabel = baseOption.baseLabel || BASE_LABELS[baseOption.index] || '塁';
+  const lineupData = baseOption.lineupData || {};
+  const nameLabel = escapeHtml(baseOption.runnerName || lineupData.name || '-');
+  const positionHtml =
+    lineupData.position && lineupData.position !== '-'
+      ? renderPositionToken(lineupData.position, lineupData.pitcher_type)
+      : '';
+  const batsBadge = renderBatsBadge(lineupData.bats);
+  const tags = [positionHtml, batsBadge]
+    .filter(Boolean)
+    .join('');
+
+  const orderValue = Number.isInteger(lineupData.order)
+    ? `${lineupData.order}番`
+    : lineupData.order
+    ? String(lineupData.order)
+    : '-';
+  const speedValue = baseOption.speedDisplay || lineupData.speed || '-';
+
+  cardEl.innerHTML = `
+    <div class="current-pitcher-header current-batter-header">
+      <span class="card-label">選択した走者</span>
+      <div class="current-batter-tags">
+        ${tags || ''}
+        <span class="pitcher-throws-badge" aria-label="塁: ${escapeHtml(baseLabel)}">${escapeHtml(baseLabel)}</span>
+      </div>
+    </div>
+    <div class="current-pitcher-body current-batter-body">
+      <h4 class="pitcher-name current-batter-name">${nameLabel}</h4>
+      <div class="pitcher-meta batter-meta">
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">塁</span>
+          <span class="pitcher-meta-value batter-meta-value">${escapeHtml(baseLabel)}</span>
+        </div>
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">打順</span>
+          <span class="pitcher-meta-value batter-meta-value">${escapeHtml(orderValue)}</span>
+        </div>
+        <div class="pitcher-meta-block batter-meta-block">
+          <span class="pitcher-meta-label batter-meta-label">Speed</span>
+          <span class="pitcher-meta-value batter-meta-value">${escapeHtml(speedValue)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function highlightPinchRunBases(gridEl, selectedValue) {
+  if (!gridEl) return;
+  const normalized = selectedValue != null ? String(selectedValue) : '';
+  const cards = gridEl.querySelectorAll('.pinch-run-card');
+  cards.forEach((card) => {
+    const value = card.dataset.value || '';
+    const isSelected = normalized !== '' && value === normalized;
+    if (isSelected) {
+      card.classList.add('selected');
+      card.setAttribute('aria-pressed', 'true');
+    } else {
+      card.classList.remove('selected');
+      card.setAttribute('aria-pressed', 'false');
+    }
+  });
+}
+
+function updatePinchRunBaseGrid(
+  gridEl,
+  baseOptions,
+  selectEl,
+  helperEl,
+  helperMessage,
+  disabledMessage,
+  currentCardEl,
+) {
+  if (!gridEl) return;
+
+  gridEl.innerHTML = '';
+  const hasOptions = Array.isArray(baseOptions) && baseOptions.length > 0;
+  const selectionDisabled = !selectEl || Boolean(selectEl.disabled);
+
+  if (!hasOptions) {
+    const emptyMessage = document.createElement('p');
+    emptyMessage.className = 'pitcher-card-empty pinch-card-empty';
+    emptyMessage.textContent = '走者がいないため代走を送れません。';
+    gridEl.appendChild(emptyMessage);
+    highlightPinchRunBases(gridEl, '');
+    if (helperEl) {
+      helperEl.textContent = helperMessage || '走者が出塁すると代走を選択できます。';
+    }
+    if (currentCardEl) {
+      updatePinchRunCurrentCard(currentCardEl, null);
+    }
+    return;
+  }
+
+  baseOptions.forEach((baseOption) => {
+    const optionValue = String(baseOption.index);
+    const runnerName = baseOption.runnerName || baseOption.lineupData?.name || '-';
+    const positionsList = renderPositionList(
+      baseOption.lineupData?.eligible || baseOption.lineupData?.eligible_all,
+      baseOption.lineupData?.pitcher_type,
+    );
+    const nameLabel = escapeHtml(runnerName);
+    const baseLabel = escapeHtml(baseOption.baseLabel || BASE_LABELS[baseOption.index] || '塁');
+    const speedLabel = escapeHtml(baseOption.speedDisplay || baseOption.lineupData?.speed || '-');
+    const orderValue = baseOption.lineupData?.order;
+    const orderLabel = Number.isInteger(orderValue) ? `${orderValue}番` : '-';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pitcher-card pinch-card pinch-run-card';
+    button.dataset.value = optionValue;
+    button.setAttribute('role', 'listitem');
+    button.setAttribute('aria-pressed', 'false');
+    button.title = `${baseLabel}走者: ${runnerName}`;
+    button.innerHTML = `
+      <div class="pinch-card-top pinch-run-card-top">
+        <div class="pinch-card-heading">
+          <span class="pinch-run-base-chip">${baseLabel}</span>
+          <h4 class="pinch-card-name">${nameLabel}</h4>
+        </div>
+      </div>
+      <div class="pinch-card-stats pinch-run-stats">
+        <div class="pinch-stat-block">
+          <span class="pinch-stat-label">打順</span>
+          <span class="pinch-stat-value">${escapeHtml(orderLabel)}</span>
+        </div>
+        <div class="pinch-stat-block">
+          <span class="pinch-stat-label">Speed</span>
+          <span class="pinch-stat-value">${speedLabel}</span>
+        </div>
+      </div>
+      <div class="pinch-card-positions">
+        <span class="pinch-stat-label pinch-positions-label">守備適性</span>
+        <div class="pinch-position-list">${positionsList}</div>
+      </div>
+    `;
+
+    button.addEventListener('click', () => {
+      if (!selectEl || selectEl.disabled) return;
+      selectEl.value = optionValue;
+      const changeEvent = new Event('change', { bubbles: true });
+      selectEl.dispatchEvent(changeEvent);
+      highlightPinchRunBases(gridEl, optionValue);
+      if (currentCardEl) {
+        const selectedIndex = Number(optionValue);
+        const selectedOption = stateCache.pinchRunContext?.bases?.find(
+          (entry) => Number(entry.index) === selectedIndex,
+        );
+        updatePinchRunCurrentCard(currentCardEl, selectedOption);
+      }
+    });
+
+    if (selectionDisabled) {
+      button.disabled = true;
+    }
+
+    gridEl.appendChild(button);
+  });
+
+  if (selectEl && !selectEl.dataset.pinchRunListener) {
+    selectEl.addEventListener('change', () => {
+      highlightPinchRunBases(gridEl, selectEl.value);
+      const selectedIndex = Number(selectEl.value);
+      setPinchRunSelectedBase(selectedIndex);
+      if (currentCardEl) {
+        const selectedOption = stateCache.pinchRunContext?.bases?.find(
+          (entry) => Number(entry.index) === selectedIndex,
+        );
+        updatePinchRunCurrentCard(currentCardEl, selectedOption);
+      }
+    });
+    selectEl.dataset.pinchRunListener = 'true';
+  }
+
+  highlightPinchRunBases(gridEl, selectEl ? selectEl.value : '');
+
+  if (helperEl) {
+    const defaultMessage = 'カードを選択するとここに反映されます。';
+    helperEl.textContent = helperMessage || (selectionDisabled ? disabledMessage : defaultMessage);
+  }
+
+  if (currentCardEl) {
+    const selectedIndex = Number(selectEl ? selectEl.value : getPinchRunSelectedBase());
+    const selectedOption = stateCache.pinchRunContext?.bases?.find(
+      (entry) => Number(entry.index) === selectedIndex,
+    );
+    updatePinchRunCurrentCard(currentCardEl, selectedOption);
+  }
+}
+
 function highlightPitcherCards(gridEl, selectedValue) {
   if (!gridEl) return;
   const normalized = selectedValue != null ? String(selectedValue) : '';
@@ -1669,21 +1869,31 @@ function highlightPinchCards(gridEl, selectedValue) {
   });
 }
 
-function updatePinchOptionGrid(gridEl, options, selectEl, helperEl, helperMessage) {
+function updatePinchOptionGrid(
+  gridEl,
+  options,
+  selectEl,
+  helperEl,
+  helperMessage,
+  optionsConfig = {},
+) {
   if (!gridEl) return;
 
   gridEl.innerHTML = '';
   const hasOptions = Array.isArray(options) && options.length > 0;
   const selectionDisabled = !selectEl || Boolean(selectEl.disabled);
+  const config = optionsConfig || {};
+  const emptyMessageText = config.emptyMessage || '代打に使える選手がいません。';
+  const disabledMessageText = config.disabledMessage || '現在は代打を選択できません。';
 
   if (!hasOptions) {
     const emptyMessage = document.createElement('p');
     emptyMessage.className = 'pitcher-card-empty pinch-card-empty';
-    emptyMessage.textContent = '代打に使える選手がいません。';
+    emptyMessage.textContent = emptyMessageText;
     gridEl.appendChild(emptyMessage);
     highlightPinchCards(gridEl, '');
     if (helperEl) {
-      helperEl.textContent = helperMessage || '現在は代打を選択できません。';
+      helperEl.textContent = helperMessage || disabledMessageText;
     }
     return;
   }
@@ -1764,7 +1974,7 @@ function updatePinchOptionGrid(gridEl, options, selectEl, helperEl, helperMessag
       helperEl.textContent = helperMessage;
     } else {
       helperEl.textContent = selectionDisabled
-        ? '現在は代打を選択できません。'
+        ? disabledMessageText
         : 'カードを選択するとここに反映されます。';
     }
   }
@@ -2033,8 +2243,17 @@ function updateStrategyControls(gameState, teams) {
     pinchCurrentCard,
     pinchOptionGrid,
     pinchSelectHelper,
+    pinchRunBase,
+    pinchRunBaseGrid,
+    pinchRunBaseHelper,
+    pinchRunPlayer,
+    pinchRunOptionGrid,
+    pinchRunSelectHelper,
+    pinchRunButton,
+    pinchRunCurrentCard,
     openOffenseButton,
     offensePinchMenuButton,
+    offensePinchRunMenuButton,
     openDefenseButton,
     openStatsButton,
     openAbilitiesButton,
@@ -2058,11 +2277,80 @@ function updateStrategyControls(gameState, teams) {
   stateCache.currentBatterIndex =
     currentBatter && Number.isInteger(currentBatter.index) ? currentBatter.index : null;
 
+  const basesState = Array.isArray(gameState.bases) ? gameState.bases : [];
+  const previousSelectedBase = getPinchRunSelectedBase();
+  const baseOptions = [];
+  const availableBaseOptions = [];
+
+  basesState.forEach((base, index) => {
+    const occupied = Boolean(base && base.occupied);
+    const baseLabel = BASE_LABELS[index] || `${index + 1}塁`;
+    let lineupIndex = Number.isInteger(base?.lineup_index) ? base.lineup_index : null;
+    let lineupEntry = null;
+
+    if (Number.isInteger(lineupIndex)) {
+      lineupEntry = offenseLineup.find(
+        (player) => Number.isInteger(player.index) && player.index === lineupIndex,
+      );
+    }
+
+    const runnerNameRaw = typeof base?.runner === 'string' ? base.runner : null;
+    if (!lineupEntry && runnerNameRaw) {
+      lineupEntry = offenseLineup.find((player) => player.name === runnerNameRaw) || null;
+      if (lineupEntry && Number.isInteger(lineupEntry.index)) {
+        lineupIndex = lineupEntry.index;
+      }
+    }
+
+    const speedDisplay =
+      (base && typeof base.speed_display === 'string' && base.speed_display.trim() !== '')
+        ? base.speed_display
+        : lineupEntry?.speed || (base?.speed != null ? String(base.speed) : '-');
+
+    const option = {
+      index,
+      occupied,
+      baseLabel,
+      runnerName: runnerNameRaw || lineupEntry?.name || null,
+      speedDisplay,
+      lineupIndex: Number.isInteger(lineupIndex) ? lineupIndex : null,
+      lineupData: lineupEntry || null,
+    };
+
+    baseOptions.push(option);
+
+    if (occupied && Number.isInteger(option.lineupIndex) && option.lineupData) {
+      availableBaseOptions.push(option);
+    }
+  });
+
+  let selectedBaseIndex = Number.isInteger(previousSelectedBase) ? previousSelectedBase : null;
+  if (!availableBaseOptions.some((option) => option.index === selectedBaseIndex)) {
+    selectedBaseIndex = availableBaseOptions.length ? availableBaseOptions[0].index : null;
+  }
+
+  setPinchRunContext(
+    baseOptions,
+    availableBaseOptions.map((option) => option.index),
+    selectedBaseIndex,
+  );
+
+  const sanitizedBaseIndex = stateCache.pinchRunContext?.selectedBaseIndex ?? null;
+  const selectedBaseOption =
+    Number.isInteger(sanitizedBaseIndex)
+      ? baseOptions.find((option) => option.index === sanitizedBaseIndex)
+      : null;
+  if (!Number.isInteger(previousSelectedBase) || previousSelectedBase !== sanitizedBaseIndex) {
+    setPinchRunSelectedBase(sanitizedBaseIndex);
+  }
+
   if (pinchCurrentCard) {
     updateCurrentBatterCard(pinchCurrentCard, currentBatter);
   }
 
   const canPinch = isActive && !isGameOver && Boolean(currentBatter) && offenseBench.length > 0;
+  const canPinchRun =
+    isActive && !isGameOver && offenseBench.length > 0 && availableBaseOptions.length > 0;
 
   if (pinchPlayer) {
     const benchPlaceholder = !currentBatter
@@ -2096,6 +2384,60 @@ function updateStrategyControls(gameState, teams) {
     offensePinchMenuButton.textContent = isGameOver ? 'Game Over' : '代打戦略';
   }
 
+  if (pinchRunBase) {
+    const basePlaceholder = !availableBaseOptions.length
+      ? '走者がいないため選択できません'
+      : 'カードまたはリストから選択';
+
+    populateSelectSimple(
+      pinchRunBase,
+      availableBaseOptions.map((option) => ({
+        value: option.index,
+        label: `${option.baseLabel} ${option.runnerName ?? '-'}`.trim(),
+      })),
+      basePlaceholder,
+    );
+
+    pinchRunBase.disabled = !canPinchRun;
+    if (Number.isInteger(sanitizedBaseIndex) && canPinchRun) {
+      pinchRunBase.value = String(sanitizedBaseIndex);
+    } else if (!canPinchRun) {
+      pinchRunBase.value = '';
+    }
+  }
+
+  if (pinchRunPlayer) {
+    const benchPlaceholder = !availableBaseOptions.length
+      ? '走者がいないため選択できません'
+      : offenseBench.length
+      ? 'カードまたはリストから選択'
+      : '代走に使える選手がいません';
+
+    populateSelectSimple(
+      pinchRunPlayer,
+      offenseBench.map((player) => ({
+        value: player.index,
+        label: `${player.name} (AVG ${player.avg ?? '-'}, HR ${player.hr ?? '-'})`,
+      })),
+      benchPlaceholder,
+    );
+
+    pinchRunPlayer.disabled = !canPinchRun;
+    if (!canPinchRun) {
+      pinchRunPlayer.value = '';
+    }
+  }
+
+  if (pinchRunButton) {
+    pinchRunButton.disabled = !canPinchRun;
+    pinchRunButton.textContent = isGameOver ? 'Game Over' : '代走を送る';
+  }
+
+  if (offensePinchRunMenuButton) {
+    offensePinchRunMenuButton.disabled = !canPinchRun;
+    offensePinchRunMenuButton.textContent = isGameOver ? 'Game Over' : '代走戦略';
+  }
+
   if (pinchOptionGrid) {
     let pinchHelperMessage = 'カードを選択するとここに反映されます。';
     if (!isActive) {
@@ -2109,6 +2451,54 @@ function updateStrategyControls(gameState, teams) {
     }
 
     updatePinchOptionGrid(pinchOptionGrid, offenseBench, pinchPlayer, pinchSelectHelper, pinchHelperMessage);
+  }
+
+  if (pinchRunOptionGrid) {
+    let pinchRunHelperMessage = 'カードを選択するとここに反映されます。';
+    if (!isActive) {
+      pinchRunHelperMessage = '試合開始後に代走が選択できます。';
+    } else if (isGameOver) {
+      pinchRunHelperMessage = '試合終了のため代走は行えません。';
+    } else if (!availableBaseOptions.length) {
+      pinchRunHelperMessage = '走者がいないため代走を送れません。';
+    } else if (!offenseBench.length) {
+      pinchRunHelperMessage = '代走に使える選手がいません。';
+    }
+
+    updatePinchOptionGrid(
+      pinchRunOptionGrid,
+      offenseBench,
+      pinchRunPlayer,
+      pinchRunSelectHelper,
+      pinchRunHelperMessage,
+      {
+        emptyMessage: '代走に使える選手がいません。',
+        disabledMessage: '現在は代走を選択できません。',
+      },
+    );
+  }
+
+  if (pinchRunBaseGrid) {
+    let baseHelperMessage = 'カードを選択するとここに反映されます。';
+    if (!isActive) {
+      baseHelperMessage = '試合開始後に代走が選択できます。';
+    } else if (isGameOver) {
+      baseHelperMessage = '試合終了のため代走は行えません。';
+    } else if (!availableBaseOptions.length) {
+      baseHelperMessage = '走者がいないため代走を送れません。';
+    }
+
+    updatePinchRunBaseGrid(
+      pinchRunBaseGrid,
+      availableBaseOptions,
+      pinchRunBase,
+      pinchRunBaseHelper,
+      baseHelperMessage,
+      '現在は代走を選択できません。',
+      pinchRunCurrentCard,
+    );
+  } else if (pinchRunCurrentCard) {
+    updatePinchRunCurrentCard(pinchRunCurrentCard, selectedBaseOption);
   }
 
   if (openOffenseButton) {

@@ -24,6 +24,7 @@ export function openModal(name) {
   hideOffenseMenu();
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
+  modal.dispatchEvent(new CustomEvent('show', { detail: { name } }));
 }
 
 export function closeModal(name) {

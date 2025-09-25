@@ -408,6 +408,57 @@ class WebGameSession:
         self._log.append(message, variant="highlight" if success else "danger")
         return self.build_state()
 
+    def execute_pinch_run(self, base_index: int, bench_index: int) -> Dict[str, Any]:
+        """Replace an active base runner with a bench player."""
+
+        if not self.game_state or not self.game_state.batting_team:
+            raise GameSessionError("Game has not started yet.")
+
+        bases = self.game_state.bases
+        total_bases = len(bases)
+        if base_index < 0 or base_index >= total_bases:
+            raise GameSessionError("Invalid base index for pinch run request.")
+
+        runner = bases[base_index]
+        if runner is None:
+            raise GameSessionError("The selected base is not occupied.")
+
+        batting_team = self.game_state.batting_team
+        lineup_index = None
+        try:
+            lineup_index = batting_team.lineup.index(runner)
+        except ValueError:
+            runner_name = getattr(runner, "name", None)
+            if runner_name:
+                for idx, player in enumerate(batting_team.lineup):
+                    if getattr(player, "name", None) == runner_name:
+                        lineup_index = idx
+                        break
+
+        if lineup_index is None:
+            raise GameSessionError("Could not match the selected runner to the lineup.")
+
+        substitution_manager = SubstitutionManager(batting_team)
+        success, result_message = substitution_manager.execute_defensive_substitution(
+            bench_index, lineup_index
+        )
+
+        original_name = getattr(runner, "name", "runner")
+        message = result_message
+        if success:
+            new_runner = batting_team.lineup[lineup_index]
+            bases[base_index] = new_runner
+            base_labels = ["first base", "second base", "third base"]
+            label = base_labels[base_index] if base_index < len(base_labels) else f"base {base_index + 1}"
+            message = (
+                f"{new_runner.name} pinch runs for {original_name} on {label}. {result_message}"
+            )
+
+        self._notifications.publish("success" if success else "danger", message)
+        variant = "highlight" if success else "danger"
+        self._log.append(message, variant=variant)
+        return self.build_state()
+
     def execute_defensive_substitution(
         self,
         *,

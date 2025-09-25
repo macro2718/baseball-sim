@@ -363,6 +363,51 @@
   gap: 18px;
 }
 
+.pinch-run-panels {
+  display: grid;
+  gap: 18px;
+}
+
+.pinch-run-base-grid {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .pinch-run-base-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+.pinch-run-card {
+  position: relative;
+}
+
+.pinch-run-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pinch-run-base-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pinch-run-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
 @media (min-width: 720px) {
   .pitcher-change,
   .pinch-strategy {
