@@ -2815,9 +2815,26 @@ function renderTitleLineup(teamKey, teamData, enabled) {
     order.className = 'title-lineup-order';
     order.textContent = `${slot.order}`;
 
-    const position = document.createElement('div');
-    position.className = 'title-lineup-position';
-    position.textContent = slot.slotPositionLabel || slot.slotPositionKey || '-';
+    const positionLabel = slot.slotPositionLabel || slot.slotPositionKey || '-';
+
+    const positionButton = document.createElement('button');
+    positionButton.type = 'button';
+    positionButton.className = 'title-lineup-position';
+    positionButton.textContent = positionLabel;
+    positionButton.dataset.team = plan.teamKey;
+    positionButton.dataset.titleRole = 'lineup';
+    positionButton.dataset.index = String(slot.index);
+    positionButton.dataset.lineupField = 'position';
+    positionButton.setAttribute('aria-label', `${slot.order}番 ${positionLabel} の守備位置を選択`);
+    positionButton.setAttribute(
+      'aria-pressed',
+      selectionMatchesTeam &&
+        selection.type === 'lineup' &&
+        selection.index === slot.index &&
+        (!selection.field || selection.field === 'position')
+        ? 'true'
+        : 'false',
+    );
 
     const playerButton = document.createElement('button');
     playerButton.type = 'button';
@@ -2825,6 +2842,16 @@ function renderTitleLineup(teamKey, teamData, enabled) {
     playerButton.dataset.team = plan.teamKey;
     playerButton.dataset.titleRole = 'lineup';
     playerButton.dataset.index = String(slot.index);
+    playerButton.dataset.lineupField = 'player';
+    playerButton.setAttribute(
+      'aria-pressed',
+      selectionMatchesTeam &&
+        selection.type === 'lineup' &&
+        selection.index === slot.index &&
+        (!selection.field || selection.field === 'player')
+        ? 'true'
+        : 'false',
+    );
 
     const name = document.createElement('span');
     name.className = 'title-lineup-player-name';
@@ -2853,7 +2880,7 @@ function renderTitleLineup(teamKey, teamData, enabled) {
     }
 
     row.appendChild(order);
-    row.appendChild(position);
+    row.appendChild(positionButton);
     row.appendChild(playerButton);
     container.appendChild(row);
   });

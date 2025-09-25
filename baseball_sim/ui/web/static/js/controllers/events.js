@@ -31,6 +31,7 @@ import {
   setTitleLineupSelection,
   clearTitleLineupSelection,
   swapTitleLineupPlayers,
+  swapTitleLineupPositions,
   moveBenchPlayerToLineup,
 } from '../ui/titleLineup.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
@@ -2562,22 +2563,36 @@ export function initEventListeners(actions) {
             return;
           }
 
+          const field = interactiveTarget.dataset.lineupField === 'position' ? 'position' : 'player';
+          const selectionField =
+            selection.field === 'position' ? 'position' : selection.field === 'player' ? 'player' : null;
+
           if (selection.team === normalizedTeam && selection.type === 'lineup') {
-            if (selection.index === index) {
+            if (selection.index === index && (selectionField === null || selectionField === field)) {
               clearTitleLineupSelection();
-            } else if (swapTitleLineupPlayers(normalizedTeam, selection.index, index)) {
-              clearTitleLineupSelection();
+            } else if (selectionField === 'position' && field === 'position') {
+              if (swapTitleLineupPositions(normalizedTeam, selection.index, index)) {
+                clearTitleLineupSelection();
+              } else {
+                setTitleLineupSelection(normalizedTeam, 'lineup', index, field);
+              }
+            } else if (selectionField !== 'position' && field !== 'position') {
+              if (swapTitleLineupPlayers(normalizedTeam, selection.index, index)) {
+                clearTitleLineupSelection();
+              } else {
+                setTitleLineupSelection(normalizedTeam, 'lineup', index, field);
+              }
             } else {
-              setTitleLineupSelection(normalizedTeam, 'lineup', index);
+              setTitleLineupSelection(normalizedTeam, 'lineup', index, field);
             }
           } else if (selection.team === normalizedTeam && selection.type === 'bench') {
             if (moveBenchPlayerToLineup(normalizedTeam, selection.index, index)) {
               clearTitleLineupSelection();
             } else {
-              setTitleLineupSelection(normalizedTeam, 'lineup', index);
+              setTitleLineupSelection(normalizedTeam, 'lineup', index, field);
             }
           } else {
-            setTitleLineupSelection(normalizedTeam, 'lineup', index);
+            setTitleLineupSelection(normalizedTeam, 'lineup', index, field);
           }
         } else if (role === 'bench') {
           const index = Number.parseInt(interactiveTarget.dataset.index || '', 10);

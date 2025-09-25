@@ -142,14 +142,23 @@ export function getTitleLineupPlan(teamKey) {
 }
 
 export function getTitleLineupSelection() {
-  return stateCache.titleLineup.selection || { team: null, type: null, index: null };
+  const selection = stateCache.titleLineup.selection || { team: null, type: null, index: null, field: null };
+  if (selection && typeof selection === 'object') {
+    return {
+      team: selection.team ?? null,
+      type: selection.type ?? null,
+      index: Number.isInteger(selection.index) ? selection.index : null,
+      field: selection.field === 'position' || selection.field === 'player' ? selection.field : null,
+    };
+  }
+  return { team: null, type: null, index: null, field: null };
 }
 
 export function clearTitleLineupSelection() {
-  stateCache.titleLineup.selection = { team: null, type: null, index: null };
+  stateCache.titleLineup.selection = { team: null, type: null, index: null, field: null };
 }
 
-export function setTitleLineupSelection(teamKey, type, index) {
+export function setTitleLineupSelection(teamKey, type, index, field = null) {
   const normalizedKey = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
   if (!normalizedKey) {
     clearTitleLineupSelection();
@@ -179,7 +188,8 @@ export function setTitleLineupSelection(teamKey, type, index) {
       return;
     }
   }
-  stateCache.titleLineup.selection = { team: normalizedKey, type, index };
+  const normalizedField = field === 'position' || field === 'player' ? field : null;
+  stateCache.titleLineup.selection = { team: normalizedKey, type, index, field: normalizedField };
 }
 
 export function swapTitleLineupPlayers(teamKey, indexA, indexB) {
@@ -199,6 +209,35 @@ export function swapTitleLineupPlayers(teamKey, indexA, indexB) {
   if (slotB.player) {
     updatePlayerForSlot(slotB.player, slotB);
   }
+  reindexPlan(plan);
+  return true;
+}
+
+export function swapTitleLineupPositions(teamKey, indexA, indexB) {
+  const plan = getTitleLineupPlan(teamKey);
+  if (!plan) return false;
+  if (!Number.isInteger(indexA) || !Number.isInteger(indexB)) return false;
+  if (indexA === indexB) return false;
+  const slotA = plan.lineup[indexA];
+  const slotB = plan.lineup[indexB];
+  if (!slotA || !slotB) return false;
+
+  const tempKey = slotA.slotPositionKey;
+  const tempLabel = slotA.slotPositionLabel;
+
+  slotA.slotPositionKey = slotB.slotPositionKey;
+  slotA.slotPositionLabel = slotB.slotPositionLabel;
+
+  slotB.slotPositionKey = tempKey;
+  slotB.slotPositionLabel = tempLabel;
+
+  if (slotA.player) {
+    updatePlayerForSlot(slotA.player, slotA);
+  }
+  if (slotB.player) {
+    updatePlayerForSlot(slotB.player, slotB);
+  }
+
   reindexPlan(plan);
   return true;
 }
