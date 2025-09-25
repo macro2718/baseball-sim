@@ -68,24 +68,46 @@ export function createGameActions(render) {
     }
   }
 
-  async function handleRunSimulation(games) {
+  async function handleRunSimulation(games, options = {}) {
     const parsedGames = Number.parseInt(games, 10);
     if (!Number.isFinite(parsedGames) || parsedGames <= 0) {
       showStatus('試合数には1以上の整数を入力してください。', 'danger');
-      return;
+      return null;
     }
-
-    stateCache.forceGameView = true;
 
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.simulationRun, {
         method: 'POST',
         body: JSON.stringify({ games: parsedGames }),
       });
+      if (options?.setView) {
+        setUIView(options.setView);
+      }
       render(payload);
+      return payload;
     } catch (error) {
       handleApiError(error, render);
+      throw error;
     }
+  }
+
+  async function handleSimulationStart(homeId, awayId, games) {
+    if (!homeId || !awayId) {
+      showStatus('ホーム・アウェイのチームを選択してください。', 'danger');
+      return;
+    }
+
+    try {
+      await apiRequest(CONFIG.api.endpoints.teamSelect, {
+        method: 'POST',
+        body: JSON.stringify({ home: homeId, away: awayId }),
+      });
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+
+    await handleRunSimulation(games, { setView: 'simulation-results' });
   }
 
   async function handleSwing() {
@@ -447,6 +469,7 @@ export function createGameActions(render) {
     handleReturnToTitle,
     handleClearLog,
     runSimulation: handleRunSimulation,
+    startSimulation: handleSimulationStart,
     handleSwing,
     handleBunt,
     handlePinchHit,

@@ -358,6 +358,168 @@
   outline-offset: 2px;
 }
 
+.simulation-setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.simulation-setup-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.form-feedback {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.form-feedback.info {
+  color: var(--accent);
+}
+
+.form-feedback.danger {
+  color: var(--danger);
+}
+
+.simulation-results-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.simulation-results-header h2 {
+  margin-bottom: 6px;
+}
+
+.simulation-results-summary {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.simulation-results-meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.simulation-results-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.simulation-results-block {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.simulation-game-list,
+.simulation-log-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.simulation-team-panels {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.simulation-team-panel {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(8, 13, 28, 0.72);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.simulation-team-header h3 {
+  margin: 0 0 4px;
+}
+
+.simulation-team-summary {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.simulation-team-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.simulation-player-table h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.simulation-player-stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.simulation-player-stats thead th {
+  padding: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.78);
+  border-bottom: 1px solid rgba(125, 211, 252, 0.18);
+  text-align: center;
+}
+
+.simulation-player-stats tbody td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.08);
+  font-size: 13px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+
+.simulation-player-stats tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.simulation-player-stats thead th:first-child,
+.simulation-player-stats tbody td:first-child {
+  text-align: left;
+  font-family: var(--font-heading);
+}
+
+.simulation-results-actions {
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .simulation-results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .simulation-team-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
 .player-panel-controls input[type='search'] {
   width: 100%;
   border-radius: 12px;

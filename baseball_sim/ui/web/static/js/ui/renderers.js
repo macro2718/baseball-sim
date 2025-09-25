@@ -2870,6 +2870,8 @@ export function updateScreenVisibility() {
   const showPlayerBuilder = view === 'player-builder';
   const showTitle = view === 'title';
   const showGame = view === 'game';
+  const showSimulationSetup = view === 'simulation';
+  const showSimulationResults = view === 'simulation-results';
 
   if (elements.lobbyScreen) {
     elements.lobbyScreen.classList.toggle('hidden', !showLobby);
@@ -2889,163 +2891,425 @@ export function updateScreenVisibility() {
   if (elements.gameScreen) {
     elements.gameScreen.classList.toggle('hidden', !showGame);
   }
+  if (elements.simulationSetupScreen) {
+    elements.simulationSetupScreen.classList.toggle('hidden', !showSimulationSetup);
+  }
+  if (elements.simulationResultsScreen) {
+    elements.simulationResultsScreen.classList.toggle('hidden', !showSimulationResults);
+  }
 }
 
-function renderSimulationPanel(simulationState) {
+function formatAverageDisplay(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  const formatted = num.toFixed(3);
+  return formatted.startsWith('0') ? formatted.slice(1) : formatted;
+}
+
+function formatNumberDisplay(value, digits = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return digits > 0 ? num.toFixed(digits) : String(Math.round(num));
+}
+
+function formatSignedNumber(value, digits = 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  const formatted = digits > 0 ? num.toFixed(digits) : String(Math.round(num));
+  if (num > 0) {
+    return `+${formatted}`;
+  }
+  return formatted;
+}
+
+function formatInningsDisplay(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  const outs = Math.round(num * 3);
+  const innings = Math.floor(outs / 3);
+  const remainder = outs % 3;
+  return `${innings}.${remainder}`;
+}
+
+function renderSimulationSetup(teamLibraryState, simulationState) {
   const {
-    simulationCard,
-    simulationGamesInput,
-    simulationRunButton,
-    simulationStatus,
-    simulationSummary,
-    simulationTable,
-    simulationTableBody,
-    simulationRecentSection,
-    simulationRecentList,
-    simulationLogSection,
-    simulationLogList,
+    simulationSetupForm,
+    simulationSetupAway,
+    simulationSetupHome,
+    simulationGameCountInput,
+    simulationStartButton,
+    simulationSetupFeedback,
   } = elements;
 
-  if (!simulationCard) {
+  if (!simulationSetupForm) {
     return;
   }
 
-  const enabled = Boolean(simulationState?.enabled);
-  const running = Boolean(simulationState?.running);
-  const defaultGames = Number.isFinite(simulationState?.defaultGames)
-    ? Number(simulationState.defaultGames)
-    : 20;
+  const teams = Array.isArray(teamLibraryState?.teams) ? teamLibraryState.teams : [];
+  const selection = teamLibraryState?.selection || {};
+  const options = teams.map((team) => ({ value: team.id, label: team.name || team.id }));
+  const fallbackHome = options.length ? options[0].value : '';
+  const fallbackAway = options.length > 1 ? options[1].value : fallbackHome;
+
+  if (simulationSetupAway) {
+    populateSelect(simulationSetupAway, options, {
+      placeholder: 'チームを選択',
+      selected: selection.away,
+      fallback: fallbackAway,
+    });
+    simulationSetupAway.disabled = Boolean(simulationState?.running);
+  }
+
+  if (simulationSetupHome) {
+    populateSelect(simulationSetupHome, options, {
+      placeholder: 'チームを選択',
+      selected: selection.home,
+      fallback: fallbackHome,
+    });
+    simulationSetupHome.disabled = Boolean(simulationState?.running);
+  }
+
   const limits = simulationState?.limits || {};
   const minGames = Number.isFinite(limits.min) ? Number(limits.min) : 1;
   const maxGames = Number.isFinite(limits.max) ? Number(limits.max) : 200;
-  const lastRun = simulationState?.lastRun || null;
-  const logEntries = Array.isArray(simulationState?.log)
-    ? simulationState.log.filter((entry) => typeof entry === 'string' && entry.trim())
-    : [];
+  const defaultGames = Number.isFinite(simulationState?.defaultGames)
+    ? Number(simulationState.defaultGames)
+    : 20;
 
-  simulationCard.classList.toggle('disabled', !enabled);
-
-  if (simulationGamesInput) {
-    simulationGamesInput.min = String(minGames);
-    simulationGamesInput.max = String(maxGames);
-    const isFocused = document.activeElement === simulationGamesInput;
-    const userModified = simulationGamesInput.dataset.userModified === 'true';
-    if (!isFocused && (!userModified || !simulationGamesInput.value)) {
-      simulationGamesInput.value = String(defaultGames);
+  if (simulationGameCountInput) {
+    simulationGameCountInput.min = String(minGames);
+    simulationGameCountInput.max = String(maxGames);
+    const isFocused = document.activeElement === simulationGameCountInput;
+    const userModified = simulationGameCountInput.dataset.userModified === 'true';
+    if (!isFocused && (!userModified || !simulationGameCountInput.value)) {
+      simulationGameCountInput.value = String(defaultGames);
       if (userModified) {
-        simulationGamesInput.dataset.userModified = '';
+        simulationGameCountInput.dataset.userModified = '';
       }
     }
-    simulationGamesInput.disabled = !enabled || running;
+    simulationGameCountInput.disabled = Boolean(simulationState?.running);
   }
 
-  if (simulationRunButton) {
-    simulationRunButton.disabled = !enabled || running;
-    simulationRunButton.textContent = running ? '実行中…' : '実行';
+  const homeValue = simulationSetupHome?.value ?? '';
+  const awayValue = simulationSetupAway?.value ?? '';
+  const teamsChosen = Boolean(homeValue && awayValue);
+  const sameTeamSelected = teamsChosen && homeValue === awayValue;
+  const running = Boolean(simulationState?.running);
+  const canStart = teamsChosen && !sameTeamSelected && !running;
+
+  if (simulationStartButton) {
+    simulationStartButton.disabled = !canStart;
   }
 
-  if (simulationStatus) {
-    let statusText = '試合数を指定してシミュレーションを実行してください。';
-    if (!enabled) {
-      statusText = 'チームを読み込むとシミュレーションを実行できます。';
-    } else if (running) {
-      statusText = 'シミュレーションを実行中…';
-    } else if (lastRun) {
-      const timestamp = formatSimulationTimestamp(lastRun.timestamp);
-      statusText = `最新結果: ${lastRun.totalGames}試合${timestamp ? `（${timestamp}）` : ''}`;
-    }
-    simulationStatus.textContent = statusText;
-  }
-
-  if (simulationSummary) {
-    if (lastRun) {
-      simulationSummary.classList.remove('empty');
-      const timestamp = formatSimulationTimestamp(lastRun.timestamp);
-      const summaryLabel = `${lastRun.totalGames}試合をシミュレーションしました${timestamp ? `（${timestamp}）` : ''}`;
-      simulationSummary.innerHTML = `<strong>${escapeHtml(summaryLabel)}</strong>`;
+  if (simulationSetupFeedback) {
+    let message = '';
+    let level = 'info';
+    if (running) {
+      message = 'シミュレーションを実行中です…';
+      level = 'info';
+    } else if (sameTeamSelected) {
+      message = '同じチームを両方に選択しています。別のチームを選んでください。';
+      level = 'danger';
+    } else if (!teamsChosen) {
+      message = 'ホームとアウェイのチーム、試合数を選択して実行してください。';
+    } else if (teamLibraryState?.hint) {
+      message = teamLibraryState.hint;
     } else {
-      simulationSummary.classList.add('empty');
-      simulationSummary.textContent = 'まだシミュレーション結果がありません。';
+      message = '準備ができたら「シミュレーション開始」を押してください。';
+    }
+
+    simulationSetupFeedback.textContent = message;
+    simulationSetupFeedback.classList.remove('danger', 'success', 'info');
+    simulationSetupFeedback.classList.add(level);
+  }
+}
+
+function renderTeamRecordRow(tbody, teamEntry) {
+  if (!tbody || !teamEntry) return;
+  const row = document.createElement('tr');
+  const nameCell = document.createElement('th');
+  nameCell.scope = 'row';
+  nameCell.textContent = teamEntry.name || '-';
+  row.appendChild(nameCell);
+
+  const record = teamEntry.record || {};
+  const cells = [
+    Number.isFinite(record.wins) ? record.wins : 0,
+    Number.isFinite(record.losses) ? record.losses : 0,
+    Number.isFinite(record.draws) ? record.draws : 0,
+    Number.isFinite(record.winPct) ? record.winPct.toFixed(3) : '-',
+    Number.isFinite(record.runsScored) ? record.runsScored : 0,
+    Number.isFinite(record.runsAllowed) ? record.runsAllowed : 0,
+    Number.isFinite(record.runDiff) ? formatSignedNumber(record.runDiff) : '-',
+  ];
+
+  cells.forEach((value, index) => {
+    const cell = document.createElement('td');
+    cell.textContent = typeof value === 'number' ? String(value) : value;
+    if (index === 3 && typeof value === 'string' && value !== '-') {
+      cell.classList.add('simulation-winrate');
+    }
+    if (index === 6) {
+      if (typeof value === 'string' && value.startsWith('+')) {
+        cell.classList.add('positive');
+      } else if (typeof value === 'string' && value.startsWith('-')) {
+        cell.classList.add('negative');
+      }
+    }
+    row.appendChild(cell);
+  });
+
+  tbody.appendChild(row);
+}
+
+function describeTeamTotals(teamEntry) {
+  if (!teamEntry) return '';
+  const record = teamEntry.record || {};
+  const batting = teamEntry.batting || {};
+  const pitching = teamEntry.pitching || {};
+
+  const pieces = [];
+  const wins = Number.isFinite(record.wins) ? record.wins : 0;
+  const losses = Number.isFinite(record.losses) ? record.losses : 0;
+  const draws = Number.isFinite(record.draws) ? record.draws : 0;
+  pieces.push(`勝:${wins} 敗:${losses} 分:${draws}`);
+  if (Number.isFinite(record.runDiff)) {
+    pieces.push(`得失点差 ${formatSignedNumber(record.runDiff)}`);
+  }
+  if (Number.isFinite(batting.ops)) {
+    pieces.push(`OPS ${formatAverageDisplay(batting.ops)}`);
+  }
+  if (Number.isFinite(pitching.era)) {
+    pieces.push(`防御率 ${formatNumberDisplay(pitching.era, 2)}`);
+  }
+  return pieces.join(' / ');
+}
+
+function renderBattingTable(tbody, teamEntry) {
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const rows = Array.isArray(teamEntry?.batters) ? teamEntry.batters : [];
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 15;
+    td.textContent = 'データがありません。';
+    td.classList.add('empty');
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    const cells = [
+      row.name || '-',
+      row.pa ?? 0,
+      row.ab ?? 0,
+      row.hits ?? 0,
+      row.doubles ?? 0,
+      row.triples ?? 0,
+      row.homeRuns ?? 0,
+      row.runs ?? 0,
+      row.rbi ?? 0,
+      row.walks ?? 0,
+      row.strikeouts ?? 0,
+      formatAverageDisplay(row.avg),
+      formatAverageDisplay(row.obp),
+      formatAverageDisplay(row.slg),
+      formatAverageDisplay(row.ops),
+    ];
+    cells.forEach((value) => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderPitchingTable(tbody, teamEntry) {
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const rows = Array.isArray(teamEntry?.pitchers) ? teamEntry.pitchers : [];
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 12;
+    td.textContent = 'データがありません。';
+    td.classList.add('empty');
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    const cells = [
+      row.name || '-',
+      formatInningsDisplay(row.ip),
+      row.hits ?? 0,
+      row.runs ?? 0,
+      row.earnedRuns ?? 0,
+      row.walks ?? 0,
+      row.strikeouts ?? 0,
+      row.homeRuns ?? 0,
+      formatNumberDisplay(row.era, 2),
+      formatNumberDisplay(row.whip, 2),
+      formatNumberDisplay(row.kPer9, 2),
+      formatNumberDisplay(row.bbPer9, 2),
+    ];
+    cells.forEach((value) => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderSimulationResults(simulationState) {
+  const {
+    simulationResultsSummary,
+    simulationResultsMeta,
+    simulationResultsTableBody,
+    simulationGamesList,
+    simulationAwayName,
+    simulationHomeName,
+    simulationAwaySummary,
+    simulationHomeSummary,
+    simulationAwayBattingBody,
+    simulationHomeBattingBody,
+    simulationAwayPitchingBody,
+    simulationHomePitchingBody,
+    simulationResultsLog,
+  } = elements;
+
+  const lastRun = simulationState?.lastRun || null;
+
+  if (!lastRun) {
+    if (simulationResultsSummary) {
+      simulationResultsSummary.textContent = 'まだシミュレーション結果がありません。';
+    }
+    if (simulationResultsMeta) {
+      simulationResultsMeta.textContent = '';
+    }
+    if (simulationAwayName) {
+      simulationAwayName.textContent = 'アウェイチーム';
+    }
+    if (simulationHomeName) {
+      simulationHomeName.textContent = 'ホームチーム';
+    }
+    if (simulationResultsTableBody) {
+      simulationResultsTableBody.innerHTML = '';
+    }
+    if (simulationGamesList) {
+      simulationGamesList.innerHTML = '';
+      const li = document.createElement('li');
+      li.textContent = 'シミュレーション結果が表示されるとここに試合一覧が表示されます。';
+      simulationGamesList.appendChild(li);
+    }
+    if (simulationAwaySummary) simulationAwaySummary.textContent = '';
+    if (simulationHomeSummary) simulationHomeSummary.textContent = '';
+    if (simulationAwayBattingBody) simulationAwayBattingBody.innerHTML = '';
+    if (simulationHomeBattingBody) simulationHomeBattingBody.innerHTML = '';
+    if (simulationAwayPitchingBody) simulationAwayPitchingBody.innerHTML = '';
+    if (simulationHomePitchingBody) simulationHomePitchingBody.innerHTML = '';
+    if (simulationResultsLog) simulationResultsLog.innerHTML = '';
+    return;
+  }
+
+  const teams = Array.isArray(lastRun.teams) ? lastRun.teams : [];
+  const awayTeam = teams.find((team) => team.key === 'away') || teams[0] || null;
+  const homeTeam = teams.find((team) => team.key === 'home') || teams[1] || null;
+
+  if (simulationAwayName) {
+    simulationAwayName.textContent = awayTeam?.name || 'アウェイチーム';
+  }
+  if (simulationHomeName) {
+    simulationHomeName.textContent = homeTeam?.name || 'ホームチーム';
+  }
+
+  if (simulationResultsSummary) {
+    const awayName = awayTeam?.name || 'Away';
+    const homeName = homeTeam?.name || 'Home';
+    simulationResultsSummary.textContent = `${awayName} vs ${homeName}`;
+  }
+
+  if (simulationResultsMeta) {
+    const totalGames = Number.isFinite(Number(lastRun.totalGames))
+      ? Number(lastRun.totalGames)
+      : 0;
+    const timestamp = formatSimulationTimestamp(lastRun.timestamp);
+    const parts = [];
+    if (totalGames > 0) {
+      parts.push(`${totalGames}試合をシミュレーションしました`);
+    }
+    if (timestamp) {
+      parts.push(`最終実行: ${timestamp}`);
+    }
+    simulationResultsMeta.textContent = parts.join(' / ');
+  }
+
+  if (simulationResultsTableBody) {
+    simulationResultsTableBody.innerHTML = '';
+    if (awayTeam) {
+      renderTeamRecordRow(simulationResultsTableBody, awayTeam);
+    }
+    if (homeTeam) {
+      renderTeamRecordRow(simulationResultsTableBody, homeTeam);
     }
   }
 
-  if (simulationTable && simulationTableBody) {
-    simulationTableBody.innerHTML = '';
-    const teams = Array.isArray(lastRun?.teams) ? lastRun.teams : [];
-    if (teams.length) {
-      simulationTable.classList.remove('hidden');
-      teams.forEach((team) => {
-        const row = document.createElement('tr');
-        const nameCell = document.createElement('th');
-        nameCell.scope = 'row';
-        nameCell.textContent = team.name || '-';
-        row.appendChild(nameCell);
-
-        const cells = [
-          Number.isFinite(team.wins) ? team.wins : 0,
-          Number.isFinite(team.losses) ? team.losses : 0,
-          Number.isFinite(team.draws) ? team.draws : 0,
-          Number.isFinite(team.winPct) ? team.winPct.toFixed(3) : '-',
-          Number.isFinite(team.runsScored) ? team.runsScored : 0,
-          Number.isFinite(team.runsAllowed) ? team.runsAllowed : 0,
-          Number.isFinite(team.runDiff)
-            ? (team.runDiff > 0 ? `+${team.runDiff}` : String(team.runDiff))
-            : '-',
-        ];
-
-        cells.forEach((value, index) => {
-          const cell = document.createElement('td');
-          cell.textContent = typeof value === 'number' ? String(value) : value;
-          if (index === 3 && typeof value === 'string' && value !== '-') {
-            cell.classList.add('simulation-winrate');
-          }
-          if (index === 6 && typeof value === 'string' && value.startsWith('+')) {
-            cell.classList.add('positive');
-          } else if (index === 6 && typeof value === 'string' && value.startsWith('-')) {
-            cell.classList.add('negative');
-          }
-          row.appendChild(cell);
-        });
-
-        simulationTableBody.appendChild(row);
-      });
+  if (simulationGamesList) {
+    simulationGamesList.innerHTML = '';
+    const games = Array.isArray(lastRun.games) ? lastRun.games : [];
+    if (!games.length) {
+      const li = document.createElement('li');
+      li.textContent = '試合結果はまだありません。';
+      simulationGamesList.appendChild(li);
     } else {
-      simulationTable.classList.add('hidden');
-    }
-  }
-
-  if (simulationRecentSection && simulationRecentList) {
-    simulationRecentList.innerHTML = '';
-    const recentGames = Array.isArray(lastRun?.recentGames) ? lastRun.recentGames : [];
-    if (recentGames.length) {
-      simulationRecentSection.classList.remove('hidden');
-      recentGames.forEach((game) => {
+      games.forEach((game) => {
         const li = document.createElement('li');
         const winnerLabel =
           game.winner === 'home' ? 'ホーム勝利' : game.winner === 'away' ? 'アウェイ勝利' : '引き分け';
         const inningsLabel = Number.isFinite(game.innings) && game.innings > 0 ? ` / ${game.innings}イニング` : '';
         const text = `第${game.index}戦: ${(game.awayTeam ?? 'Away')} ${game.awayScore} - ${game.homeScore} ${(game.homeTeam ?? 'Home')}（${winnerLabel}${inningsLabel}）`;
         li.textContent = text;
-        simulationRecentList.appendChild(li);
+        simulationGamesList.appendChild(li);
       });
-    } else {
-      simulationRecentSection.classList.add('hidden');
     }
   }
 
-  if (simulationLogSection && simulationLogList) {
-    simulationLogList.innerHTML = '';
-    if (logEntries.length) {
-      simulationLogSection.classList.remove('hidden');
-      logEntries.slice(-6).forEach((entry) => {
+  if (simulationResultsLog) {
+    simulationResultsLog.innerHTML = '';
+    const logEntries = Array.isArray(simulationState?.log)
+      ? simulationState.log.filter((entry) => typeof entry === 'string' && entry.trim())
+      : [];
+    if (!logEntries.length) {
+      const li = document.createElement('li');
+      li.textContent = '進捗ログはまだありません。';
+      simulationResultsLog.appendChild(li);
+    } else {
+      logEntries.forEach((entry) => {
         const li = document.createElement('li');
         li.textContent = entry;
-        simulationLogList.appendChild(li);
+        simulationResultsLog.appendChild(li);
       });
-    } else {
-      simulationLogSection.classList.add('hidden');
     }
   }
+
+  if (simulationAwaySummary) {
+    simulationAwaySummary.textContent = describeTeamTotals(awayTeam);
+  }
+  if (simulationHomeSummary) {
+    simulationHomeSummary.textContent = describeTeamTotals(homeTeam);
+  }
+
+  renderBattingTable(simulationAwayBattingBody, awayTeam);
+  renderBattingTable(simulationHomeBattingBody, homeTeam);
+  renderPitchingTable(simulationAwayPitchingBody, awayTeam);
+  renderPitchingTable(simulationHomePitchingBody, homeTeam);
 }
 
 export function updateStatsPanel(state) {
@@ -3302,22 +3566,95 @@ export function render(data) {
   let lastRun = null;
   if (rawSimulation.last_run && typeof rawSimulation.last_run === 'object') {
     const rawLastRun = rawSimulation.last_run;
-    const teamEntries = Array.isArray(rawLastRun.teams)
-      ? rawLastRun.teams.map((team) => ({
-          key: team.key || null,
-          name: team.name || '',
-          wins: Number.isFinite(Number(team.wins)) ? Number(team.wins) : 0,
-          losses: Number.isFinite(Number(team.losses)) ? Number(team.losses) : 0,
-          draws: Number.isFinite(Number(team.draws)) ? Number(team.draws) : 0,
-          winPct: Number.isFinite(Number(team.win_pct)) ? Number(team.win_pct) : 0,
-          runsScored: Number.isFinite(Number(team.runs_scored)) ? Number(team.runs_scored) : 0,
-          runsAllowed: Number.isFinite(Number(team.runs_allowed)) ? Number(team.runs_allowed) : 0,
-          runDiff: Number.isFinite(Number(team.run_diff)) ? Number(team.run_diff) : 0,
-        }))
-      : [];
+    const rawTeams = Array.isArray(rawLastRun.teams) ? rawLastRun.teams : [];
+    const teamEntries = rawTeams.map((team) => {
+      const record = team.record || {};
+      const batting = team.batting || {};
+      const pitching = team.pitching || {};
+      const batters = Array.isArray(team.batters)
+        ? team.batters.map((batter) => ({
+            name: batter.name || '',
+            pa: Number.isFinite(Number(batter.pa)) ? Number(batter.pa) : 0,
+            ab: Number.isFinite(Number(batter.ab)) ? Number(batter.ab) : 0,
+            hits: Number.isFinite(Number(batter.hits)) ? Number(batter.hits) : 0,
+            singles: Number.isFinite(Number(batter.singles)) ? Number(batter.singles) : 0,
+            doubles: Number.isFinite(Number(batter.doubles)) ? Number(batter.doubles) : 0,
+            triples: Number.isFinite(Number(batter.triples)) ? Number(batter.triples) : 0,
+            homeRuns: Number.isFinite(Number(batter.home_runs)) ? Number(batter.home_runs) : 0,
+            runs: Number.isFinite(Number(batter.runs)) ? Number(batter.runs) : 0,
+            rbi: Number.isFinite(Number(batter.rbi)) ? Number(batter.rbi) : 0,
+            walks: Number.isFinite(Number(batter.walks)) ? Number(batter.walks) : 0,
+            strikeouts: Number.isFinite(Number(batter.strikeouts)) ? Number(batter.strikeouts) : 0,
+            avg: Number.isFinite(Number(batter.avg)) ? Number(batter.avg) : 0,
+            obp: Number.isFinite(Number(batter.obp)) ? Number(batter.obp) : 0,
+            slg: Number.isFinite(Number(batter.slg)) ? Number(batter.slg) : 0,
+            ops: Number.isFinite(Number(batter.ops)) ? Number(batter.ops) : 0,
+          }))
+        : [];
+      const pitchers = Array.isArray(team.pitchers)
+        ? team.pitchers.map((pitcher) => ({
+            name: pitcher.name || '',
+            ip: Number.isFinite(Number(pitcher.ip)) ? Number(pitcher.ip) : 0,
+            hits: Number.isFinite(Number(pitcher.hits)) ? Number(pitcher.hits) : 0,
+            runs: Number.isFinite(Number(pitcher.runs)) ? Number(pitcher.runs) : 0,
+            earnedRuns: Number.isFinite(Number(pitcher.earned_runs)) ? Number(pitcher.earned_runs) : 0,
+            walks: Number.isFinite(Number(pitcher.walks)) ? Number(pitcher.walks) : 0,
+            strikeouts: Number.isFinite(Number(pitcher.strikeouts)) ? Number(pitcher.strikeouts) : 0,
+            homeRuns: Number.isFinite(Number(pitcher.home_runs)) ? Number(pitcher.home_runs) : 0,
+            era: Number.isFinite(Number(pitcher.era)) ? Number(pitcher.era) : 0,
+            whip: Number.isFinite(Number(pitcher.whip)) ? Number(pitcher.whip) : 0,
+            kPer9: Number.isFinite(Number(pitcher.k_per_9)) ? Number(pitcher.k_per_9) : 0,
+            bbPer9: Number.isFinite(Number(pitcher.bb_per_9)) ? Number(pitcher.bb_per_9) : 0,
+          }))
+        : [];
 
-    const recentGames = Array.isArray(rawLastRun.recent_games)
-      ? rawLastRun.recent_games.map((game, index) => {
+      return {
+        key: team.key || null,
+        name: team.name || '',
+        record: {
+          wins: Number.isFinite(Number(record.wins)) ? Number(record.wins) : 0,
+          losses: Number.isFinite(Number(record.losses)) ? Number(record.losses) : 0,
+          draws: Number.isFinite(Number(record.draws)) ? Number(record.draws) : 0,
+          winPct: Number.isFinite(Number(record.win_pct)) ? Number(record.win_pct) : 0,
+          runsScored: Number.isFinite(Number(record.runs_scored)) ? Number(record.runs_scored) : 0,
+          runsAllowed: Number.isFinite(Number(record.runs_allowed)) ? Number(record.runs_allowed) : 0,
+          runDiff: Number.isFinite(Number(record.run_diff)) ? Number(record.run_diff) : 0,
+        },
+        batting: {
+          pa: Number.isFinite(Number(batting.pa)) ? Number(batting.pa) : 0,
+          ab: Number.isFinite(Number(batting.ab)) ? Number(batting.ab) : 0,
+          singles: Number.isFinite(Number(batting.singles)) ? Number(batting.singles) : 0,
+          doubles: Number.isFinite(Number(batting.doubles)) ? Number(batting.doubles) : 0,
+          triples: Number.isFinite(Number(batting.triples)) ? Number(batting.triples) : 0,
+          homeRuns: Number.isFinite(Number(batting.home_runs)) ? Number(batting.home_runs) : 0,
+          walks: Number.isFinite(Number(batting.walks)) ? Number(batting.walks) : 0,
+          strikeouts: Number.isFinite(Number(batting.strikeouts)) ? Number(batting.strikeouts) : 0,
+          hits: Number.isFinite(Number(batting.hits)) ? Number(batting.hits) : 0,
+          avg: Number.isFinite(Number(batting.avg)) ? Number(batting.avg) : 0,
+          obp: Number.isFinite(Number(batting.obp)) ? Number(batting.obp) : 0,
+          slg: Number.isFinite(Number(batting.slg)) ? Number(batting.slg) : 0,
+          ops: Number.isFinite(Number(batting.ops)) ? Number(batting.ops) : 0,
+        },
+        pitching: {
+          ip: Number.isFinite(Number(pitching.ip)) ? Number(pitching.ip) : 0,
+          hits: Number.isFinite(Number(pitching.hits_allowed)) ? Number(pitching.hits_allowed) : 0,
+          runs: Number.isFinite(Number(pitching.runs_allowed)) ? Number(pitching.runs_allowed) : 0,
+          earnedRuns: Number.isFinite(Number(pitching.earned_runs)) ? Number(pitching.earned_runs) : 0,
+          walks: Number.isFinite(Number(pitching.walks)) ? Number(pitching.walks) : 0,
+          strikeouts: Number.isFinite(Number(pitching.strikeouts)) ? Number(pitching.strikeouts) : 0,
+          homeRuns: Number.isFinite(Number(pitching.home_runs)) ? Number(pitching.home_runs) : 0,
+          era: Number.isFinite(Number(pitching.era)) ? Number(pitching.era) : 0,
+          whip: Number.isFinite(Number(pitching.whip)) ? Number(pitching.whip) : 0,
+          kPer9: Number.isFinite(Number(pitching.k_per_9)) ? Number(pitching.k_per_9) : 0,
+          bbPer9: Number.isFinite(Number(pitching.bb_per_9)) ? Number(pitching.bb_per_9) : 0,
+        },
+        batters,
+        pitchers,
+      };
+    });
+
+    const games = Array.isArray(rawLastRun.games)
+      ? rawLastRun.games.map((game, index) => {
           const idx = Number.isFinite(Number(game.index)) ? Number(game.index) : index + 1;
           const winner = typeof game.winner === 'string' ? game.winner : 'draw';
           return {
@@ -3333,16 +3670,18 @@ export function render(data) {
       : [];
 
     const totalGamesValue = Number(rawLastRun.total_games);
-    const computedTotalGames = teamEntries.reduce(
-      (sum, team) => sum + team.wins + team.losses + team.draws,
-      0,
-    );
+    const computedTotalGames = teamEntries.reduce((sum, team) => {
+      const rec = team.record || {};
+      return sum + (rec.wins || 0) + (rec.losses || 0) + (rec.draws || 0);
+    }, 0);
 
     lastRun = {
-      totalGames: Number.isFinite(totalGamesValue) && totalGamesValue > 0 ? totalGamesValue : computedTotalGames,
+      totalGames:
+        Number.isFinite(totalGamesValue) && totalGamesValue > 0 ? totalGamesValue : computedTotalGames,
       timestamp: rawLastRun.timestamp || '',
       teams: teamEntries,
-      recentGames: recentGames.slice(-5),
+      games,
+      recentGames: games.slice(-5),
     };
   }
 
@@ -3360,12 +3699,7 @@ export function render(data) {
     log: simulationLog.slice(-12),
   };
 
-  const hasSimulationResults = Boolean(stateCache.simulation?.lastRun);
-
   if (data.game?.active) {
-    stateCache.uiView = 'game';
-    stateCache.forceGameView = false;
-  } else if (stateCache.forceGameView || hasSimulationResults) {
     stateCache.uiView = 'game';
   } else if (stateCache.uiView === 'game') {
     stateCache.uiView = 'title';
@@ -3376,7 +3710,8 @@ export function render(data) {
   renderTeamBuilder(stateCache.teamLibrary);
   renderTitle(data.title);
   renderGame(data.game, data.teams, data.log, previousData?.game || null);
-  renderSimulationPanel(stateCache.simulation);
+  renderSimulationSetup(stateCache.teamLibrary, stateCache.simulation);
+  renderSimulationResults(stateCache.simulation);
   updateStatsPanel(data);
   updateAbilitiesPanel(data);
   updateScreenVisibility();

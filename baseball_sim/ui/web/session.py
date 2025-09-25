@@ -10,6 +10,7 @@ from baseball_sim.data.loader import DataLoader
 from baseball_sim.data.team_library import TeamLibrary, TeamLibraryError
 from baseball_sim.gameplay.game import GameState
 from baseball_sim.gameplay.substitutions import SubstitutionManager
+from baseball_sim.gameplay.statistics import StatsCalculator
 from baseball_sim.interface.simulation import simulate_games
 
 from .formatting import half_inning_banner
@@ -276,10 +277,20 @@ class WebGameSession:
         self._simulation_state["log"] = progress_messages[-20:]
 
         team_stats = results.get("team_stats") or {}
+        team_objects = results.get("teams") or {}
 
-        def build_team_entry(team_key: str, team_obj) -> Dict[str, Any]:
-            name = getattr(team_obj, "name", team_key.title())
-            stats = team_stats.get(name, {})
+        def resolve_team_object(team_name: Optional[str]):
+            if not team_name:
+                return None
+            if team_name in team_objects:
+                return team_objects[team_name]
+            for candidate in team_objects.values():
+                if getattr(candidate, "name", None) == team_name:
+                    return candidate
+            return None
+
+        def build_team_record(team_name: str) -> Dict[str, Any]:
+            stats = team_stats.get(team_name, {})
             wins = int(stats.get("wins", 0))
             losses = int(stats.get("losses", 0))
             draws = int(stats.get("draws", 0))
@@ -287,17 +298,252 @@ class WebGameSession:
             runs_allowed = int(stats.get("runs_allowed", 0))
             total = max(wins + losses + draws, 0)
             win_pct = wins / total if total else 0.0
-            run_diff = runs_scored - runs_allowed
             return {
-                "key": team_key,
-                "name": name,
                 "wins": wins,
                 "losses": losses,
                 "draws": draws,
-                "win_pct": win_pct,
                 "runs_scored": runs_scored,
                 "runs_allowed": runs_allowed,
-                "run_diff": run_diff,
+                "run_diff": runs_scored - runs_allowed,
+                "win_pct": win_pct,
+            }
+
+        def iter_team_hitters(team_obj):
+            players: List[Any] = []
+            seen_ids = set()
+            for collection in (
+                getattr(team_obj, "lineup", []) or [],
+                getattr(team_obj, "bench", []) or [],
+            ):
+                for player in collection:
+                    if player is None:
+                        continue
+                    identifier = id(player)
+                    if identifier in seen_ids:
+                        continue
+                    seen_ids.add(identifier)
+                    players.append(player)
+            return players
+
+        def compute_team_batting(team_obj) -> Dict[str, Any]:
+            totals = {
+                "pa": 0,
+                "ab": 0,
+                "singles": 0,
+                "doubles": 0,
+                "triples": 0,
+                "home_runs": 0,
+                "walks": 0,
+                "strikeouts": 0,
+                "hits": 0,
+            }
+
+            for player in iter_team_hitters(team_obj):
+                stats = getattr(player, "stats", {}) or {}
+                singles = int(stats.get("1B", 0) or 0)
+                doubles = int(stats.get("2B", 0) or 0)
+                triples = int(stats.get("3B", 0) or 0)
+                homers = int(stats.get("HR", 0) or 0)
+                walks = int(stats.get("BB", 0) or 0)
+                strikeouts = int(stats.get("SO", stats.get("K", 0)) or 0)
+                plate_appearances = int(stats.get("PA", 0) or 0)
+                at_bats = int(stats.get("AB", 0) or 0)
+
+                totals["pa"] += plate_appearances
+                totals["ab"] += at_bats
+                totals["singles"] += singles
+                totals["doubles"] += doubles
+                totals["triples"] += triples
+                totals["home_runs"] += homers
+                totals["walks"] += walks
+                totals["strikeouts"] += strikeouts
+                totals["hits"] += singles + doubles + triples + homers
+
+            avg = totals["hits"] / totals["ab"] if totals["ab"] > 0 else 0.0
+            obp = StatsCalculator.calculate_obp(
+                totals["hits"], totals["walks"], totals["ab"]
+            )
+            slg = StatsCalculator.calculate_slg(
+                totals["singles"],
+                totals["doubles"],
+                totals["triples"],
+                totals["home_runs"],
+                totals["ab"],
+            )
+            ops = StatsCalculator.calculate_ops(obp, slg)
+
+            totals.update({
+                "avg": avg,
+                "obp": obp,
+                "slg": slg,
+                "ops": ops,
+            })
+            return totals
+
+        def compute_team_pitching(team_obj) -> Dict[str, Any]:
+            totals = {
+                "ip": 0.0,
+                "hits_allowed": 0,
+                "runs_allowed": 0,
+                "earned_runs": 0,
+                "walks": 0,
+                "strikeouts": 0,
+                "home_runs": 0,
+            }
+
+            for pitcher in getattr(team_obj, "pitchers", []) or []:
+                stats = getattr(pitcher, "pitching_stats", {}) or {}
+                totals["ip"] += float(stats.get("IP", 0) or 0.0)
+                totals["hits_allowed"] += int(stats.get("H", 0) or 0)
+                totals["runs_allowed"] += int(stats.get("R", 0) or 0)
+                totals["earned_runs"] += int(stats.get("ER", 0) or 0)
+                totals["walks"] += int(stats.get("BB", 0) or 0)
+                totals["strikeouts"] += int(stats.get("SO", stats.get("K", 0)) or 0)
+                totals["home_runs"] += int(stats.get("HR", 0) or 0)
+
+            era = StatsCalculator.calculate_era(
+                totals["earned_runs"], totals["ip"]
+            )
+            whip = StatsCalculator.calculate_whip(
+                totals["hits_allowed"], totals["walks"], totals["ip"]
+            )
+            k_per_9 = StatsCalculator.calculate_k_per_9(
+                totals["strikeouts"], totals["ip"]
+            )
+            bb_per_9 = StatsCalculator.calculate_bb_per_9(
+                totals["walks"], totals["ip"]
+            )
+            hr_per_9 = StatsCalculator.calculate_hr_per_9(
+                totals["home_runs"], totals["ip"]
+            )
+
+            totals.update(
+                {
+                    "era": era,
+                    "whip": whip,
+                    "k_per_9": k_per_9,
+                    "bb_per_9": bb_per_9,
+                    "hr_per_9": hr_per_9,
+                }
+            )
+            return totals
+
+        def build_batter_stats(team_obj) -> List[Dict[str, Any]]:
+            batters: List[Dict[str, Any]] = []
+            for player in iter_team_hitters(team_obj):
+                stats = getattr(player, "stats", {}) or {}
+                pa = int(stats.get("PA", 0) or 0)
+                if pa == 0:
+                    continue
+                ab = int(stats.get("AB", 0) or 0)
+                singles = int(stats.get("1B", 0) or 0)
+                doubles = int(stats.get("2B", 0) or 0)
+                triples = int(stats.get("3B", 0) or 0)
+                homers = int(stats.get("HR", 0) or 0)
+                walks = int(stats.get("BB", 0) or 0)
+                strikeouts = int(stats.get("SO", stats.get("K", 0)) or 0)
+                runs = int(stats.get("R", 0) or 0)
+                rbi = int(stats.get("RBI", 0) or 0)
+                hits = singles + doubles + triples + homers
+
+                try:
+                    avg = float(player.get_avg()) if hasattr(player, "get_avg") else 0.0
+                    obp = float(player.get_obp()) if hasattr(player, "get_obp") else 0.0
+                    slg = float(player.get_slg()) if hasattr(player, "get_slg") else 0.0
+                    ops = float(player.get_ops()) if hasattr(player, "get_ops") else 0.0
+                except Exception:  # pragma: no cover - defensive
+                    avg = obp = slg = ops = 0.0
+
+                k_pct = (strikeouts / pa * 100) if pa > 0 else 0.0
+                bb_pct = (walks / pa * 100) if pa > 0 else 0.0
+
+                batters.append(
+                    {
+                        "name": getattr(player, "name", ""),
+                        "pa": pa,
+                        "ab": ab,
+                        "singles": singles,
+                        "doubles": doubles,
+                        "triples": triples,
+                        "home_runs": homers,
+                        "runs": runs,
+                        "rbi": rbi,
+                        "walks": walks,
+                        "strikeouts": strikeouts,
+                        "hits": hits,
+                        "avg": avg,
+                        "obp": obp,
+                        "slg": slg,
+                        "ops": ops,
+                        "k_pct": k_pct,
+                        "bb_pct": bb_pct,
+                    }
+                )
+
+            return batters
+
+        def build_pitcher_stats(team_obj) -> List[Dict[str, Any]]:
+            pitchers: List[Dict[str, Any]] = []
+            for pitcher in getattr(team_obj, "pitchers", []) or []:
+                stats = getattr(pitcher, "pitching_stats", {}) or {}
+                ip = float(stats.get("IP", 0) or 0.0)
+                hits = int(stats.get("H", 0) or 0)
+                runs = int(stats.get("R", 0) or 0)
+                earned = int(stats.get("ER", 0) or 0)
+                walks = int(stats.get("BB", 0) or 0)
+                strikeouts = int(stats.get("SO", stats.get("K", 0)) or 0)
+                homers = int(stats.get("HR", 0) or 0)
+
+                try:
+                    era = float(pitcher.get_era()) if hasattr(pitcher, "get_era") else 0.0
+                    whip = float(pitcher.get_whip()) if hasattr(pitcher, "get_whip") else 0.0
+                    k_per_9 = (
+                        float(pitcher.get_k_per_9())
+                        if hasattr(pitcher, "get_k_per_9")
+                        else 0.0
+                    )
+                    bb_per_9 = (
+                        float(pitcher.get_bb_per_9())
+                        if hasattr(pitcher, "get_bb_per_9")
+                        else 0.0
+                    )
+                except Exception:  # pragma: no cover - defensive
+                    era = whip = k_per_9 = bb_per_9 = 0.0
+
+                hr_per_9 = StatsCalculator.calculate_hr_per_9(homers, ip)
+
+                pitchers.append(
+                    {
+                        "name": getattr(pitcher, "name", ""),
+                        "ip": ip,
+                        "hits": hits,
+                        "runs": runs,
+                        "earned_runs": earned,
+                        "walks": walks,
+                        "strikeouts": strikeouts,
+                        "home_runs": homers,
+                        "era": era,
+                        "whip": whip,
+                        "k_per_9": k_per_9,
+                        "bb_per_9": bb_per_9,
+                        "hr_per_9": hr_per_9,
+                    }
+                )
+
+            return pitchers
+
+        def build_team_entry(team_key: str, fallback_team) -> Dict[str, Any]:
+            team_name = getattr(fallback_team, "name", team_key.title())
+            team_obj = resolve_team_object(team_name) or fallback_team
+
+            return {
+                "key": team_key,
+                "name": team_name,
+                "record": build_team_record(team_name),
+                "batting": compute_team_batting(team_obj),
+                "pitching": compute_team_pitching(team_obj),
+                "batters": build_batter_stats(team_obj),
+                "pitchers": build_pitcher_stats(team_obj),
             }
 
         teams_summary = [
@@ -306,7 +552,7 @@ class WebGameSession:
         ]
 
         games = results.get("games") or []
-        recent_games: List[Dict[str, Any]] = []
+        all_games: List[Dict[str, Any]] = []
         for index, game in enumerate(games, start=1):
             try:
                 home_score = int(game.get("home_score", 0))
@@ -314,7 +560,6 @@ class WebGameSession:
             except (TypeError, ValueError):  # pragma: no cover - fallback
                 home_score, away_score = 0, 0
 
-            winner: str
             if home_score > away_score:
                 winner = "home"
             elif home_score < away_score:
@@ -322,7 +567,7 @@ class WebGameSession:
             else:
                 winner = "draw"
 
-            recent_games.append(
+            all_games.append(
                 {
                     "index": index,
                     "home_team": game.get("home_team"),
@@ -334,13 +579,13 @@ class WebGameSession:
                 }
             )
 
-        if recent_games:
-            recent_games = recent_games[-5:]
+        recent_games = all_games[-5:] if all_games else []
 
         self._simulation_state["last_run"] = {
             "total_games": int(num_games),
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "teams": teams_summary,
+            "games": all_games,
             "recent_games": recent_games,
         }
 
