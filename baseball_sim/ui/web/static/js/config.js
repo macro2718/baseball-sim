@@ -15,6 +15,7 @@ export const CONFIG = {
       defenseSubstitution: '/api/strategy/defense_substitution',
       changePitcher: '/api/strategy/change_pitcher',
       clearLog: '/api/log/clear',
+      simulationRun: '/api/simulation/run',
       reloadTeams: '/api/teams/reload',
       teamSelect: '/api/teams/library/select',
       teamSave: '/api/teams/library/save',

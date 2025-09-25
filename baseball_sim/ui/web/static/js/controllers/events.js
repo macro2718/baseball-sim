@@ -2430,6 +2430,60 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.openSimulationButton) {
+    elements.openSimulationButton.addEventListener('click', () => {
+      stateCache.forceGameView = true;
+      setUIView('game');
+      refreshView();
+      if (elements.simulationCard && typeof elements.simulationCard.scrollIntoView === 'function') {
+        try {
+          elements.simulationCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (error) {
+          // ignore scroll errors
+        }
+      }
+    });
+  }
+
+  if (elements.simulationGamesInput) {
+    elements.simulationGamesInput.addEventListener('input', () => {
+      elements.simulationGamesInput.dataset.userModified = 'true';
+    });
+  }
+
+  if (elements.simulationForm) {
+    elements.simulationForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!actions.runSimulation) return;
+      const value = elements.simulationGamesInput?.value ?? '';
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        showStatus('シミュレーションする試合数は1以上の整数で指定してください。', 'danger');
+        return;
+      }
+
+      const button = elements.simulationRunButton;
+      let originalText = '';
+      if (button) {
+        originalText = button.textContent || '';
+        button.disabled = true;
+        button.textContent = '実行中…';
+      }
+
+      try {
+        await actions.runSimulation(parsed);
+        if (elements.simulationGamesInput) {
+          elements.simulationGamesInput.dataset.userModified = '';
+        }
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalText || '実行';
+        }
+      }
+    });
+  }
+
   if (elements.openPlayerBuilder) {
     elements.openPlayerBuilder.addEventListener('click', () => {
       setUIView('player-builder');

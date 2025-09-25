@@ -12,6 +12,8 @@ export const stateCache = {
   statsView: { team: 'away', type: 'batting' },
   abilitiesView: { team: 'away', type: 'batting' },
   uiView: 'lobby',
+  forceGameView: false,
+  simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min_games: 1, max_games: 200 } },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   teamBuilder: {
     currentTeamId: null,
@@ -31,6 +33,9 @@ export const stateCache = {
 
 export function setUIView(view) {
   if (!view) return;
+  if (view !== 'game') {
+    stateCache.forceGameView = false;
+  }
   stateCache.uiView = view;
 }
 

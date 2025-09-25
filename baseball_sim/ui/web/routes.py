@@ -153,6 +153,16 @@ def create_routes(session: WebGameSession) -> Blueprint:
         state = session.clear_log()
         return jsonify(state)
 
+    @api_bp.post("/simulation/run")
+    def run_simulation() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        games = parse_int_param(payload, "games")
+        try:
+            state = session.run_simulation(games)
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     @api_bp.post("/teams/reload")
     def reload_teams() -> Dict[str, Any]:
         state = session.reload_teams()

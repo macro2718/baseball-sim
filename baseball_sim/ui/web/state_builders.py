@@ -43,6 +43,7 @@ class SessionStateBuilder:
         teams = self._build_teams_state()
         team_library = self._build_team_library_state()
         game, updated_reason = self._build_game_state(teams, action_block_reason)
+        simulation = self._build_simulation_state()
 
         payload: Dict[str, object] = {
             "title": title,
@@ -51,6 +52,7 @@ class SessionStateBuilder:
             "game": game,
             "log": list(log_entries),
             "notification": notification.to_dict() if notification else None,
+            "simulation": simulation,
         }
         return payload, updated_reason
 
@@ -118,6 +120,23 @@ class SessionStateBuilder:
             "ready": False,
             "hint": "チームデータを読み込めませんでした。",
             "active": {"home": None, "away": None},
+        }
+
+    def _build_simulation_state(self) -> Dict[str, object]:
+        if hasattr(self._session, "get_simulation_state"):
+            try:
+                state = self._session.get_simulation_state()
+            except Exception:  # pragma: no cover - defensive fallback
+                state = None
+            if isinstance(state, dict):
+                return state
+        return {
+            "enabled": False,
+            "running": False,
+            "default_games": 20,
+            "limits": {"min_games": 1, "max_games": 200},
+            "last_run": None,
+            "log": [],
         }
 
     # ------------------------------------------------------------------

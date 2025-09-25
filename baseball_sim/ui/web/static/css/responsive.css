@@ -87,6 +87,15 @@
     margin-top: 32px;
   }
 
+  .simulation-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .simulation-input-row button {
+    width: 100%;
+  }
+
   .roster-panel {
     margin-top: 32px;
     /* Stack rosters and matchup on small screens */

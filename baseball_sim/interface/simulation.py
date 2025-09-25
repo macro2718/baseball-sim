@@ -7,23 +7,36 @@ from baseball_sim.gameplay.statistics import StatsCalculator
 
 setup_project_environment()
 
-def simulate_games(num_games=10, output_file=None, progress_callback=None, message_callback=None):
+def simulate_games(
+    num_games=10,
+    output_file=None,
+    progress_callback=None,
+    message_callback=None,
+    *,
+    home_team_data=None,
+    away_team_data=None,
+    save_to_file=True,
+):
     """指定された回数の試合をシミュレーションし、結果をファイルに出力する"""
     # データローダーを直接インポート
     from baseball_sim.data.loader import DataLoader
     
-    # デフォルトのファイル名にタイムスタンプを追加
-    if output_file is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        project_root = get_project_paths().project_root
-        output_dir = os.path.join(project_root, "simulation_results")
-        os.makedirs(output_dir, exist_ok=True)
-        output_file = os.path.join(output_dir, f"simulation_results_{timestamp}.txt")
+    # 出力ファイルの設定
+    output_path = None
+    if save_to_file:
+        if output_file is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            project_root = get_project_paths().project_root
+            output_dir = os.path.join(project_root, "simulation_results")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, f"simulation_results_{timestamp}.txt")
+        else:
+            output_path = output_file
 
-    if message_callback:
-        message_callback(f"Results will be saved to {output_file}.")
-    else:
-        print(f"Results will be saved to {output_file}.")
+        if message_callback:
+            message_callback(f"Results will be saved to {output_path}.")
+        else:
+            print(f"Results will be saved to {output_path}.")
     
     # 結果を保存するデータ構造を初期化
     results = {
@@ -35,7 +48,10 @@ def simulate_games(num_games=10, output_file=None, progress_callback=None, messa
     }
     
     # 最初にチームを作成し、全試合で再利用する
-    home_team, away_team = DataLoader.create_teams_from_data()
+    home_team, away_team = DataLoader.create_teams_from_data(
+        home_team_override=home_team_data,
+        away_team_override=away_team_data,
+    )
     
     # ホームチーム、アウェイチームそれぞれの選手・投手をループでまとめて保存
     for team in (home_team, away_team):
@@ -72,11 +88,16 @@ def simulate_games(num_games=10, output_file=None, progress_callback=None, messa
             message_callback(f"Game {game_num}/{num_games} complete.")
     
     # 結果をファイルに出力
-    output_results(results, output_file)
+    if save_to_file and output_path:
+        output_results(results, output_path)
 
-    results["output_file"] = output_file
+    results["output_file"] = output_path
 
-    completion_message = f"Simulation complete. Results will be saved to {output_file}."
+    if save_to_file and output_path:
+        completion_message = f"Simulation complete. Results will be saved to {output_path}."
+    else:
+        completion_message = "Simulation complete."
+
     if message_callback:
         message_callback(completion_message)
     else:

@@ -68,6 +68,26 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleRunSimulation(games) {
+    const parsedGames = Number.parseInt(games, 10);
+    if (!Number.isFinite(parsedGames) || parsedGames <= 0) {
+      showStatus('試合数には1以上の整数を入力してください。', 'danger');
+      return;
+    }
+
+    stateCache.forceGameView = true;
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.simulationRun, {
+        method: 'POST',
+        body: JSON.stringify({ games: parsedGames }),
+      });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
   async function handleSwing() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameSwing, { method: 'POST' });
@@ -426,6 +446,7 @@ export function createGameActions(render) {
     handleReloadTeams,
     handleReturnToTitle,
     handleClearLog,
+    runSimulation: handleRunSimulation,
     handleSwing,
     handleBunt,
     handlePinchHit,
