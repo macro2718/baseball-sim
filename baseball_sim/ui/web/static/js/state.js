@@ -16,6 +16,10 @@ export const stateCache = {
   playersTeamView: 'away',
   simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min: 1, max: 200 } },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
+  titleLineup: {
+    plans: { home: null, away: null },
+    selection: { team: null, type: null, index: null },
+  },
   teamBuilder: {
     currentTeamId: null,
     lastSavedId: null,
