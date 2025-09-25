@@ -18,7 +18,7 @@ export const stateCache = {
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   titleLineup: {
     plans: { home: null, away: null },
-    selection: { team: null, type: null, index: null },
+    selection: { team: null, type: null, index: null, field: null },
   },
   teamBuilder: {
     currentTeamId: null,
