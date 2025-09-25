@@ -9,15 +9,17 @@ Web Player Editor changes:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Callable, Tuple, Optional, List
+from typing import Any, Dict, Tuple
 
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, Response, jsonify, request
 
+from .player_service import (
+    PlayerLibraryError,
+    PlayerLibraryService,
+    PlayerDataset,
+    PlayerSaveResult,
+)
 from .session import GameSessionError, WebGameSession
-from baseball_sim.config.paths import path_manager, FileUtils
-import json
-import uuid
-import os
 
 # Create Blueprint for API routes
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -38,6 +40,14 @@ def parse_int_param(payload: dict, key: str, default: int = -1) -> int:
 
 def create_routes(session: WebGameSession) -> Blueprint:
     """Create and configure API routes with the given session."""
+
+    player_service = PlayerLibraryService()
+
+    def load_players_dataset(auto_save: bool = True) -> PlayerDataset:
+        dataset = player_service.load_dataset()
+        if auto_save and dataset.mutated:
+            player_service.save_dataset(dataset)
+        return dataset
     
     @api_bp.get("/game/state")
     def get_state() -> Dict[str, Any]:
@@ -183,298 +193,31 @@ def create_routes(session: WebGameSession) -> Blueprint:
 
     # ------------------------- Players API -------------------------
 
-    def _load_players_with_ids() -> tuple[dict, bool, str]:
-        """Load players.json and ensure each player has a stable unique id.
-
-        Returns (data, mutated, path) where mutated indicates whether ids were
-        added and the file should be saved back.
-        """
-        players_path = path_manager.get_players_data_path()
-        data = FileUtils.safe_json_load(players_path, default={"batters": [], "pitchers": []})
-        if not isinstance(data, dict):
-            data = {"batters": [], "pitchers": []}
-        data.setdefault("batters", [])
-        data.setdefault("pitchers", [])
-
-        mutated = False
-        for role_key in ("batters", "pitchers"):
-            items = data.get(role_key, []) or []
-            for p in items:
-                if isinstance(p, dict) and not p.get("id"):
-                    # assign a UUIDv4
-                    p["id"] = str(uuid.uuid4())
-                    mutated = True
-        return data, mutated, players_path
-
-    def _save_players_data(data: dict, path: str) -> bool:
-        return FileUtils.safe_json_save(data, path)
-
-    def _find_player_by_id(data: dict, player_id: str) -> tuple[Optional[dict], Optional[str], Optional[int]]:
-        """Find player by id across both roles.
-
-        Returns (player_ref, role_key, index) where player_ref is the dict in place.
-        """
-        if not player_id:
-            return None, None, None
-        for role_key in ("batters", "pitchers"):
-            items: List[dict] = data.get(role_key, []) or []
-            for idx, p in enumerate(items):
-                if isinstance(p, dict) and p.get("id") == player_id:
-                    return p, role_key, idx
-        return None, None, None
-
-    def _infer_role_from_player_dict(player: dict, fallback: str = "batter") -> str:
-        role = (request.get_json(silent=True) or {}).get("role") if False else None  # placeholder
-        # We won't read request here; rely on content
-        if not isinstance(player, dict):
-            return fallback
-        # crude inference: presence of pitcher fields indicates pitcher
-        if "stamina" in player or "pitcher_type" in player:
-            return "pitcher"
-        return "batter"
-
-    def _team_mentions_player(team_obj: dict, target_name: str) -> bool:
-        if not isinstance(team_obj, dict) or not target_name:
-            return False
-        # pitchers: list of names
-        for pitcher_name in team_obj.get('pitchers', []) or []:
-            if isinstance(pitcher_name, str) and pitcher_name == target_name:
-                return True
-        # lineup: list of {name, position}
-        for entry in team_obj.get('lineup', []) or []:
-            if isinstance(entry, dict) and entry.get('name') == target_name:
-                return True
-        # bench: list of names
-        for bench_name in team_obj.get('bench', []) or []:
-            if isinstance(bench_name, str) and bench_name == target_name:
-                return True
-        return False
-
-    def _find_referencing_teams(target_name: str) -> list[str]:
-        refs: list[str] = []
-        if not target_name:
-            return refs
-        # Check aggregated teams.json (home_team/away_team)
-        try:
-            teams_path = path_manager.get_teams_data_path()
-            teams_data = FileUtils.safe_json_load(teams_path, default=None)
-            if isinstance(teams_data, dict):
-                for key in ("home_team", "away_team"):
-                    team_obj = teams_data.get(key)
-                    if isinstance(team_obj, dict) and _team_mentions_player(team_obj, target_name):
-                        team_name = team_obj.get('name') or key
-                        refs.append(str(team_name))
-        except Exception:
-            pass
-
-        # Check team library files
-        try:
-            teams_dir = path_manager.get_team_library_path()
-            if os.path.isdir(teams_dir):
-                for fname in os.listdir(teams_dir):
-                    if not fname.lower().endswith('.json'):
-                        continue
-                    fpath = os.path.join(teams_dir, fname)
-                    team_obj = FileUtils.safe_json_load(fpath, default=None)
-                    if isinstance(team_obj, dict) and _team_mentions_player(team_obj, target_name):
-                        team_name = team_obj.get('name') or os.path.splitext(fname)[0]
-                        refs.append(str(team_name))
-        except Exception:
-            pass
-
-        return refs
-
-    def _rename_player_in_team(team_obj: dict, old_name: str, new_name: str) -> bool:
-        if not isinstance(team_obj, dict):
-            return False
-        if not old_name or not new_name or old_name == new_name:
-            return False
-
-        changed = False
-
-        lineup = team_obj.get('lineup')
-        if isinstance(lineup, list):
-            for entry in lineup:
-                if isinstance(entry, dict) and entry.get('name') == old_name:
-                    entry['name'] = new_name
-                    changed = True
-
-        bench = team_obj.get('bench')
-        if isinstance(bench, list):
-            for index, entry in enumerate(bench):
-                if isinstance(entry, str) and entry == old_name:
-                    bench[index] = new_name
-                    changed = True
-                elif isinstance(entry, dict) and entry.get('name') == old_name:
-                    entry['name'] = new_name
-                    changed = True
-
-        pitchers = team_obj.get('pitchers')
-        if isinstance(pitchers, list):
-            for index, entry in enumerate(pitchers):
-                if isinstance(entry, str) and entry == old_name:
-                    pitchers[index] = new_name
-                    changed = True
-        return changed
-
-    def _rename_player_references(old_name: str, new_name: str) -> None:
-        if not old_name or not new_name or old_name == new_name:
-            return
-
-        try:
-            teams_path = path_manager.get_teams_data_path()
-            teams_data = FileUtils.safe_json_load(teams_path, default=None)
-        except Exception:
-            teams_data = None
-
-        if isinstance(teams_data, dict):
-            updated = False
-            for key in ('home_team', 'away_team'):
-                team_obj = teams_data.get(key)
-                if isinstance(team_obj, dict) and _rename_player_in_team(team_obj, old_name, new_name):
-                    updated = True
-            if updated:
-                FileUtils.safe_json_save(teams_data, teams_path)
-
-        teams_dir = path_manager.get_team_library_path()
-        if os.path.isdir(teams_dir):
-            for fname in os.listdir(teams_dir):
-                if not fname.lower().endswith('.json'):
-                    continue
-                fpath = os.path.join(teams_dir, fname)
-                try:
-                    team_obj = FileUtils.safe_json_load(fpath, default=None)
-                except Exception:
-                    continue
-                if isinstance(team_obj, dict) and _rename_player_in_team(team_obj, old_name, new_name):
-                    FileUtils.safe_json_save(team_obj, fpath)
-
     @api_bp.get("/players/catalog")
     def players_catalog() -> Dict[str, Any]:
-        data, mutated, players_path = _load_players_with_ids()
-        if mutated:
-            _save_players_data(data, players_path)
-
-        def safe_float(value: object) -> Optional[float]:
-            try:
-                if value is None or value == "":
-                    return None
-                return float(value)
-            except (TypeError, ValueError):
-                return None
-
-        def normalise_positions(raw_positions: object) -> list[str]:
-            positions: list[str] = []
-            if isinstance(raw_positions, list):
-                for pos in raw_positions:
-                    if not isinstance(pos, str):
-                        continue
-                    token = pos.strip().upper()
-                    if token and token not in positions:
-                        positions.append(token)
-            return positions
-
-        batters: list[dict[str, object]] = []
-        for record in data.get('batters', []) or []:
-            if not isinstance(record, dict):
-                continue
-            name = record.get('name')
-            pid = record.get('id')
-            if not name or not pid:
-                continue
-            batter_payload: dict[str, object] = {
-                'id': str(pid),
-                'name': str(name),
-                'bats': (record.get('bats') or '').strip().upper() or None,
-                'eligible_positions': normalise_positions(record.get('eligible_positions')),
-                'k_pct': safe_float(record.get('k_pct')),
-                'bb_pct': safe_float(record.get('bb_pct')),
-                'hard_pct': safe_float(record.get('hard_pct')),
-                'gb_pct': safe_float(record.get('gb_pct')),
-                'speed': safe_float(record.get('speed')),
-                'fielding_skill': safe_float(record.get('fielding_skill')),
-            }
-            batters.append(batter_payload)
-
-        pitchers: list[dict[str, object]] = []
-        for record in data.get('pitchers', []) or []:
-            if not isinstance(record, dict):
-                continue
-            name = record.get('name')
-            pid = record.get('id')
-            if not name or not pid:
-                continue
-            pitcher_payload: dict[str, object] = {
-                'id': str(pid),
-                'name': str(name),
-                'pitcher_type': (record.get('pitcher_type') or '').strip().upper() or None,
-                'throws': (record.get('throws') or '').strip().upper() or None,
-                'k_pct': safe_float(record.get('k_pct')),
-                'bb_pct': safe_float(record.get('bb_pct')),
-                'hard_pct': safe_float(record.get('hard_pct')),
-                'gb_pct': safe_float(record.get('gb_pct')),
-                'stamina': safe_float(record.get('stamina')),
-            }
-            pitchers.append(pitcher_payload)
-
-        return jsonify({'batters': batters, 'pitchers': pitchers})
+        dataset = load_players_dataset()
+        catalogue = player_service.build_catalogue(dataset)
+        return jsonify(catalogue)
 
     @api_bp.get("/players/list")
     def list_players() -> Dict[str, Any]:
         role = (request.args.get('role') or 'batter').strip().lower()
-        data, mutated, players_path = _load_players_with_ids()
-        if mutated:
-            _save_players_data(data, players_path)
-
-        def pack(items: list[dict]) -> list[dict]:
-            out = []
-            for p in items:
-                if not isinstance(p, dict):
-                    continue
-                name = p.get('name')
-                pid = p.get('id')
-                if name and pid:
-                    out.append({'id': str(pid), 'name': str(name)})
-            return out
-
-        if role == 'pitcher':
-            return jsonify({"players": pack(list(data.get('pitchers', [])))})
-        return jsonify({"players": pack(list(data.get('batters', [])))})
+        dataset = load_players_dataset()
+        player_list = player_service.build_list(dataset, role)
+        return jsonify(player_list)
 
     @api_bp.get("/players/detail")
     def player_detail() -> Dict[str, Any]:
         player_id = (request.args.get('id') or '').strip()
         name = (request.args.get('name') or '').strip()
-        data, mutated, players_path = _load_players_with_ids()
-        if mutated:
-            _save_players_data(data, players_path)
-
-        if player_id:
-            p, role_key, _ = _find_player_by_id(data, player_id)
-            if p and role_key:
-                referenced_by = _find_referencing_teams(p.get('name'))
-                return jsonify({
-                    "player": p,
-                    "role": 'pitcher' if role_key == 'pitchers' else 'batter',
-                    "referenced_by": referenced_by,
-                    "has_references": bool(referenced_by),
-                })
-            return create_error_response("指定された選手IDは見つかりません。", session)
-
-        if not name:
-            return create_error_response("選手IDまたは選手名を指定してください。", session)
-
-        for role_key in ("batters", "pitchers"):
-            for p in data.get(role_key, []):
-                if isinstance(p, dict) and p.get('name') == name:
-                    referenced_by = _find_referencing_teams(p.get('name'))
-                    return jsonify({
-                        "player": p,
-                        "role": 'pitcher' if role_key == 'pitchers' else 'batter',
-                        "referenced_by": referenced_by,
-                        "has_references": bool(referenced_by),
-                    })
-        return create_error_response("指定された選手は見つかりません。", session)
+        dataset = load_players_dataset()
+        try:
+            detail = player_service.get_player_detail(
+                dataset, player_id=player_id, name=name
+            )
+        except PlayerLibraryError as exc:
+            return create_error_response(exc.message, session)
+        return jsonify(detail)
 
     @api_bp.post("/players/save")
     def player_save() -> Dict[str, Any]:
@@ -482,75 +225,48 @@ def create_routes(session: WebGameSession) -> Blueprint:
         player = payload.get('player')
         role = (payload.get('role') or '').strip().lower()
         original_name = (payload.get('original_name') or '').strip()
-        player_id = (payload.get('player_id') or payload.get('id') or (player or {}).get('id') or '').strip() if isinstance(payload.get('player') or {}, dict) else (payload.get('player_id') or payload.get('id') or '').strip()
-        if not isinstance(player, dict) or not player.get('name'):
-            return create_error_response("選手データの形式が不正です。", session)
-        if role not in ('batter', 'pitcher'):
-            # 推定する：pitcher必須キーがあれば投手扱い
-            role = 'pitcher' if 'stamina' in player or 'pitcher_type' in player else 'batter'
+        player_dict = player if isinstance(player, dict) else {}
+        player_id_value = (
+            payload.get('player_id')
+            or payload.get('id')
+            or player_dict.get('id')
+            or ''
+        )
+        player_id = str(player_id_value).strip()
+        dataset = load_players_dataset(auto_save=False)
+        try:
+            result: PlayerSaveResult = player_service.save_player(
+                dataset,
+                player,
+                role,
+                player_id=player_id,
+                original_name=original_name,
+            )
+        except PlayerLibraryError as exc:
+            return create_error_response(exc.message, session)
 
-        data, mutated, players_path = _load_players_with_ids()
+        if not player_service.save_dataset(dataset):
+            return create_error_response("選手データの保存に失敗しました。", session)
 
-        # When updating, prefer player_id; fall back to original_name for backward compatibility
-        existing_player = None
-        existing_role_key = None
-        existing_index: Optional[int] = None
-        previous_name: Optional[str] = None
-        if player_id:
-            existing_player, existing_role_key, existing_index = _find_player_by_id(data, player_id)
-        elif original_name:
-            for rk in ('batters', 'pitchers'):
-                items: List[dict] = data.get(rk, []) or []
-                for idx, it in enumerate(items):
-                    if isinstance(it, dict) and it.get('name') == original_name:
-                        existing_player, existing_role_key, existing_index = it, rk, idx
-                        break
-                if existing_player:
-                    break
-        if isinstance(existing_player, dict):
-            previous_name = existing_player.get('name')
-
-        # Ensure the player has an id (reuse existing if present)
-        if existing_player and existing_player.get('id'):
-            player['id'] = existing_player['id']
-        elif player_id:
-            # trust provided id if any
-            player['id'] = player_id
-        else:
-            # new player
-            player.setdefault('id', str(uuid.uuid4()))
-
-        # Determine target list key based on role
-        target_key = 'pitchers' if role == 'pitcher' else 'batters'
-
-        if existing_player is not None and existing_role_key is not None and existing_index is not None:
-            # Replace existing at index (may also move between roles if role changed)
-            # Remove old entry
-            del data[existing_role_key][existing_index]
-            # Append to target role (no name-based stripping)
-            data[target_key].append(player)
-        else:
-            # Create new entry; do not strip same-name players
-            data[target_key].append(player)
-
-        # Save file if needed
-        if mutated or True:
-            if not _save_players_data(data, players_path):
-                return create_error_response("選手データの保存に失敗しました。", session)
-
-        name_changed = bool(previous_name and previous_name != player.get('name'))
-        if previous_name:
+        if result.previous_name:
             try:
-                if name_changed:
-                    _rename_player_references(previous_name, player.get('name'))
+                if result.previous_name != result.player_name:
+                    player_service.rename_player_references(
+                        result.previous_name, result.player_name
+                    )
             except Exception:
-                # Failing to update team references should not abort the save operation
                 pass
             session.ensure_teams(force_reload=True)
 
-        # 保存後、stateを返してUIを再同期
         state = session.build_state()
-        return jsonify({"id": player['id'], "name": player['name'], "role": role, "state": state})
+        return jsonify(
+            {
+                "id": result.player_id,
+                "name": result.player_name,
+                "role": result.role,
+                "state": state,
+            }
+        )
 
     @api_bp.post("/players/delete")
     def player_delete() -> Dict[str, Any]:
@@ -559,67 +275,19 @@ def create_routes(session: WebGameSession) -> Blueprint:
         name = (payload.get('name') or '').strip()
         role = (payload.get('role') or '').strip().lower()
 
-        data, mutated, players_path = _load_players_with_ids()
-
-        # Resolve the player's display name (for reference checks)
-        player_name_for_check = None
-        if player_id:
-            p, _, _ = _find_player_by_id(data, player_id)
-            if p and isinstance(p, dict):
-                player_name_for_check = p.get('name') or name or None
-        if not player_name_for_check:
-            player_name_for_check = name or None
-
-        # Prevent deletion if referenced by any team (checked by name)
-        referencing = _find_referencing_teams(player_name_for_check)
-        if referencing:
-            team_list = ", ".join(referencing[:5]) + (" 他" + str(len(referencing) - 5) + "件" if len(referencing) > 5 else "")
-            return create_error_response(
-                f"選手 '{player_name_for_check}' はチーム({team_list})に含まれているため削除できません。先に該当チームから外してください。",
-                session,
+        dataset = load_players_dataset(auto_save=False)
+        try:
+            deleted_identifier = player_service.delete_player(
+                dataset, player_id=player_id, name=name, role=role
             )
+        except PlayerLibraryError as exc:
+            return create_error_response(exc.message, session)
 
-        removed_any = False
-        if player_id:
-            # precise removal by id
-            p, role_key, idx = _find_player_by_id(data, player_id)
-            if p is not None and role_key is not None and idx is not None:
-                del data[role_key][idx]
-                removed_any = True
-        else:
-            if not name:
-                return create_error_response("削除する選手IDまたは選手名を指定してください。", session)
-
-            def remove_by_name(items, target_name):
-                removed = False
-                output = []
-                for p in items:
-                    if isinstance(p, dict) and p.get('name') == target_name:
-                        removed = True
-                    else:
-                        output.append(p)
-                return removed, output
-
-            if role in ('batter', 'pitcher'):
-                key = 'pitchers' if role == 'pitcher' else 'batters'
-                removed_any, data[key] = remove_by_name(list(data[key]), name)
-            else:
-                removed_bat, new_bat = remove_by_name(list(data['batters']), name)
-                removed_pit, new_pit = remove_by_name(list(data['pitchers']), name)
-                data['batters'] = new_bat
-                data['pitchers'] = new_pit
-                removed_any = removed_bat or removed_pit
-
-        if not removed_any:
-            return create_error_response("指定された選手は見つかりません。", session)
-
-        if not _save_players_data(data, players_path):
+        if not player_service.save_dataset(dataset):
             return create_error_response("選手データの保存に失敗しました。", session)
 
-        # Note: Teams that reference this player are not auto-updated here.
-        # Frontend can warn users or they can update team JSON accordingly.
         state = session.build_state()
-        return jsonify({"deleted": player_id or name, "state": state})
+        return jsonify({"deleted": deleted_identifier, "state": state})
 
     @api_bp.get("/health")
     def health() -> Dict[str, Any]:
