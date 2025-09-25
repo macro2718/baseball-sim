@@ -34,6 +34,13 @@ import {
   applyDefenseSelectionHighlights,
   resetDefenseSelectionsIfUnavailable,
 } from './defensePanel.js';
+import {
+  ensureTitleLineupPlan,
+  getTitleLineupSelection,
+  getTitleLineupInvalidAssignments,
+  getBenchEligibilityForPosition,
+  getLineupEligibilityForBenchPlayer,
+} from './titleLineup.js';
 import { setStatusMessage } from './status.js';
 import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
 import { updateFieldResultDisplay, resetFieldResultDisplay } from './fieldResultDisplay.js';
@@ -2722,66 +2729,6 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   updateStrategyControls(gameState, teams);
 }
 
-function normalizeTitleEligiblePositions(player) {
-  if (!player) return [];
-  let raw = [];
-  if (Array.isArray(player.eligible_all)) {
-    raw = player.eligible_all;
-  } else if (Array.isArray(player.eligible)) {
-    raw = player.eligible;
-  }
-  const normalized = raw.map((pos) => String(pos || '').toUpperCase()).filter(Boolean);
-  const fallback = player.position_key || player.position;
-  if ((!normalized.length || normalized.includes('-')) && fallback) {
-    const key = String(fallback).toUpperCase();
-    if (key && key !== '-') {
-      normalized.push(key);
-    }
-  }
-  return Array.from(new Set(normalized));
-}
-
-function buildTitleRoster(lineup, bench) {
-  const roster = new Map();
-
-  const addPlayer = (player, source) => {
-    if (!player || !player.name) return;
-    const key = player.name;
-    if (roster.has(key)) {
-      const existing = roster.get(key);
-      if (existing.source !== 'lineup' && source === 'lineup') {
-        existing.source = 'lineup';
-      }
-      if (!existing.eligible.length) {
-        existing.eligible = normalizeTitleEligiblePositions(player);
-      }
-      return;
-    }
-
-    roster.set(key, {
-      name: player.name,
-      source,
-      eligible: normalizeTitleEligiblePositions(player),
-    });
-  };
-
-  (lineup || []).forEach((player) => addPlayer(player, 'lineup'));
-  (bench || []).forEach((player) => addPlayer(player, 'bench'));
-
-  return Array.from(roster.values());
-}
-
-function ensureCurrentPlayerOption(select, slotName) {
-  if (!slotName) return;
-  const exists = Array.from(select.options).some((option) => option.value === slotName);
-  if (!exists) {
-    const fallbackOption = document.createElement('option');
-    fallbackOption.value = slotName;
-    fallbackOption.textContent = `${slotName} (現スタメン)`;
-    select.appendChild(fallbackOption);
-  }
-}
-
 function renderTitleLineup(teamKey, teamData, enabled) {
   const container = document.querySelector(`[data-title-lineup="${teamKey}"]`);
   const note = document.querySelector(`[data-title-lineup-note="${teamKey}"]`);
@@ -2790,28 +2737,13 @@ function renderTitleLineup(teamKey, teamData, enabled) {
 
   container.innerHTML = '';
 
-  const lineup = Array.isArray(teamData?.lineup) ? teamData.lineup : [];
-  const bench = Array.isArray(teamData?.bench) ? teamData.bench : [];
-  const roster = buildTitleRoster(lineup, bench);
-  const hasLineup = enabled && lineup.length > 0;
-  const unavailablePositions = [];
-
-  if (note) {
-    if (!enabled) {
+  if (!enabled) {
+    if (note) {
       note.textContent = 'チームデータが読み込まれていません。';
-    } else if (!lineup.length) {
-      note.textContent = 'スタメン情報が不足しています。チーム編成を確認してください。';
-    } else {
-      note.textContent = '守備位置ごとに出場する選手を選択してください。';
     }
-  }
-
-  if (!hasLineup) {
     const message = document.createElement('p');
     message.className = 'title-bench-empty';
-    message.textContent = enabled
-      ? 'スタメン情報がありません。'
-      : 'チームが読み込まれていません。';
+    message.textContent = 'チームが読み込まれていません。';
     container.appendChild(message);
     if (applyButton) {
       applyButton.disabled = true;
@@ -2819,76 +2751,129 @@ function renderTitleLineup(teamKey, teamData, enabled) {
     return;
   }
 
-  lineup.forEach((slot, index) => {
+  const plan = ensureTitleLineupPlan(teamKey, teamData, enabled);
+  if (!plan || !plan.lineup.length) {
+    if (note) {
+      note.textContent = 'スタメン情報が不足しています。チーム編成を確認してください。';
+    }
+    const message = document.createElement('p');
+    message.className = 'title-bench-empty';
+    message.textContent = 'スタメン情報がありません。';
+    container.appendChild(message);
+    if (applyButton) {
+      applyButton.disabled = true;
+    }
+    return;
+  }
+
+  const selection = getTitleLineupSelection();
+  const selectionMatchesTeam = selection.team === plan.teamKey;
+  const invalidAssignments = getTitleLineupInvalidAssignments(plan);
+  const invalidIndexes = new Set(invalidAssignments.map((entry) => entry.index));
+  let helperMessage = '';
+
+  let benchEligibility = { eligible: new Set(), ineligible: new Set() };
+  let lineupEligibility = { eligible: new Set(), ineligible: new Set() };
+
+  if (selectionMatchesTeam && selection.type === 'lineup') {
+    const slot = plan.lineup[selection.index];
+    if (slot) {
+      benchEligibility = getBenchEligibilityForPosition(plan, slot.slotPositionKey);
+      helperMessage = `${slot.order}番 ${slot.slotPositionLabel} の交代先をベンチから選択してください。`;
+    }
+  } else if (selectionMatchesTeam && selection.type === 'bench') {
+    lineupEligibility = getLineupEligibilityForBenchPlayer(plan, selection.index);
+    const benchPlayer = plan.bench[selection.index];
+    if (benchPlayer) {
+      helperMessage = `${benchPlayer.name} を出場させる守備位置を選択してください。`;
+    }
+  }
+
+  plan.lineup.forEach((slot) => {
+    if (!slot) return;
     const row = document.createElement('div');
     row.className = 'title-lineup-row';
+    row.dataset.team = plan.teamKey;
+    row.dataset.titleRole = 'lineup';
+    row.dataset.index = String(slot.index);
+
+    if (selectionMatchesTeam && selection.type === 'lineup' && selection.index === slot.index) {
+      row.classList.add('selected');
+    }
+    if (invalidIndexes.has(slot.index)) {
+      row.classList.add('invalid');
+    }
+    if (selectionMatchesTeam && selection.type === 'bench') {
+      if (lineupEligibility.eligible.has(slot.index)) {
+        row.classList.add('eligible');
+      } else if (lineupEligibility.ineligible.has(slot.index)) {
+        row.classList.add('ineligible');
+      }
+    }
 
     const order = document.createElement('div');
     order.className = 'title-lineup-order';
-    order.textContent = `${slot.order ?? index + 1}`;
+    order.textContent = `${slot.order}`;
 
     const position = document.createElement('div');
     position.className = 'title-lineup-position';
-    position.textContent = slot.position || slot.position_key || '-';
+    position.textContent = slot.slotPositionLabel || slot.slotPositionKey || '-';
 
-    const select = document.createElement('select');
-    select.className = 'title-lineup-select';
-    select.dataset.team = teamKey;
-    const positionKey = String(slot.position_key || slot.position || '').toUpperCase();
-    select.dataset.position = positionKey;
+    const playerButton = document.createElement('button');
+    playerButton.type = 'button';
+    playerButton.className = 'title-lineup-player';
+    playerButton.dataset.team = plan.teamKey;
+    playerButton.dataset.titleRole = 'lineup';
+    playerButton.dataset.index = String(slot.index);
 
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = '選手を選択';
-    placeholder.disabled = true;
-    placeholder.hidden = true;
-    select.appendChild(placeholder);
+    const name = document.createElement('span');
+    name.className = 'title-lineup-player-name';
+    name.textContent = slot.player?.name || '選手を選択';
+    playerButton.appendChild(name);
 
-    const eligiblePlayers = roster
-      .filter((entry) => !positionKey || entry.eligible.includes(positionKey))
-      .sort((a, b) => {
-        if (a.source === b.source) {
-          return a.name.localeCompare(b.name, 'ja');
-        }
-        return a.source === 'lineup' ? -1 : 1;
-      });
-
-    eligiblePlayers.forEach((entry) => {
-      const option = document.createElement('option');
-      option.value = entry.name;
-      option.textContent = entry.source === 'bench' ? `${entry.name} (ベンチ)` : entry.name;
-      if (entry.name === slot.name) {
-        option.selected = true;
+    if (!slot.player) {
+      playerButton.classList.add('empty');
+    } else {
+      const metaParts = [];
+      if (slot.player.bats) {
+        metaParts.push(`Bats ${slot.player.bats}`);
       }
-      select.appendChild(option);
-    });
-
-    ensureCurrentPlayerOption(select, slot.name);
-
-    if (slot.name) {
-      select.value = slot.name;
-    }
-
-    select.disabled = !eligiblePlayers.length;
-    if (select.disabled) {
-      unavailablePositions.push(position.textContent || positionKey || '-');
+      if (slot.player.fielding_rating) {
+        metaParts.push(`守備 ${slot.player.fielding_rating}`);
+      }
+      if (slot.player.avg) {
+        metaParts.push(`AVG ${slot.player.avg}`);
+      }
+      if (metaParts.length) {
+        const meta = document.createElement('span');
+        meta.className = 'title-lineup-player-meta';
+        meta.textContent = metaParts.join(' · ');
+        playerButton.appendChild(meta);
+      }
     }
 
     row.appendChild(order);
     row.appendChild(position);
-    row.appendChild(select);
+    row.appendChild(playerButton);
     container.appendChild(row);
   });
 
-  if (note && unavailablePositions.length) {
-    note.textContent = `${unavailablePositions.join('、')} を守れる選手が見つかりません。`;
+  if (note) {
+    if (helperMessage) {
+      note.textContent = helperMessage;
+    } else if (invalidAssignments.length) {
+      const labels = invalidAssignments
+        .map((entry) => `${entry.slot.slotPositionLabel || entry.positionKey}`)
+        .join('、');
+      note.textContent = `${labels} を守れる選手が見つかりません。`;
+    } else {
+      note.textContent = '守備位置をクリックして、ベンチから交代させる選手を選択できます。';
+    }
   }
 
   if (applyButton) {
-    const anyDisabled = Array.from(container.querySelectorAll('select.title-lineup-select')).some(
-      (select) => select.disabled,
-    );
-    applyButton.disabled = anyDisabled;
+    const hasEmptySlot = plan.lineup.some((slot) => !slot.player || !slot.player.name);
+    applyButton.disabled = hasEmptySlot;
   }
 }
 
@@ -2905,8 +2890,28 @@ function renderTitleBench(teamKey, teamData, enabled) {
     return;
   }
 
-  const bench = Array.isArray(teamData?.bench) ? teamData.bench : [];
-  if (!bench.length) {
+  const plan = ensureTitleLineupPlan(teamKey, teamData, enabled);
+  if (!plan) {
+    const message = document.createElement('p');
+    message.className = 'title-bench-empty';
+    message.textContent = 'ベンチ情報が読み込めませんでした。';
+    container.appendChild(message);
+    return;
+  }
+
+  const benchPlayers = plan.bench || [];
+  const selection = getTitleLineupSelection();
+  const selectionMatchesTeam = selection.team === plan.teamKey;
+  let benchHighlight = { eligible: new Set(), ineligible: new Set() };
+
+  if (selectionMatchesTeam && selection.type === 'lineup') {
+    const slot = plan.lineup[selection.index];
+    if (slot) {
+      benchHighlight = getBenchEligibilityForPosition(plan, slot.slotPositionKey);
+    }
+  }
+
+  if (!benchPlayers.length) {
     const message = document.createElement('p');
     message.className = 'title-bench-empty';
     message.textContent = 'ベンチ登録がありません。';
@@ -2914,10 +2919,14 @@ function renderTitleBench(teamKey, teamData, enabled) {
     return;
   }
 
-  bench.forEach((player) => {
+  benchPlayers.forEach((player, index) => {
     if (!player || !player.name) return;
-    const chip = document.createElement('span');
+    const chip = document.createElement('button');
+    chip.type = 'button';
     chip.className = 'title-bench-chip';
+    chip.dataset.team = plan.teamKey;
+    chip.dataset.titleRole = 'bench';
+    chip.dataset.index = String(index);
     let label = player.name;
     const metaParts = [];
     if (player.pitcher_type && player.pitcher_type !== 'P') {
@@ -2925,10 +2934,23 @@ function renderTitleBench(teamKey, teamData, enabled) {
     } else if (player.position && player.position !== '-' && player.position !== 'P') {
       metaParts.push(player.position);
     }
+    if (player.bats) {
+      metaParts.push(player.bats);
+    }
     if (metaParts.length) {
       label += ` (${metaParts.join('/')})`;
     }
     chip.textContent = label;
+
+    if (selectionMatchesTeam && selection.type === 'bench' && selection.index === index) {
+      chip.classList.add('selected');
+    }
+    if (benchHighlight.eligible.has(index)) {
+      chip.classList.add('eligible');
+    } else if (benchHighlight.ineligible.has(index)) {
+      chip.classList.add('ineligible');
+    }
+
     container.appendChild(chip);
   });
 }

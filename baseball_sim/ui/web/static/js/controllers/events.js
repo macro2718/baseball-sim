@@ -19,10 +19,20 @@ import {
   updateStatsPanel,
   updateAbilitiesPanel,
   render,
+  renderTitle,
   updateScreenVisibility,
 } from '../ui/renderers.js';
 import { showStatus } from '../ui/status.js';
 import { handleDefensePlayerClick, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
+import {
+  ensureTitleLineupPlan,
+  getTitleLineupPlan,
+  getTitleLineupSelection,
+  setTitleLineupSelection,
+  clearTitleLineupSelection,
+  swapTitleLineupPlayers,
+  moveBenchPlayerToLineup,
+} from '../ui/titleLineup.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
 import { applyAbilityColor, resetAbilityColor, ABILITY_COLOR_PRESETS } from '../ui/renderers.js';
 
@@ -2332,17 +2342,21 @@ export function initEventListeners(actions) {
       return;
     }
 
-    const selects = Array.from(container.querySelectorAll('select.title-lineup-select'));
-    if (!selects.length) {
+    const teamsData = stateCache.data?.teams || {};
+    const teamData = teamsData[normalizedTeam];
+    ensureTitleLineupPlan(normalizedTeam, teamData, Boolean(teamData));
+    const plan = getTitleLineupPlan(normalizedTeam);
+    if (!plan) {
       showStatus('スタメンを編成できる状態ではありません。', 'danger');
       return;
     }
 
     const lineupEntries = [];
     const seenNames = new Set();
-    for (const select of selects) {
-      const playerName = String(select.value || '').trim();
-      const position = String(select.dataset.position || '').trim().toUpperCase();
+    for (const slot of plan.lineup) {
+      const player = slot?.player;
+      const playerName = player?.name ? String(player.name).trim() : '';
+      const position = slot?.slotPositionKey ? String(slot.slotPositionKey).trim().toUpperCase() : '';
       if (!playerName) {
         showStatus('すべての打順に選手を割り当ててください。', 'danger');
         return;
@@ -2513,6 +2527,80 @@ export function initEventListeners(actions) {
         event.preventDefault();
         const teamKey = pitcherButton.dataset.team || '';
         submitTitlePitcher(teamKey, pitcherButton);
+        return;
+      }
+
+      const interactiveTarget = event.target.closest('[data-title-role]');
+      if (interactiveTarget) {
+        event.preventDefault();
+        const role = interactiveTarget.dataset.titleRole;
+        const rawTeam = interactiveTarget.dataset.team || '';
+        const normalizedTeam = rawTeam === 'home' ? 'home' : rawTeam === 'away' ? 'away' : null;
+        if (!normalizedTeam) {
+          clearTitleLineupSelection();
+          renderTitle(stateCache.data?.title || {});
+          return;
+        }
+
+        const teamsData = stateCache.data?.teams || {};
+        const teamData = teamsData[normalizedTeam];
+        ensureTitleLineupPlan(normalizedTeam, teamData, Boolean(teamData));
+        const plan = getTitleLineupPlan(normalizedTeam);
+        if (!plan) {
+          clearTitleLineupSelection();
+          renderTitle(stateCache.data?.title || {});
+          return;
+        }
+
+        const selection = getTitleLineupSelection();
+
+        if (role === 'lineup') {
+          const index = Number.parseInt(interactiveTarget.dataset.index || '', 10);
+          if (!Number.isInteger(index)) {
+            clearTitleLineupSelection();
+            renderTitle(stateCache.data?.title || {});
+            return;
+          }
+
+          if (selection.team === normalizedTeam && selection.type === 'lineup') {
+            if (selection.index === index) {
+              clearTitleLineupSelection();
+            } else if (swapTitleLineupPlayers(normalizedTeam, selection.index, index)) {
+              clearTitleLineupSelection();
+            } else {
+              setTitleLineupSelection(normalizedTeam, 'lineup', index);
+            }
+          } else if (selection.team === normalizedTeam && selection.type === 'bench') {
+            if (moveBenchPlayerToLineup(normalizedTeam, selection.index, index)) {
+              clearTitleLineupSelection();
+            } else {
+              setTitleLineupSelection(normalizedTeam, 'lineup', index);
+            }
+          } else {
+            setTitleLineupSelection(normalizedTeam, 'lineup', index);
+          }
+        } else if (role === 'bench') {
+          const index = Number.parseInt(interactiveTarget.dataset.index || '', 10);
+          if (!Number.isInteger(index)) {
+            clearTitleLineupSelection();
+            renderTitle(stateCache.data?.title || {});
+            return;
+          }
+
+          if (selection.team === normalizedTeam && selection.type === 'bench' && selection.index === index) {
+            clearTitleLineupSelection();
+          } else if (selection.team === normalizedTeam && selection.type === 'lineup') {
+            if (moveBenchPlayerToLineup(normalizedTeam, index, selection.index)) {
+              clearTitleLineupSelection();
+            } else {
+              setTitleLineupSelection(normalizedTeam, 'bench', index);
+            }
+          } else {
+            setTitleLineupSelection(normalizedTeam, 'bench', index);
+          }
+        }
+
+        renderTitle(stateCache.data?.title || {});
       }
     });
   }
