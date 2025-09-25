@@ -7,6 +7,7 @@ import {
   resetDefenseSelection,
   getDefensePlanInvalidAssignments,
   setUIView,
+  getPinchRunSelectedBase,
 } from '../state.js';
 import { apiRequest } from '../services/apiClient.js';
 import { renderDefensePanel, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
@@ -108,6 +109,37 @@ export function createGameActions(render) {
       const payload = await apiRequest(CONFIG.api.endpoints.pinchHit, {
         method: 'POST',
         body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
+      });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handlePinchRun() {
+    if (!elements.pinchRunPlayer) return;
+    const baseIndex = getPinchRunSelectedBase();
+    if (!Number.isInteger(baseIndex)) {
+      showStatus('代走させる走者を選択してください。', 'danger');
+      return;
+    }
+
+    const benchValue = elements.pinchRunPlayer.value;
+    if (!benchValue) {
+      showStatus('代走に出す選手をカード（またはリスト）から選択してください。', 'danger');
+      return;
+    }
+
+    const benchIndex = Number(benchValue);
+    if (Number.isNaN(benchIndex)) {
+      showStatus('選択内容を解釈できませんでした。', 'danger');
+      return;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.pinchRun, {
+        method: 'POST',
+        body: JSON.stringify({ base_index: baseIndex, bench_index: benchIndex }),
       });
       render(payload);
     } catch (error) {
@@ -397,6 +429,7 @@ export function createGameActions(render) {
     handleSwing,
     handleBunt,
     handlePinchHit,
+    handlePinchRun,
     handleDefenseSubstitution,
     handleDefenseReset,
     handlePitcherChange,

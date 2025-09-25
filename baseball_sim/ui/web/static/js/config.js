@@ -11,6 +11,7 @@ export const CONFIG = {
       gameSwing: '/api/game/swing',
       gameBunt: '/api/game/bunt',
       pinchHit: '/api/strategy/pinch_hit',
+      pinchRun: '/api/strategy/pinch_run',
       defenseSubstitution: '/api/strategy/defense_substitution',
       changePitcher: '/api/strategy/change_pitcher',
       clearLog: '/api/log/clear',

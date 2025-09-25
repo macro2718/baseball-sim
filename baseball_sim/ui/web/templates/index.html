@@ -654,6 +654,7 @@
                   <p class="strategy-menu-title">攻撃側の采配を選択</p>
                   <div class="strategy-menu-actions">
                     <button type="button" id="open-offense-pinch-menu">代打戦略</button>
+                    <button type="button" id="open-offense-pinch-run-menu">代走戦略</button>
                   </div>
                 </div>
                 <div
@@ -779,8 +780,75 @@
             </section>
           </div>
         </div>
+      <div class="modal-footer">
+        <button id="pinch-hit-button" class="primary">代打を送る</button>
+      </div>
+    </div>
+  </div>
+
+    <div class="modal hidden" id="pinch-run-modal" aria-hidden="true">
+      <div
+        class="modal-card strategy-modal wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pinch-run-modal-title"
+      >
+        <div class="modal-header">
+          <h3 id="pinch-run-modal-title">代走戦略</h3>
+          <button type="button" class="modal-close" data-close="pinch-run-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">
+            ベンチの走力に優れた選手を走者として投入します。カードまたはリストから走者と代走候補を選択してください。
+          </p>
+          <div class="pinch-strategy pinch-run-strategy">
+            <section
+              class="current-pitcher-card current-batter-card"
+              id="pinch-run-current-card"
+              aria-live="polite"
+            >
+              <p class="pitcher-card-empty pinch-card-empty">ベース上の走者情報がまだありません。</p>
+            </section>
+            <div class="pinch-run-panels">
+              <section class="pitcher-options-panel pinch-options-panel pinch-run-bases">
+                <header class="pitcher-options-header pinch-options-header">
+                  <div>
+                    <h4>走者の選択</h4>
+                    <p class="pitcher-options-subtitle">代走を送る塁を選択</p>
+                  </div>
+                </header>
+                <div class="pinch-run-base-grid" id="pinch-run-base-grid" role="list"></div>
+                <div class="pinch-select-fallback">
+                  <label for="pinch-run-base">代走させる走者</label>
+                  <div class="select-wrapper">
+                    <select id="pinch-run-base"></select>
+                    <span class="select-chevron" aria-hidden="true">▾</span>
+                  </div>
+                </div>
+                <p class="pinch-select-helper" id="pinch-run-base-helper"></p>
+              </section>
+              <section class="pitcher-options-panel pinch-options-panel pinch-run-bench">
+                <header class="pitcher-options-header pinch-options-header">
+                  <div>
+                    <h4>ベンチ候補</h4>
+                    <p class="pitcher-options-subtitle">走力と守備適性を確認して選択</p>
+                  </div>
+                </header>
+                <div class="pinch-option-grid" id="pinch-run-option-grid" role="list"></div>
+                <div class="pinch-select-fallback">
+                  <label for="pinch-run-player">代走に出す選手</label>
+                  <div class="select-wrapper">
+                    <select id="pinch-run-player"></select>
+                    <span class="select-chevron" aria-hidden="true">▾</span>
+                  </div>
+                </div>
+                <p class="pinch-select-helper" id="pinch-run-select-helper"></p>
+              </section>
+            </div>
+          </div>
+        </div>
         <div class="modal-footer">
-          <button id="pinch-hit-button" class="primary">代打を送る</button>
+          <button type="button" id="pinch-run-button" class="primary">代走を送る</button>
         </div>
       </div>
     </div>

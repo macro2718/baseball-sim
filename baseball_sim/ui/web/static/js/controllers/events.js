@@ -1,5 +1,10 @@
 import { elements } from '../dom.js';
-import { stateCache, setUIView } from '../state.js';
+import {
+  stateCache,
+  setUIView,
+  setPinchRunSelectedBase,
+  getPinchRunSelectedBase,
+} from '../state.js';
 import {
   hideDefenseMenu,
   hideOffenseMenu,
@@ -2325,11 +2330,17 @@ export function initEventListeners(actions) {
   if (elements.pinchButton) {
     elements.pinchButton.addEventListener('click', actions.handlePinchHit);
   }
+  if (elements.pinchRunButton) {
+    elements.pinchRunButton.addEventListener('click', actions.handlePinchRun);
+  }
   if (elements.openOffenseButton) {
     elements.openOffenseButton.addEventListener('click', toggleOffenseMenu);
   }
   if (elements.offensePinchMenuButton) {
     elements.offensePinchMenuButton.addEventListener('click', () => openModal('offense'));
+  }
+  if (elements.offensePinchRunMenuButton) {
+    elements.offensePinchRunMenuButton.addEventListener('click', () => openModal('pinch-run'));
   }
   if (elements.openDefenseButton) {
     elements.openDefenseButton.addEventListener('click', toggleDefenseMenu);
@@ -2906,7 +2917,7 @@ export function initEventListeners(actions) {
     button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
   });
 
-  ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
+  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
@@ -2916,6 +2927,29 @@ export function initEventListeners(actions) {
       });
     }
   });
+
+  if (elements.pinchRunBase) {
+    elements.pinchRunBase.addEventListener('change', (event) => {
+      const rawValue = event.target.value;
+      const parsed = rawValue === '' ? null : Number(rawValue);
+      if (rawValue !== '' && Number.isInteger(parsed)) {
+        setPinchRunSelectedBase(parsed);
+      } else {
+        setPinchRunSelectedBase(null);
+      }
+    });
+  }
+
+  if (elements.pinchRunModal) {
+    elements.pinchRunModal.addEventListener('show', () => {
+      const selected = getPinchRunSelectedBase();
+      if (Number.isInteger(selected) && elements.pinchRunBase) {
+        elements.pinchRunBase.value = String(selected);
+        const changeEvent = new Event('change', { bubbles: true });
+        elements.pinchRunBase.dispatchEvent(changeEvent);
+      }
+    });
+  }
 
   if (elements.offenseMenu) {
     document.addEventListener('click', (event) => {

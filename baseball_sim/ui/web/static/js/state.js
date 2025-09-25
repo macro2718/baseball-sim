@@ -8,6 +8,7 @@ export const stateCache = {
   defenseSelection: { first: null, feedback: null },
   defenseContext: { lineup: {}, bench: {}, canSub: false },
   currentBatterIndex: null,
+  pinchRunContext: { bases: [], availableBaseIndexes: [], selectedBaseIndex: null },
   statsView: { team: 'away', type: 'batting' },
   abilitiesView: { team: 'away', type: 'batting' },
   uiView: 'lobby',
@@ -35,6 +36,42 @@ export function setUIView(view) {
 
 export function getUIView() {
   return stateCache.uiView;
+}
+
+export function setPinchRunContext(bases, availableIndexes, selectedIndex) {
+  const baseList = Array.isArray(bases) ? bases : [];
+  const indexList = Array.isArray(availableIndexes)
+    ? availableIndexes.filter((idx) => Number.isInteger(idx))
+    : [];
+  const selected = Number.isInteger(selectedIndex) && indexList.includes(selectedIndex)
+    ? selectedIndex
+    : null;
+  stateCache.pinchRunContext = {
+    bases: baseList,
+    availableBaseIndexes: indexList,
+    selectedBaseIndex: selected,
+  };
+}
+
+export function setPinchRunSelectedBase(index) {
+  const normalized = Number.isInteger(index) ? index : null;
+  if (!stateCache.pinchRunContext) {
+    stateCache.pinchRunContext = { bases: [], availableBaseIndexes: [], selectedBaseIndex: null };
+  }
+  if (
+    normalized !== null &&
+    Array.isArray(stateCache.pinchRunContext.availableBaseIndexes) &&
+    stateCache.pinchRunContext.availableBaseIndexes.includes(normalized)
+  ) {
+    stateCache.pinchRunContext.selectedBaseIndex = normalized;
+  } else {
+    stateCache.pinchRunContext.selectedBaseIndex = null;
+  }
+}
+
+export function getPinchRunSelectedBase() {
+  const value = stateCache.pinchRunContext?.selectedBaseIndex;
+  return Number.isInteger(value) ? value : null;
 }
 
 export function normalizePositionKey(position) {

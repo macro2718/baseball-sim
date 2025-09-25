@@ -220,6 +220,35 @@ class SessionStateBuilder:
             message_text = ""
             sequence_number = getattr(game_state, "_play_sequence", 0)
 
+        lineup_lookup = {}
+        if batting_team and getattr(batting_team, "lineup", None):
+            lineup_lookup = {id(player): index for index, player in enumerate(batting_team.lineup)}
+
+        bases_payload = []
+        for slot_index, runner in enumerate(game_state.bases):
+            lineup_index = None
+            if runner is not None and batting_team:
+                lineup_index = lineup_lookup.get(id(runner))
+                if lineup_index is None:
+                    runner_name = getattr(runner, "name", None)
+                    if runner_name:
+                        for index, player in enumerate(batting_team.lineup):
+                            if getattr(player, "name", None) == runner_name:
+                                lineup_index = index
+                                break
+
+            bases_payload.append(
+                {
+                    "occupied": runner is not None,
+                    "runner": getattr(runner, "name", None),
+                    "speed": getattr(runner, "speed", None),
+                    "speed_display": self._format_speed(getattr(runner, "speed", None))
+                    if runner
+                    else None,
+                    "lineup_index": lineup_index,
+                }
+            )
+
         return (
             {
                 "active": True,
@@ -227,17 +256,7 @@ class SessionStateBuilder:
                 "half": "top" if game_state.is_top_inning else "bottom",
                 "half_label": "TOP" if game_state.is_top_inning else "BOTTOM",
                 "outs": game_state.outs,
-                "bases": [
-                    {
-                        "occupied": runner is not None,
-                        "runner": getattr(runner, "name", None),
-                        "speed": getattr(runner, "speed", None),
-                        "speed_display": self._format_speed(getattr(runner, "speed", None))
-                        if runner
-                        else None,
-                    }
-                    for runner in game_state.bases
-                ],
+                "bases": bases_payload,
                 "offense": offense,
                 "defense": defense,
                 "current_batter": current_batter,

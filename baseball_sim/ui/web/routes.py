@@ -104,6 +104,17 @@ def create_routes(session: WebGameSession) -> Blueprint:
             return create_error_response(str(exc), session)
         return jsonify(state)
 
+    @api_bp.post("/strategy/pinch_run")
+    def pinch_run() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        base_index = parse_int_param(payload, "base_index")
+        bench_index = parse_int_param(payload, "bench_index")
+        try:
+            state = session.execute_pinch_run(base_index=base_index, bench_index=bench_index)
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     @api_bp.post("/strategy/defense_substitution")
     def defensive_substitution() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}
