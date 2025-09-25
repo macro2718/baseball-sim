@@ -172,6 +172,28 @@ def create_routes(session: WebGameSession) -> Blueprint:
         state = session.reload_teams()
         return jsonify(state)
 
+    @api_bp.post("/teams/lineup")
+    def update_lineup() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        team_key = payload.get("team")
+        lineup_payload = payload.get("lineup")
+        try:
+            state = session.update_starting_lineup(str(team_key), lineup_payload)
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
+    @api_bp.post("/teams/pitcher")
+    def update_starting_pitcher() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        team_key = payload.get("team")
+        pitcher_name = payload.get("pitcher")
+        try:
+            state = session.set_starting_pitcher(str(team_key), pitcher_name)
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     @api_bp.post("/teams/library/select")
     def select_team_files() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}

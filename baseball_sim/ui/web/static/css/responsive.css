@@ -166,4 +166,19 @@
   .defense-modal-body {
     grid-template-columns: 1fr;
   }
+
+  .title-lineup-row {
+    grid-template-columns: 34px 56px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .title-pitcher-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .title-pitcher-apply {
+    width: 100%;
+  }
 }

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from baseball_sim.data.loader import DataLoader
 from baseball_sim.data.team_library import TeamLibraryError
@@ -115,6 +115,155 @@ class TeamManagementMixin:
         self._action_block_reason = None
         self._notifications.publish("info", "Team data reloaded.")
         self._clear_simulation_results()
+        return self.build_state()
+
+    def _resolve_team_key(self, team_key: str) -> Tuple[object, str]:
+        """Return the requested team object and its normalized key."""
+
+        normalized = str(team_key or "").lower()
+        if normalized == "home":
+            team = self.home_team
+        elif normalized == "away":
+            team = self.away_team
+        else:
+            raise GameSessionError("チームには 'home' または 'away' を指定してください。")
+
+        if team is None:
+            raise GameSessionError("指定したチームが読み込めませんでした。チームデータを再確認してください。")
+        return team, normalized
+
+    def update_starting_lineup(
+        self, team_key: str, lineup_payload: Optional[List[Dict[str, Any]]]
+    ) -> Dict[str, Any]:
+        """Update the pre-game starting lineup for the selected team."""
+
+        if self.game_state:
+            raise GameSessionError("試合中はスタメンを変更できません。タイトル画面に戻ってから再設定してください。")
+
+        team, _ = self._resolve_team_key(team_key)
+
+        if not isinstance(lineup_payload, list) or not lineup_payload:
+            raise GameSessionError("スタメンデータの形式が不正です。再度やり直してください。")
+
+        required_slots = len(getattr(team, "required_positions", [])) or 9
+
+        normalized_entries: List[Tuple[str, str]] = []
+        for entry in lineup_payload:
+            if not isinstance(entry, dict):
+                continue
+            name = str(entry.get("name") or "").strip()
+            position = str(entry.get("position") or "").strip().upper()
+            if not name or not position:
+                raise GameSessionError("スタメンには選手名とポジションの両方が必要です。")
+            normalized_entries.append((name, position))
+
+        if len(normalized_entries) != required_slots:
+            raise GameSessionError(f"スタメンは{required_slots}枠すべてを埋めてください。")
+
+        seen_names = set()
+        for name, _ in normalized_entries:
+            if name in seen_names:
+                raise GameSessionError(f"{name} が複数の打順に設定されています。")
+            seen_names.add(name)
+
+        available_players: Dict[str, Any] = {}
+        for player in list(getattr(team, "lineup", [])) + list(getattr(team, "bench", [])):
+            if not player:
+                continue
+            if player.name not in available_players:
+                available_players[player.name] = player
+
+        new_lineup: List[Any] = []
+        defensive_positions = {pos: None for pos in getattr(team, "required_positions", [])}
+
+        for name, position in normalized_entries:
+            player = available_players.get(name)
+            if not player:
+                raise GameSessionError(f"{team.name} のロスターに {name} が見つかりません。")
+            if defensive_positions.get(position):
+                raise GameSessionError(f"{position} の枠が重複しています。")
+            if hasattr(player, "can_play_position") and not player.can_play_position(position):
+                raise GameSessionError(f"{player.name} は {position} を守れません。")
+            player.current_position = position
+            defensive_positions[position] = player
+            new_lineup.append(player)
+
+        original_lineup = list(team.lineup)
+        original_bench = list(team.bench)
+        original_positions = dict(team.defensive_positions)
+        original_batter_index = team.current_batter_index
+
+        team.lineup = new_lineup
+        team.defensive_positions = defensive_positions
+        team.current_batter_index = 0
+
+        bench_candidates = list(original_bench) + list(original_lineup)
+        bench_result: List[Any] = []
+        used_ids = {id(player) for player in new_lineup}
+        for player in bench_candidates:
+            if not player or id(player) in used_ids:
+                continue
+            player.current_position = None
+            if player not in bench_result:
+                bench_result.append(player)
+        team.bench = bench_result
+        if isinstance(getattr(team, "ejected_players", None), list):
+            team.ejected_players.clear()
+
+        errors = team.validate_lineup()
+        if errors:
+            team.lineup = original_lineup
+            team.bench = original_bench
+            team.defensive_positions = original_positions
+            team.current_batter_index = original_batter_index
+            raise GameSessionError("ラインナップが不正です: " + ", ".join(errors))
+
+        self._notifications.publish("success", f"{team.name}のスタメンを更新しました。")
+        return self.build_state()
+
+    def set_starting_pitcher(self, team_key: str, pitcher_name: str) -> Dict[str, Any]:
+        """Select the starting pitcher before the game begins."""
+
+        if self.game_state:
+            raise GameSessionError("試合中は先発投手を変更できません。タイトル画面に戻ってから再設定してください。")
+
+        team, _ = self._resolve_team_key(team_key)
+        name = str(pitcher_name or "").strip()
+        if not name:
+            raise GameSessionError("先発投手を選択してください。")
+
+        candidates: List[Any] = []
+        if getattr(team, "current_pitcher", None):
+            candidates.append(team.current_pitcher)
+        candidates.extend(getattr(team, "pitchers", []) or [])
+
+        selected = None
+        for pitcher in candidates:
+            if pitcher and getattr(pitcher, "name", None) == name:
+                selected = pitcher
+                break
+
+        if not selected:
+            raise GameSessionError(f"{team.name} の投手 '{name}' が見つかりません。")
+
+        if team.current_pitcher is selected:
+            self._notifications.publish("info", f"{selected.name} は既に先発に設定されています。")
+            return self.build_state()
+
+        previous = getattr(team, "current_pitcher", None)
+        team.current_pitcher = selected
+        selected.current_position = "P"
+
+        if previous and previous is not selected and previous not in team.pitchers:
+            team.pitchers.append(previous)
+
+        if selected not in team.pitchers:
+            team.pitchers.insert(0, selected)
+
+        if selected in getattr(team, "ejected_players", []):
+            team.ejected_players.remove(selected)
+
+        self._notifications.publish("success", f"{team.name}の先発投手を{selected.name}に設定しました。")
         return self.build_state()
 
     def get_team_library_state(self) -> Dict[str, object]:

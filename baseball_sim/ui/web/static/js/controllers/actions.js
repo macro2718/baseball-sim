@@ -310,6 +310,57 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleLineupUpdate(teamKey, lineupEntries) {
+    const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+    if (!normalizedTeam) {
+      showStatus('スタメンを更新するチームを正しく選択してください。', 'danger');
+      return null;
+    }
+
+    if (!Array.isArray(lineupEntries) || !lineupEntries.length) {
+      showStatus('スタメンの候補が見つかりません。', 'danger');
+      return null;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.teamSetLineup, {
+        method: 'POST',
+        body: JSON.stringify({ team: normalizedTeam, lineup: lineupEntries }),
+      });
+      render(payload);
+      return payload;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
+  async function handleSetStartingPitcher(teamKey, pitcherName) {
+    const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+    if (!normalizedTeam) {
+      showStatus('先発投手を設定するチームを正しく選択してください。', 'danger');
+      return null;
+    }
+
+    const normalizedName = typeof pitcherName === 'string' ? pitcherName.trim() : '';
+    if (!normalizedName) {
+      showStatus('先発投手を選択してください。', 'danger');
+      return null;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.teamSetPitcher, {
+        method: 'POST',
+        body: JSON.stringify({ team: normalizedTeam, pitcher: normalizedName }),
+      });
+      render(payload);
+      return payload;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
   async function loadInitialState() {
     try {
       const initialState = await apiRequest(CONFIG.api.endpoints.gameState);
@@ -487,6 +538,8 @@ export function createGameActions(render) {
     handleDefenseSubstitution,
     handleDefenseReset,
     handlePitcherChange,
+    handleLineupUpdate,
+    handleSetStartingPitcher,
     loadInitialState,
     handleTeamSelection,
     fetchTeamDefinition,

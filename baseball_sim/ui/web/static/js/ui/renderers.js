@@ -2722,6 +2722,273 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   updateStrategyControls(gameState, teams);
 }
 
+function normalizeTitleEligiblePositions(player) {
+  if (!player) return [];
+  let raw = [];
+  if (Array.isArray(player.eligible_all)) {
+    raw = player.eligible_all;
+  } else if (Array.isArray(player.eligible)) {
+    raw = player.eligible;
+  }
+  const normalized = raw.map((pos) => String(pos || '').toUpperCase()).filter(Boolean);
+  const fallback = player.position_key || player.position;
+  if ((!normalized.length || normalized.includes('-')) && fallback) {
+    const key = String(fallback).toUpperCase();
+    if (key && key !== '-') {
+      normalized.push(key);
+    }
+  }
+  return Array.from(new Set(normalized));
+}
+
+function buildTitleRoster(lineup, bench) {
+  const roster = new Map();
+
+  const addPlayer = (player, source) => {
+    if (!player || !player.name) return;
+    const key = player.name;
+    if (roster.has(key)) {
+      const existing = roster.get(key);
+      if (existing.source !== 'lineup' && source === 'lineup') {
+        existing.source = 'lineup';
+      }
+      if (!existing.eligible.length) {
+        existing.eligible = normalizeTitleEligiblePositions(player);
+      }
+      return;
+    }
+
+    roster.set(key, {
+      name: player.name,
+      source,
+      eligible: normalizeTitleEligiblePositions(player),
+    });
+  };
+
+  (lineup || []).forEach((player) => addPlayer(player, 'lineup'));
+  (bench || []).forEach((player) => addPlayer(player, 'bench'));
+
+  return Array.from(roster.values());
+}
+
+function ensureCurrentPlayerOption(select, slotName) {
+  if (!slotName) return;
+  const exists = Array.from(select.options).some((option) => option.value === slotName);
+  if (!exists) {
+    const fallbackOption = document.createElement('option');
+    fallbackOption.value = slotName;
+    fallbackOption.textContent = `${slotName} (現スタメン)`;
+    select.appendChild(fallbackOption);
+  }
+}
+
+function renderTitleLineup(teamKey, teamData, enabled) {
+  const container = document.querySelector(`[data-title-lineup="${teamKey}"]`);
+  const note = document.querySelector(`[data-title-lineup-note="${teamKey}"]`);
+  const applyButton = document.querySelector(`[data-action="apply-lineup"][data-team="${teamKey}"]`);
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const lineup = Array.isArray(teamData?.lineup) ? teamData.lineup : [];
+  const bench = Array.isArray(teamData?.bench) ? teamData.bench : [];
+  const roster = buildTitleRoster(lineup, bench);
+  const hasLineup = enabled && lineup.length > 0;
+  const unavailablePositions = [];
+
+  if (note) {
+    if (!enabled) {
+      note.textContent = 'チームデータが読み込まれていません。';
+    } else if (!lineup.length) {
+      note.textContent = 'スタメン情報が不足しています。チーム編成を確認してください。';
+    } else {
+      note.textContent = '守備位置ごとに出場する選手を選択してください。';
+    }
+  }
+
+  if (!hasLineup) {
+    const message = document.createElement('p');
+    message.className = 'title-bench-empty';
+    message.textContent = enabled
+      ? 'スタメン情報がありません。'
+      : 'チームが読み込まれていません。';
+    container.appendChild(message);
+    if (applyButton) {
+      applyButton.disabled = true;
+    }
+    return;
+  }
+
+  lineup.forEach((slot, index) => {
+    const row = document.createElement('div');
+    row.className = 'title-lineup-row';
+
+    const order = document.createElement('div');
+    order.className = 'title-lineup-order';
+    order.textContent = `${slot.order ?? index + 1}`;
+
+    const position = document.createElement('div');
+    position.className = 'title-lineup-position';
+    position.textContent = slot.position || slot.position_key || '-';
+
+    const select = document.createElement('select');
+    select.className = 'title-lineup-select';
+    select.dataset.team = teamKey;
+    const positionKey = String(slot.position_key || slot.position || '').toUpperCase();
+    select.dataset.position = positionKey;
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '選手を選択';
+    placeholder.disabled = true;
+    placeholder.hidden = true;
+    select.appendChild(placeholder);
+
+    const eligiblePlayers = roster
+      .filter((entry) => !positionKey || entry.eligible.includes(positionKey))
+      .sort((a, b) => {
+        if (a.source === b.source) {
+          return a.name.localeCompare(b.name, 'ja');
+        }
+        return a.source === 'lineup' ? -1 : 1;
+      });
+
+    eligiblePlayers.forEach((entry) => {
+      const option = document.createElement('option');
+      option.value = entry.name;
+      option.textContent = entry.source === 'bench' ? `${entry.name} (ベンチ)` : entry.name;
+      if (entry.name === slot.name) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+
+    ensureCurrentPlayerOption(select, slot.name);
+
+    if (slot.name) {
+      select.value = slot.name;
+    }
+
+    select.disabled = !eligiblePlayers.length;
+    if (select.disabled) {
+      unavailablePositions.push(position.textContent || positionKey || '-');
+    }
+
+    row.appendChild(order);
+    row.appendChild(position);
+    row.appendChild(select);
+    container.appendChild(row);
+  });
+
+  if (note && unavailablePositions.length) {
+    note.textContent = `${unavailablePositions.join('、')} を守れる選手が見つかりません。`;
+  }
+
+  if (applyButton) {
+    const anyDisabled = Array.from(container.querySelectorAll('select.title-lineup-select')).some(
+      (select) => select.disabled,
+    );
+    applyButton.disabled = anyDisabled;
+  }
+}
+
+function renderTitleBench(teamKey, teamData, enabled) {
+  const container = document.querySelector(`[data-title-bench="${teamKey}"]`);
+  if (!container) return;
+
+  container.innerHTML = '';
+  if (!enabled) {
+    const message = document.createElement('p');
+    message.className = 'title-bench-empty';
+    message.textContent = 'チームが読み込まれていません。';
+    container.appendChild(message);
+    return;
+  }
+
+  const bench = Array.isArray(teamData?.bench) ? teamData.bench : [];
+  if (!bench.length) {
+    const message = document.createElement('p');
+    message.className = 'title-bench-empty';
+    message.textContent = 'ベンチ登録がありません。';
+    container.appendChild(message);
+    return;
+  }
+
+  bench.forEach((player) => {
+    if (!player || !player.name) return;
+    const chip = document.createElement('span');
+    chip.className = 'title-bench-chip';
+    let label = player.name;
+    const metaParts = [];
+    if (player.pitcher_type && player.pitcher_type !== 'P') {
+      metaParts.push(player.pitcher_type);
+    } else if (player.position && player.position !== '-' && player.position !== 'P') {
+      metaParts.push(player.position);
+    }
+    if (metaParts.length) {
+      label += ` (${metaParts.join('/')})`;
+    }
+    chip.textContent = label;
+    container.appendChild(chip);
+  });
+}
+
+function renderTitlePitcher(teamKey, teamData, enabled) {
+  const select = document.querySelector(`.title-pitcher-select[data-team="${teamKey}"]`);
+  const button = document.querySelector(`[data-action="apply-pitcher"][data-team="${teamKey}"]`);
+  if (!select) return;
+
+  select.innerHTML = '';
+
+  if (!enabled) {
+    select.disabled = true;
+    if (button) {
+      button.disabled = true;
+    }
+    return;
+  }
+
+  const pitchers = Array.isArray(teamData?.pitchers) ? teamData.pitchers : [];
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = '投手を選択';
+  select.appendChild(placeholder);
+
+  pitchers.forEach((pitcher) => {
+    if (!pitcher || !pitcher.name) return;
+    const option = document.createElement('option');
+    option.value = pitcher.name;
+    const infoParts = [];
+    if (pitcher.pitcher_type) {
+      infoParts.push(pitcher.pitcher_type);
+    }
+    if (pitcher.throws) {
+      infoParts.push(pitcher.throws);
+    }
+    if (typeof pitcher.stamina === 'number' && Number.isFinite(pitcher.stamina)) {
+      infoParts.push(`St ${pitcher.stamina}`);
+    }
+    option.textContent = infoParts.length ? `${pitcher.name} (${infoParts.join(' / ')})` : pitcher.name;
+    if (pitcher.is_current) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+
+  if (!select.value) {
+    const current = pitchers.find((pitcher) => pitcher?.is_current);
+    if (current) {
+      select.value = current.name;
+    }
+  }
+
+  const hasPitchers = pitchers.length > 0;
+  select.disabled = !hasPitchers;
+  if (button) {
+    button.disabled = !hasPitchers;
+  }
+}
+
 export function renderTitle(titleState) {
   const homeName = document.querySelector('.team-name[data-team="home"]');
   const awayName = document.querySelector('.team-name[data-team="away"]');
@@ -2751,6 +3018,14 @@ export function renderTitle(titleState) {
       awayErrors.appendChild(li);
     });
   }
+
+  const teamsData = stateCache.data?.teams || {};
+  renderTitleLineup('home', teamsData.home, Boolean(teamsData?.home));
+  renderTitleLineup('away', teamsData.away, Boolean(teamsData?.away));
+  renderTitleBench('home', teamsData.home, Boolean(teamsData?.home));
+  renderTitleBench('away', teamsData.away, Boolean(teamsData?.away));
+  renderTitlePitcher('home', teamsData.home, Boolean(teamsData?.home));
+  renderTitlePitcher('away', teamsData.away, Boolean(teamsData?.away));
 
   elements.titleHint.textContent = titleState.hint || '';
   elements.startButton.disabled = !titleState.ready;
