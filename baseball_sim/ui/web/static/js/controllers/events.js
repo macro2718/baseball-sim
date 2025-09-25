@@ -2319,6 +2319,101 @@ export function initEventListeners(actions) {
     return players;
   }
 
+  async function submitTitleLineup(teamKey, button) {
+    const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+    if (!normalizedTeam) {
+      showStatus('スタメンを更新するチームを正しく指定してください。', 'danger');
+      return;
+    }
+
+    const container = elements.titleScreen?.querySelector(`[data-title-lineup="${normalizedTeam}"]`);
+    if (!container) {
+      showStatus('スタメン編集エリアが見つかりません。', 'danger');
+      return;
+    }
+
+    const selects = Array.from(container.querySelectorAll('select.title-lineup-select'));
+    if (!selects.length) {
+      showStatus('スタメンを編成できる状態ではありません。', 'danger');
+      return;
+    }
+
+    const lineupEntries = [];
+    const seenNames = new Set();
+    for (const select of selects) {
+      const playerName = String(select.value || '').trim();
+      const position = String(select.dataset.position || '').trim().toUpperCase();
+      if (!playerName) {
+        showStatus('すべての打順に選手を割り当ててください。', 'danger');
+        return;
+      }
+      if (!position) {
+        showStatus('ポジション情報を取得できませんでした。', 'danger');
+        return;
+      }
+      if (seenNames.has(playerName)) {
+        showStatus(`${playerName} が複数の打順に選択されています。`, 'danger');
+        return;
+      }
+      seenNames.add(playerName);
+      lineupEntries.push({ name: playerName, position });
+    }
+
+    const originalText = button?.textContent || '';
+    if (button) {
+      button.disabled = true;
+      button.textContent = '更新中…';
+    }
+
+    try {
+      await actions.handleLineupUpdate(normalizedTeam, lineupEntries);
+    } catch (error) {
+      // Error feedback is handled within handleLineupUpdate via handleApiError.
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText || 'スタメンを更新';
+      }
+    }
+  }
+
+  async function submitTitlePitcher(teamKey, button) {
+    const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+    if (!normalizedTeam) {
+      showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
+      return;
+    }
+
+    const select = elements.titleScreen?.querySelector(`.title-pitcher-select[data-team="${normalizedTeam}"]`);
+    if (!select) {
+      showStatus('先発投手の選択欄が見つかりません。', 'danger');
+      return;
+    }
+
+    const pitcherName = String(select.value || '').trim();
+    if (!pitcherName) {
+      showStatus('先発投手を選択してください。', 'danger');
+      return;
+    }
+
+    const originalText = button?.textContent || '';
+    if (button) {
+      button.disabled = true;
+      button.textContent = '設定中…';
+    }
+
+    try {
+      await actions.handleSetStartingPitcher(normalizedTeam, pitcherName);
+    } catch (error) {
+      // Feedback is displayed by handleSetStartingPitcher/handleApiError.
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText || '先発を設定';
+      }
+    }
+  }
+
   updatePlayerRoleUI(elements.playerEditorRole?.value || 'batter');
 
   elements.startButton.addEventListener('click', () => actions.handleStart(false));
@@ -2399,6 +2494,25 @@ export function initEventListeners(actions) {
         // エラーハンドリングはhandleTeamSelection内で行われる
       } finally {
         elements.enterTitleButton.disabled = false;
+      }
+    });
+  }
+
+  if (elements.titleScreen) {
+    elements.titleScreen.addEventListener('click', (event) => {
+      const lineupButton = event.target.closest('[data-action="apply-lineup"]');
+      if (lineupButton) {
+        event.preventDefault();
+        const teamKey = lineupButton.dataset.team || '';
+        submitTitleLineup(teamKey, lineupButton);
+        return;
+      }
+
+      const pitcherButton = event.target.closest('[data-action="apply-pitcher"]');
+      if (pitcherButton) {
+        event.preventDefault();
+        const teamKey = pitcherButton.dataset.team || '';
+        submitTitlePitcher(teamKey, pitcherButton);
       }
     });
   }

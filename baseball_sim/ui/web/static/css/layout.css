@@ -1025,6 +1025,212 @@
   font-size: 14px;
 }
 
+.title-roster-section {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.title-lineup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.title-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title-section-header h4 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: var(--text-strong);
+}
+
+.title-section-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.title-lineup-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title-lineup-row {
+  display: grid;
+  grid-template-columns: 42px 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.58);
+  box-shadow: 0 12px 26px rgba(8, 14, 28, 0.32);
+}
+
+.title-lineup-order {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  text-align: center;
+}
+
+.title-lineup-position {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-strong);
+  letter-spacing: 0.06em;
+}
+
+.title-lineup-select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(10, 18, 34, 0.9);
+  color: var(--text);
+  font-size: 14px;
+  padding: 9px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.title-lineup-select:focus-visible {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.75);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.title-lineup-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.title-lineup-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.title-lineup-apply {
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  background: rgba(30, 64, 175, 0.5);
+  color: var(--text-strong);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.title-lineup-apply:hover:not(:disabled) {
+  border-color: rgba(125, 211, 252, 0.7);
+  background: rgba(37, 99, 235, 0.62);
+}
+
+.title-lineup-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.title-bench-section h5 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.title-bench-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.title-bench-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.title-bench-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.title-pitcher-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title-pitcher-section h4 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  color: var(--text-strong);
+}
+
+.title-pitcher-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.title-pitcher-select {
+  flex: 1;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(10, 18, 34, 0.9);
+  color: var(--text);
+  font-size: 14px;
+  padding: 9px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.title-pitcher-select:focus-visible {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.75);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.title-pitcher-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.title-pitcher-apply {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(30, 58, 138, 0.45);
+  color: var(--text-strong);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.title-pitcher-apply:hover:not(:disabled) {
+  border-color: rgba(148, 163, 184, 0.6);
+  background: rgba(30, 64, 175, 0.58);
+}
+
+.title-pitcher-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .title-hint {
   margin: 0 0 18px;
   color: var(--text-muted);
