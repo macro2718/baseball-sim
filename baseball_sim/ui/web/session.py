@@ -806,6 +806,64 @@ class WebGameSession:
 
         return self.build_state()
 
+    def execute_steal(self) -> Dict[str, Any]:
+        """Attempt a steal with the current base runners."""
+
+        if not self.game_state:
+            raise GameSessionError("Game has not started yet.")
+
+        if self.game_state.game_ended:
+            self._action_block_reason = "The game has already ended."
+            self._log.append(self._action_block_reason, variant="warning")
+            return self.build_state()
+
+        allowed, reason = self.game_state.is_game_action_allowed()
+        if not allowed:
+            self._action_block_reason = reason
+            self._log.append(f"❌ {reason}", variant="danger")
+            return self.build_state()
+
+        if not self.game_state.can_steal():
+            message = "盗塁はできません（適切な走者がいません）。"
+            self._action_block_reason = message
+            self._log.append(message, variant="warning")
+            return self.build_state()
+
+        self._action_block_reason = None
+
+        prev_inning = self.game_state.inning
+        prev_half = self.game_state.is_top_inning
+
+        self._log.append("🔐 盗塁指示", variant="header")
+
+        result_info = self.game_state.execute_steal()
+        result_key = result_info.get("result")
+        message = result_info.get("message", "盗塁を試みました。")
+        success = bool(result_info.get("success"))
+
+        if result_key == GameResults.STEAL_NOT_ALLOWED:
+            self._action_block_reason = message
+            self._log.append(message, variant="warning")
+            return self.build_state()
+
+        variant = "success" if success else "danger"
+        self._log.append(message, variant=variant)
+        notification_type = "success" if success else "danger"
+        self._notifications.publish(notification_type, message)
+
+        inning_changed = (
+            prev_inning != self.game_state.inning
+            or prev_half != self.game_state.is_top_inning
+        )
+        if inning_changed:
+            banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
+            self._log.extend_banner(banner)
+
+        if self.game_state.game_ended:
+            self._record_game_over()
+
+        return self.build_state()
+
     def execute_pinch_hit(self, lineup_index: int, bench_index: int) -> Dict[str, Any]:
         """Replace the selected batter with a bench player."""
 

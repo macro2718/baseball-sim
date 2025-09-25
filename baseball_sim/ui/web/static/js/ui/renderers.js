@@ -2622,6 +2622,10 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     elements.actionWarning.textContent = '';
     elements.swingButton.disabled = true;
     elements.buntButton.disabled = true;
+    if (elements.stealButton) {
+      elements.stealButton.disabled = true;
+      elements.stealButton.textContent = '盗塁';
+    }
     if (elements.batterAlignment) {
       elements.batterAlignment.innerHTML = '';
       elements.batterAlignment.classList.add('hidden');
@@ -2689,12 +2693,20 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     elements.buntButton.disabled = true;
     elements.swingButton.textContent = 'Game Over';
     elements.buntButton.textContent = 'Game Over';
+    if (elements.stealButton) {
+      elements.stealButton.disabled = true;
+      elements.stealButton.textContent = 'Game Over';
+    }
     elements.actionWarning.textContent = 'ゲーム終了 - 新しい試合を開始するか、タイトルに戻ってください';
   } else {
     elements.swingButton.disabled = !gameState.actions?.swing;
     elements.buntButton.disabled = !gameState.actions?.bunt;
     elements.swingButton.textContent = '通常打撃';
     elements.buntButton.textContent = 'バント';
+    if (elements.stealButton) {
+      elements.stealButton.disabled = !gameState.actions?.steal;
+      elements.stealButton.textContent = '盗塁';
+    }
     elements.actionWarning.textContent = gameState.action_block_reason || '';
   }
 

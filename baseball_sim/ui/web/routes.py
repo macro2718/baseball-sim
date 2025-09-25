@@ -89,6 +89,14 @@ def create_routes(session: WebGameSession) -> Blueprint:
             return create_error_response(str(exc), session)
         return jsonify(state)
 
+    @api_bp.post("/strategy/steal")
+    def steal() -> Dict[str, Any]:
+        try:
+            state = session.execute_steal()
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     @api_bp.post("/strategy/pinch_hit")
     def pinch_hit() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}

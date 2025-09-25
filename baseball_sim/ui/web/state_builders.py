@@ -316,6 +316,9 @@ class SessionStateBuilder:
                     "bunt": allowed
                     and not game_state.game_ended
                     and game_state.can_bunt(),
+                    "steal": allowed
+                    and not game_state.game_ended
+                    and game_state.can_steal(),
                 },
                 "action_block_reason": action_block_reason if not allowed else None,
                 "defensive_errors": list(game_state.defensive_error_messages),
@@ -664,6 +667,8 @@ class SessionStateBuilder:
             "runs": stats.get("R", 0),
             "rbi": stats.get("RBI", 0),
             "bb": stats.get("BB", 0),
+            "sb": stats.get("SB", 0),
+            "sba": stats.get("SBA", 0),
             "so": stats.get("SO", stats.get("K", 0)),
             "avg": average,
         }

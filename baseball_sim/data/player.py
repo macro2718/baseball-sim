@@ -31,7 +31,9 @@ class Player:
             StatColumns.WALKS: 0,
             StatColumns.STRIKEOUTS: 0,
             "K": 0,  # 旧来のキー名との互換性確保
-            StatColumns.RUNS_BATTED_IN: 0
+            StatColumns.RUNS_BATTED_IN: 0,
+            StatColumns.STOLEN_BASES: 0,
+            StatColumns.STEAL_ATTEMPTS: 0,
         }
 
     def __str__(self):

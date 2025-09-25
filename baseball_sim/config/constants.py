@@ -68,19 +68,32 @@ class GameResults:
     GROUND_OUT = "ground_out"
     FLY_OUT = "fly_out"
     SACRIFICE = "sacrifice"
-    
+    STOLEN_BASE = "stolen_base"
+    CAUGHT_STEALING = "caught_stealing"
+    STEAL_NOT_ALLOWED = "steal_not_allowed"
+
     # バント関連の結果
     BUNT_SINGLE = "bunt_single"
     SACRIFICE_BUNT = "sacrifice_bunt"
     BUNT_OUT = "bunt_out"
     BUNT_FAILED = "bunt_failed"
-    
+
     # 良い結果（攻撃側にとって）
-    POSITIVE_RESULTS = [SINGLE, DOUBLE, TRIPLE, HOME_RUN, SACRIFICE, WALK, BUNT_SINGLE, SACRIFICE_BUNT]
-    
+    POSITIVE_RESULTS = [
+        SINGLE,
+        DOUBLE,
+        TRIPLE,
+        HOME_RUN,
+        SACRIFICE,
+        WALK,
+        BUNT_SINGLE,
+        SACRIFICE_BUNT,
+        STOLEN_BASE,
+    ]
+
     # アウトになる結果
-    OUT_RESULTS = [STRIKEOUT, GROUND_OUT, FLY_OUT, BUNT_OUT, BUNT_FAILED]
-    
+    OUT_RESULTS = [STRIKEOUT, GROUND_OUT, FLY_OUT, BUNT_OUT, BUNT_FAILED, CAUGHT_STEALING]
+
     # バント関連の結果
     BUNT_RESULTS = [BUNT_SINGLE, SACRIFICE_BUNT, BUNT_OUT, BUNT_FAILED]
 
@@ -115,4 +128,6 @@ class StatColumns:
     WALKS = "BB"
     STRIKEOUTS = "SO"
     RUNS_BATTED_IN = "RBI"
+    STOLEN_BASES = "SB"
+    STEAL_ATTEMPTS = "SBA"
 

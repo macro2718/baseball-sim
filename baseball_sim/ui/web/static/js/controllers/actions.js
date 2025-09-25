@@ -128,6 +128,15 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleSteal() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.strategySteal, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
   async function handlePinchHit() {
     if (!elements.pinchPlayer) return;
     const benchValue = elements.pinchPlayer.value;
@@ -472,6 +481,7 @@ export function createGameActions(render) {
     startSimulation: handleSimulationStart,
     handleSwing,
     handleBunt,
+    handleSteal,
     handlePinchHit,
     handlePinchRun,
     handleDefenseSubstitution,

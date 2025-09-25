@@ -7,9 +7,12 @@ from __future__ import annotations
 import random
 
 from baseball_sim.config import (
+    BuntConstants,
+    GameResults,
     INNINGS_PER_GAME,
     MAX_EXTRA_INNINGS,
     OUTS_PER_INNING,
+    StatColumns,
     config,
     path_manager,
 )
@@ -125,9 +128,10 @@ class GameState:
     # ------------------------------------------------------------------
     # Core game flow
     # ------------------------------------------------------------------
-    def switch_sides(self):
+    def switch_sides(self, advance_lineup: bool = True):
         """攻守交代の処理"""
-        self.batting_team.next_batter()
+        if advance_lineup:
+            self.batting_team.next_batter()
 
         if self.is_top_inning:
             if self._complete_top_half():
@@ -200,7 +204,7 @@ class GameState:
 
         return True, ""
 
-    def add_out(self, credit_pitcher: bool = True):
+    def add_out(self, credit_pitcher: bool = True, advance_lineup: bool = True):
         """アウトカウントを増やし、投手のIPも自動で更新する"""
 
         if credit_pitcher:
@@ -212,7 +216,7 @@ class GameState:
 
         inning_complete = self._half_state.register_out()
         if inning_complete:
-            self.switch_sides()
+            self.switch_sides(advance_lineup=advance_lineup)
 
     def can_bunt(self):
         """バントが可能かどうかを判定"""
@@ -221,6 +225,20 @@ class GameState:
         if self.outs >= 2:
             return False
         return True
+
+    def can_steal(self) -> bool:
+        """盗塁が可能かどうかを判定"""
+        first_runner = self._bases[0]
+        second_runner = self._bases[1]
+        third_runner = self._bases[2]
+
+        if first_runner and not second_runner:
+            return True
+        if second_runner and not third_runner:
+            return True
+        if first_runner and second_runner and not third_runner:
+            return True
+        return False
 
     def record_play(self, result, message):
         """記録されたプレー結果を保存し、連番を更新する"""
@@ -240,6 +258,157 @@ class GameState:
 
         bunt_processor = BuntProcessor(self)
         return bunt_processor.execute(batter, pitcher)
+
+    def _steal_success_probability(self, runner) -> float:
+        base_rate = 0.7
+        average_speed = getattr(BuntConstants, "STANDARD_RUNNER_SPEED", 100.0) or 100.0
+        runner_speed = getattr(runner, "speed", average_speed) or average_speed
+        speed_factor = runner_speed / average_speed if average_speed else 1.0
+        probability = base_rate * speed_factor
+        return max(0.3, min(0.95, probability))
+
+    def _register_steal_attempt(self, runner, success: bool) -> None:
+        if runner is None:
+            return
+        stats = getattr(runner, "stats", None)
+        if not isinstance(stats, dict):
+            return
+        attempts_key = StatColumns.STEAL_ATTEMPTS
+        steals_key = StatColumns.STOLEN_BASES
+        stats[attempts_key] = stats.get(attempts_key, 0) + 1
+        if success:
+            stats[steals_key] = stats.get(steals_key, 0) + 1
+
+    def execute_steal(self):
+        """盗塁処理を実行し、結果を返す"""
+        if not self.can_steal():
+            message = "盗塁はできません（進める塁が空いていません）。"
+            self.record_play(GameResults.STEAL_NOT_ALLOWED, message)
+            return {
+                "success": False,
+                "result": GameResults.STEAL_NOT_ALLOWED,
+                "message": message,
+                "outs_recorded": 0,
+            }
+
+        first_runner = self._bases[0]
+        second_runner = self._bases[1]
+        third_runner = self._bases[2]
+
+        outs_recorded = 0
+        result_key = GameResults.STOLEN_BASE
+        message = ""
+        success = True
+
+        if first_runner and second_runner and not third_runner:
+            first_prob = self._steal_success_probability(first_runner)
+            second_prob = self._steal_success_probability(second_runner)
+            first_success = random.random() < first_prob
+            second_success = random.random() < second_prob
+
+            self._register_steal_attempt(first_runner, first_success)
+            self._register_steal_attempt(second_runner, second_success)
+
+            if first_success and second_success:
+                self._bases[0] = None
+                self._bases[1] = first_runner
+                self._bases[2] = second_runner
+                message = (
+                    f"ダブルスチール成功！{first_runner.name}が二塁へ、{second_runner.name}が三塁へ。"
+                )
+            else:
+                success = False
+                result_key = GameResults.CAUGHT_STEALING
+                outs_recorded = 1
+
+                if first_success and not second_success:
+                    # 二塁走者がアウト、走者一塁は成功して二塁へ
+                    self._bases[0] = None
+                    self._bases[1] = first_runner
+                    self._bases[2] = None
+                    out_runner = second_runner
+                    safe_runner = first_runner
+                    message = (
+                        f"ダブルスチール失敗。{out_runner.name}が三塁でアウト、"
+                        f"{safe_runner.name}は二塁を奪取。"
+                    )
+                elif not first_success and second_success:
+                    # 一塁走者がアウト、二塁走者は三塁へ
+                    self._bases[0] = None
+                    self._bases[1] = None
+                    self._bases[2] = second_runner
+                    out_runner = first_runner
+                    safe_runner = second_runner
+                    message = (
+                        f"ダブルスチール失敗。{out_runner.name}が二塁でアウト、"
+                        f"{safe_runner.name}は三塁へ進塁。"
+                    )
+                else:
+                    # 両者失敗だが仕様上アウトは1人のみ
+                    out_runner = random.choice([first_runner, second_runner])
+                    if out_runner is first_runner:
+                        self._bases[0] = None
+                        self._bases[1] = second_runner
+                        self._bases[2] = None
+                        message = (
+                            f"ダブルスチール失敗。{first_runner.name}が二塁でアウト、"
+                            f"{second_runner.name}は二塁に戻った。"
+                        )
+                    else:
+                        self._bases[0] = first_runner
+                        self._bases[1] = None
+                        self._bases[2] = None
+                        message = (
+                            f"ダブルスチール失敗。{second_runner.name}が三塁でアウト、"
+                            f"{first_runner.name}は一塁に戻った。"
+                        )
+                self.add_out(advance_lineup=False)
+        elif second_runner and not third_runner:
+            probability = self._steal_success_probability(second_runner)
+            steal_success = random.random() < probability
+            self._register_steal_attempt(second_runner, steal_success)
+
+            if steal_success:
+                self._bases[1] = None
+                self._bases[2] = second_runner
+                message = f"{second_runner.name}が三塁への盗塁に成功！"
+            else:
+                self._bases[1] = None
+                self._bases[2] = None
+                message = f"{second_runner.name}の三塁盗塁は失敗、アウト。"
+                result_key = GameResults.CAUGHT_STEALING
+                success = False
+                outs_recorded = 1
+                self.add_out(advance_lineup=False)
+        elif first_runner and not second_runner:
+            probability = self._steal_success_probability(first_runner)
+            steal_success = random.random() < probability
+            self._register_steal_attempt(first_runner, steal_success)
+
+            if steal_success:
+                self._bases[0] = None
+                self._bases[1] = first_runner
+                message = f"{first_runner.name}が二塁への盗塁に成功！"
+            else:
+                self._bases[0] = None
+                self._bases[1] = None
+                message = f"{first_runner.name}の二塁盗塁は失敗、アウト。"
+                result_key = GameResults.CAUGHT_STEALING
+                success = False
+                outs_recorded = 1
+                self.add_out(advance_lineup=False)
+        else:
+            message = "盗塁はできません（条件不一致）。"
+            success = False
+            result_key = GameResults.STEAL_NOT_ALLOWED
+
+        self.record_play(result_key, message)
+        return {
+            "success": success,
+            "result": result_key,
+            "message": message,
+            "outs_recorded": outs_recorded,
+        }
 
     def _add_runs(self, runs, batter):
         """得点の加算処理"""

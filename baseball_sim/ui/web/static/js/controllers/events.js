@@ -2328,6 +2328,9 @@ export function initEventListeners(actions) {
   elements.clearLog.addEventListener('click', actions.handleClearLog);
   elements.swingButton.addEventListener('click', actions.handleSwing);
   elements.buntButton.addEventListener('click', actions.handleBunt);
+  if (elements.stealButton) {
+    elements.stealButton.addEventListener('click', actions.handleSteal);
+  }
 
   if (elements.pinchButton) {
     elements.pinchButton.addEventListener('click', actions.handlePinchHit);
