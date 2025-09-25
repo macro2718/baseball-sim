@@ -2432,37 +2432,48 @@ export function initEventListeners(actions) {
 
   if (elements.openSimulationButton) {
     elements.openSimulationButton.addEventListener('click', () => {
-      stateCache.forceGameView = true;
-      setUIView('game');
+      setUIView('simulation');
       refreshView();
-      if (elements.simulationCard && typeof elements.simulationCard.scrollIntoView === 'function') {
-        try {
-          elements.simulationCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } catch (error) {
-          // ignore scroll errors
-        }
-      }
     });
   }
 
-  if (elements.simulationGamesInput) {
-    elements.simulationGamesInput.addEventListener('input', () => {
-      elements.simulationGamesInput.dataset.userModified = 'true';
+  if (elements.simulationGameCountInput) {
+    elements.simulationGameCountInput.addEventListener('input', () => {
+      elements.simulationGameCountInput.dataset.userModified = 'true';
     });
   }
 
-  if (elements.simulationForm) {
-    elements.simulationForm.addEventListener('submit', async (event) => {
+  if (elements.simulationSetupCancel) {
+    elements.simulationSetupCancel.addEventListener('click', () => {
+      setUIView('lobby');
+      refreshView();
+    });
+  }
+
+  if (elements.simulationResultsHome) {
+    elements.simulationResultsHome.addEventListener('click', () => {
+      setUIView('lobby');
+      refreshView();
+    });
+  }
+
+  if (elements.simulationRunAgain) {
+    elements.simulationRunAgain.addEventListener('click', () => {
+      setUIView('simulation');
+      refreshView();
+    });
+  }
+
+  if (elements.simulationSetupForm) {
+    elements.simulationSetupForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (!actions.runSimulation) return;
-      const value = elements.simulationGamesInput?.value ?? '';
-      const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        showStatus('シミュレーションする試合数は1以上の整数で指定してください。', 'danger');
-        return;
-      }
+      if (!actions.startSimulation) return;
 
-      const button = elements.simulationRunButton;
+      const awayId = elements.simulationSetupAway?.value ?? '';
+      const homeId = elements.simulationSetupHome?.value ?? '';
+      const gamesValue = elements.simulationGameCountInput?.value ?? '';
+
+      const button = elements.simulationStartButton;
       let originalText = '';
       if (button) {
         originalText = button.textContent || '';
@@ -2471,14 +2482,14 @@ export function initEventListeners(actions) {
       }
 
       try {
-        await actions.runSimulation(parsed);
-        if (elements.simulationGamesInput) {
-          elements.simulationGamesInput.dataset.userModified = '';
+        await actions.startSimulation(homeId, awayId, gamesValue);
+        if (elements.simulationGameCountInput) {
+          elements.simulationGameCountInput.dataset.userModified = '';
         }
       } finally {
         if (button) {
           button.disabled = false;
-          button.textContent = originalText || '実行';
+          button.textContent = originalText || 'シミュレーション開始';
         }
       }
     });

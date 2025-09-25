@@ -148,6 +148,206 @@
           </div>
         </section>
 
+        <section id="simulation-setup-screen" class="screen hidden">
+          <div class="title-card simulation-card">
+            <h2>シミュレーション設定</h2>
+            <p class="lobby-description">シミュレーションするチームと試合数を選択してください。</p>
+            <form id="simulation-setup-form" class="simulation-setup-form">
+              <div class="form-grid two-col">
+                <div class="form-field">
+                  <label for="simulation-away-team">アウェイチーム</label>
+                  <select id="simulation-away-team" class="team-select"></select>
+                </div>
+                <div class="form-field">
+                  <label for="simulation-home-team">ホームチーム</label>
+                  <select id="simulation-home-team" class="team-select"></select>
+                </div>
+                <div class="form-field">
+                  <label for="simulation-game-count">試合数</label>
+                  <input
+                    type="number"
+                    id="simulation-game-count"
+                    name="simulation-game-count"
+                    min="1"
+                    max="200"
+                    value="20"
+                    inputmode="numeric"
+                  />
+                </div>
+              </div>
+              <p class="form-feedback info" id="simulation-setup-feedback">
+                ホームとアウェイのチーム、試合数を指定してください。
+              </p>
+              <div class="title-actions">
+                <button type="submit" id="simulation-start" class="primary">シミュレーション開始</button>
+                <button type="button" id="simulation-setup-cancel">ホームに戻る</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="simulation-results-screen" class="screen hidden">
+          <div class="title-card simulation-results-card">
+            <div class="simulation-results-header">
+              <h2>シミュレーション結果</h2>
+              <p id="simulation-results-summary" class="simulation-results-summary">
+                まだシミュレーション結果がありません。
+              </p>
+              <p id="simulation-results-meta" class="simulation-results-meta"></p>
+            </div>
+
+            <div class="simulation-results-grid">
+              <article class="simulation-results-block">
+                <h3>チーム成績</h3>
+                <table class="simulation-table" id="simulation-result-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">チーム</th>
+                      <th scope="col">勝</th>
+                      <th scope="col">敗</th>
+                      <th scope="col">分</th>
+                      <th scope="col">勝率</th>
+                      <th scope="col">得点</th>
+                      <th scope="col">失点</th>
+                      <th scope="col">差</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </article>
+
+              <article class="simulation-results-block">
+                <h3>試合一覧</h3>
+                <ol id="simulation-game-list" class="simulation-game-list"></ol>
+              </article>
+
+              <article class="simulation-results-block">
+                <h3>進捗ログ</h3>
+                <ul id="simulation-results-log" class="simulation-log-list"></ul>
+              </article>
+            </div>
+
+            <div class="simulation-team-panels">
+              <section class="simulation-team-panel">
+                <header class="simulation-team-header">
+                  <h3 id="simulation-away-name">アウェイチーム</h3>
+                  <p id="simulation-away-summary" class="simulation-team-summary"></p>
+                </header>
+                <div class="simulation-team-tables">
+                  <div class="simulation-player-table">
+                    <h4>打者成績</h4>
+                    <table class="simulation-player-stats">
+                      <thead>
+                        <tr>
+                          <th>選手</th>
+                          <th>PA</th>
+                          <th>AB</th>
+                          <th>H</th>
+                          <th>2B</th>
+                          <th>3B</th>
+                          <th>HR</th>
+                          <th>R</th>
+                          <th>RBI</th>
+                          <th>BB</th>
+                          <th>SO</th>
+                          <th>AVG</th>
+                          <th>OBP</th>
+                          <th>SLG</th>
+                          <th>OPS</th>
+                        </tr>
+                      </thead>
+                      <tbody id="simulation-away-batting-body"></tbody>
+                    </table>
+                  </div>
+                  <div class="simulation-player-table">
+                    <h4>投手成績</h4>
+                    <table class="simulation-player-stats">
+                      <thead>
+                        <tr>
+                          <th>選手</th>
+                          <th>IP</th>
+                          <th>H</th>
+                          <th>R</th>
+                          <th>ER</th>
+                          <th>BB</th>
+                          <th>SO</th>
+                          <th>HR</th>
+                          <th>ERA</th>
+                          <th>WHIP</th>
+                          <th>K/9</th>
+                          <th>BB/9</th>
+                        </tr>
+                      </thead>
+                      <tbody id="simulation-away-pitching-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+
+              <section class="simulation-team-panel">
+                <header class="simulation-team-header">
+                  <h3 id="simulation-home-name">ホームチーム</h3>
+                  <p id="simulation-home-summary" class="simulation-team-summary"></p>
+                </header>
+                <div class="simulation-team-tables">
+                  <div class="simulation-player-table">
+                    <h4>打者成績</h4>
+                    <table class="simulation-player-stats">
+                      <thead>
+                        <tr>
+                          <th>選手</th>
+                          <th>PA</th>
+                          <th>AB</th>
+                          <th>H</th>
+                          <th>2B</th>
+                          <th>3B</th>
+                          <th>HR</th>
+                          <th>R</th>
+                          <th>RBI</th>
+                          <th>BB</th>
+                          <th>SO</th>
+                          <th>AVG</th>
+                          <th>OBP</th>
+                          <th>SLG</th>
+                          <th>OPS</th>
+                        </tr>
+                      </thead>
+                      <tbody id="simulation-home-batting-body"></tbody>
+                    </table>
+                  </div>
+                  <div class="simulation-player-table">
+                    <h4>投手成績</h4>
+                    <table class="simulation-player-stats">
+                      <thead>
+                        <tr>
+                          <th>選手</th>
+                          <th>IP</th>
+                          <th>H</th>
+                          <th>R</th>
+                          <th>ER</th>
+                          <th>BB</th>
+                          <th>SO</th>
+                          <th>HR</th>
+                          <th>ERA</th>
+                          <th>WHIP</th>
+                          <th>K/9</th>
+                          <th>BB/9</th>
+                        </tr>
+                      </thead>
+                      <tbody id="simulation-home-pitching-body"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="title-actions simulation-results-actions">
+              <button type="button" id="simulation-run-again" class="primary">条件を変更して再実行</button>
+              <button type="button" id="simulation-results-home">ホームに戻る</button>
+            </div>
+          </div>
+        </section>
+
         <section id="team-builder-screen" class="screen hidden">
           <div class="title-card team-builder-card">
             <div class="team-builder-header">
@@ -672,56 +872,6 @@
               </div>
 
               <div class="defense-alert hidden" id="defense-errors"></div>
-
-              <div class="controls-card simulation-card" id="simulation-card">
-                <h3>シミュレーション</h3>
-                <form id="simulation-form" class="simulation-form">
-                  <label for="simulation-games">試合数</label>
-                  <div class="simulation-input-row">
-                    <input
-                      type="number"
-                      id="simulation-games"
-                      name="simulation-games"
-                      min="1"
-                      max="200"
-                      value="20"
-                      inputmode="numeric"
-                    />
-                    <button type="submit" id="simulation-run" class="primary">実行</button>
-                  </div>
-                </form>
-                <p class="simulation-status" id="simulation-status">
-                  選択中のチームでシミュレーションを実行できます。
-                </p>
-                <div class="simulation-results" id="simulation-results">
-                  <div class="simulation-summary empty" id="simulation-summary">
-                    まだシミュレーション結果がありません。
-                  </div>
-                  <table class="simulation-table hidden" id="simulation-team-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">チーム</th>
-                        <th scope="col">勝</th>
-                        <th scope="col">敗</th>
-                        <th scope="col">分</th>
-                        <th scope="col">勝率</th>
-                        <th scope="col">得点</th>
-                        <th scope="col">失点</th>
-                        <th scope="col">差</th>
-                      </tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                  <div class="simulation-recent hidden" id="simulation-recent-section">
-                    <h4>直近の試合</h4>
-                    <ol id="simulation-recent"></ol>
-                  </div>
-                  <div class="simulation-log hidden" id="simulation-log-section">
-                    <h4>進捗ログ</h4>
-                    <ul id="simulation-log"></ul>
-                  </div>
-                </div>
-              </div>
 
               <div class="log-panel hidden" id="log-panel">
                 <h3>試合ログ <small>(開発者用)</small></h3>
