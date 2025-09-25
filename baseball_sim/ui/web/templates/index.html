@@ -113,13 +113,40 @@
           <div class="title-card lobby-card">
             <h2>ホーム</h2>
             <p class="lobby-description">ようこそ。以下から選択してください。</p>
-            <div class="title-actions">
-              <button id="open-match" class="primary">試合</button>
-              <button id="open-simulation">シミュレーション</button>
-              <button id="open-team-builder">チーム作成/編集</button>
-              <button id="open-player-builder">選手作成/編集</button>
-              <button id="open-team-delete" class="danger">チーム削除</button>
-              <button id="open-player-delete" class="danger">選手削除</button>
+            <div class="action-grid">
+              <article class="action-card">
+                <div class="action-icon" aria-hidden="true">⚾</div>
+                <h3 class="action-title">試合</h3>
+                <p class="action-caption">ホーム/アウェイを選んで一戦勝負。</p>
+                <button id="open-match" class="primary">はじめる</button>
+              </article>
+
+              <article class="action-card">
+                <div class="action-icon" aria-hidden="true">📈</div>
+                <h3 class="action-title">シミュレーション</h3>
+                <p class="action-caption">複数試合を自動で回して傾向を分析。</p>
+                <button id="open-simulation">設定へ</button>
+              </article>
+
+              <article class="action-card">
+                <div class="action-icon" aria-hidden="true">🧢</div>
+                <h3 class="action-title">チーム管理</h3>
+                <p class="action-caption">作成/編集や削除など、チームを管理。</p>
+                <div class="action-buttons">
+                  <button id="open-team-builder">作成/編集</button>
+                  <button id="open-team-delete" class="danger">削除</button>
+                </div>
+              </article>
+
+              <article class="action-card">
+                <div class="action-icon" aria-hidden="true">🧍</div>
+                <h3 class="action-title">選手管理</h3>
+                <p class="action-caption">作成/編集や削除など、選手を管理。</p>
+                <div class="action-buttons">
+                  <button id="open-player-builder">作成/編集</button>
+                  <button id="open-player-delete" class="danger">削除</button>
+                </div>
+              </article>
             </div>
           </div>
         </section>
@@ -196,7 +223,16 @@
               <p id="simulation-results-meta" class="simulation-results-meta"></p>
             </div>
 
-            <div class="simulation-results-grid">
+            <div class="simulation-tabs-row">
+              <div class="tab-group" role="tablist" aria-label="結果表示切替">
+                <button id="simulation-tab-summary" type="button" class="tab active" aria-pressed="true">要約</button>
+                <button id="simulation-tab-games" type="button" class="tab" aria-pressed="false">試合一覧</button>
+                <button id="simulation-tab-players" type="button" class="tab" aria-pressed="false">個人成績</button>
+              </div>
+            </div>
+
+            <!-- 要約ビュー -->
+            <div id="simulation-summary-section" class="simulation-results-grid simulation-view-section">
               <article class="simulation-results-block">
                 <h3>チーム成績</h3>
                 <table class="simulation-table" id="simulation-result-table">
@@ -217,6 +253,14 @@
               </article>
 
               <article class="simulation-results-block">
+                <h3>個人タイトル</h3>
+                <ul id="simulation-leaders-list" class="simulation-leaders-list"></ul>
+              </article>
+            </div>
+
+            <!-- 試合一覧ビュー -->
+            <div id="simulation-games-section" class="simulation-results-grid simulation-view-section hidden" aria-hidden="true">
+              <article class="simulation-results-block">
                 <h3>試合一覧</h3>
                 <ol id="simulation-game-list" class="simulation-game-list"></ol>
               </article>
@@ -227,8 +271,16 @@
               </article>
             </div>
 
-            <div class="simulation-team-panels">
-              <section class="simulation-team-panel">
+            <!-- 個人成績ビュー -->
+            <div id="simulation-players-section" class="simulation-team-panels simulation-view-section hidden" aria-hidden="true">
+              <div class="simulation-tabs-row" id="simulation-players-tabs-row">
+                <div class="tab-group" role="tablist" aria-label="チーム切替">
+                  <button id="simulation-players-tab-away" type="button" class="tab active" aria-pressed="true">アウェイ</button>
+                  <button id="simulation-players-tab-home" type="button" class="tab" aria-pressed="false">ホーム</button>
+                </div>
+              </div>
+
+              <section id="simulation-players-away-panel" class="simulation-team-panel">
                 <header class="simulation-team-header">
                   <h3 id="simulation-away-name">アウェイチーム</h3>
                   <p id="simulation-away-summary" class="simulation-team-summary"></p>
@@ -284,7 +336,7 @@
                 </div>
               </section>
 
-              <section class="simulation-team-panel">
+              <section id="simulation-players-home-panel" class="simulation-team-panel">
                 <header class="simulation-team-header">
                   <h3 id="simulation-home-name">ホームチーム</h3>
                   <p id="simulation-home-summary" class="simulation-team-summary"></p>

@@ -12,6 +12,8 @@ export const stateCache = {
   statsView: { team: 'away', type: 'batting' },
   abilitiesView: { team: 'away', type: 'batting' },
   uiView: 'lobby',
+  simulationResultsView: 'summary',
+  playersTeamView: 'away',
   simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min: 1, max: 200 } },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   teamBuilder: {
@@ -33,6 +35,28 @@ export const stateCache = {
 export function setUIView(view) {
   if (!view) return;
   stateCache.uiView = view;
+}
+
+export function setSimulationResultsView(view) {
+  const allowed = new Set(['summary', 'games', 'players']);
+  const next = allowed.has(view) ? view : 'summary';
+  stateCache.simulationResultsView = next;
+  return next;
+}
+
+export function getSimulationResultsView() {
+  const v = stateCache.simulationResultsView;
+  return v === 'games' || v === 'players' ? v : 'summary';
+}
+
+export function setPlayersTeamView(team) {
+  const next = team === 'home' ? 'home' : 'away';
+  stateCache.playersTeamView = next;
+  return next;
+}
+
+export function getPlayersTeamView() {
+  return stateCache.playersTeamView === 'home' ? 'home' : 'away';
 }
 
 export function getUIView() {

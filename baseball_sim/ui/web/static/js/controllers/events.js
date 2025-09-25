@@ -4,6 +4,8 @@ import {
   setUIView,
   setPinchRunSelectedBase,
   getPinchRunSelectedBase,
+  setSimulationResultsView,
+  setPlayersTeamView,
 } from '../state.js';
 import {
   hideDefenseMenu,
@@ -2437,6 +2439,26 @@ export function initEventListeners(actions) {
     });
   }
 
+  // シミュレーション結果タブ切り替え
+  if (elements.simulationTabSummary) {
+    elements.simulationTabSummary.addEventListener('click', () => {
+      setSimulationResultsView('summary');
+      refreshView();
+    });
+  }
+  if (elements.simulationTabGames) {
+    elements.simulationTabGames.addEventListener('click', () => {
+      setSimulationResultsView('games');
+      refreshView();
+    });
+  }
+  if (elements.simulationTabPlayers) {
+    elements.simulationTabPlayers.addEventListener('click', () => {
+      setSimulationResultsView('players');
+      refreshView();
+    });
+  }
+
   if (elements.simulationGameCountInput) {
     elements.simulationGameCountInput.addEventListener('input', () => {
       elements.simulationGameCountInput.dataset.userModified = 'true';
@@ -2483,6 +2505,9 @@ export function initEventListeners(actions) {
 
       try {
         await actions.startSimulation(homeId, awayId, gamesValue);
+        // 実行直後は要約ビューをデフォルト表示
+        setSimulationResultsView('summary');
+        setPlayersTeamView('away');
         if (elements.simulationGameCountInput) {
           elements.simulationGameCountInput.dataset.userModified = '';
         }
@@ -2492,6 +2517,20 @@ export function initEventListeners(actions) {
           button.textContent = originalText || 'シミュレーション開始';
         }
       }
+    });
+  }
+
+  // 個人成績用サブタブ（Away/Home）
+  if (elements.simulationPlayersTabAway) {
+    elements.simulationPlayersTabAway.addEventListener('click', () => {
+      setPlayersTeamView('away');
+      refreshView();
+    });
+  }
+  if (elements.simulationPlayersTabHome) {
+    elements.simulationPlayersTabHome.addEventListener('click', () => {
+      setPlayersTeamView('home');
+      refreshView();
     });
   }
 

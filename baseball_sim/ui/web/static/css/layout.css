@@ -1037,6 +1037,92 @@
   gap: 12px;
 }
 
+/* Lobby action cards */
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.action-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: linear-gradient(150deg, rgba(7, 12, 28, 0.9), rgba(26, 39, 72, 0.52));
+  box-shadow: 0 24px 56px rgba(5, 12, 30, 0.5);
+  min-height: 160px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.action-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.12), transparent 60%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 0.45);
+  box-shadow:
+    0 28px 64px rgba(5, 12, 30, 0.6),
+    0 0 14px rgba(125, 211, 252, 0.18);
+}
+
+.action-card .action-icon {
+  font-size: 22px;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.action-card .action-title {
+  margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+.action-card .action-caption {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.action-card button {
+  margin-top: auto;
+  width: 100%;
+}
+
+.action-card.danger {
+  border-color: rgba(248, 113, 113, 0.28);
+  background: linear-gradient(150deg, rgba(30, 27, 27, 0.85), rgba(67, 14, 14, 0.5));
+}
+
+/* Button group inside category cards */
+.action-card .action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.action-card .action-buttons button {
+  margin-top: 0;
+}
+
+@media (max-width: 460px) {
+  .action-card .action-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
 button {
   border: 1px solid rgba(125, 211, 252, 0.3);
   border-radius: 999px;

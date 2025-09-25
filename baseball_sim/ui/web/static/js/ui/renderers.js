@@ -3168,6 +3168,134 @@ function renderPitchingTable(tbody, teamEntry) {
   });
 }
 
+function setTabActive(button, active) {
+  if (!button) return;
+  if (active) {
+    button.classList.add('active');
+    button.setAttribute('aria-pressed', 'true');
+  } else {
+    button.classList.remove('active');
+    button.setAttribute('aria-pressed', 'false');
+  }
+}
+
+function updateSimulationResultsViewUI() {
+  const {
+    simulationSummarySection,
+    simulationGamesSection,
+    simulationPlayersSection,
+    simulationPlayersTabsRow,
+    simulationPlayersAwayPanel,
+    simulationPlayersHomePanel,
+  } = elements;
+  const { simulationTabSummary, simulationTabGames, simulationTabPlayers } = elements;
+  const view = stateCache.simulationResultsView || 'summary';
+  const showSummary = view === 'summary';
+  const showGames = view === 'games';
+  const showPlayers = view === 'players';
+
+  if (simulationSummarySection) {
+    simulationSummarySection.classList.toggle('hidden', !showSummary);
+    simulationSummarySection.setAttribute('aria-hidden', showSummary ? 'false' : 'true');
+  }
+  if (simulationGamesSection) {
+    simulationGamesSection.classList.toggle('hidden', !showGames);
+    simulationGamesSection.setAttribute('aria-hidden', showGames ? 'false' : 'true');
+  }
+  if (simulationPlayersSection) {
+    simulationPlayersSection.classList.toggle('hidden', !showPlayers);
+    simulationPlayersSection.setAttribute('aria-hidden', showPlayers ? 'false' : 'true');
+  }
+
+  setTabActive(simulationTabSummary, showSummary);
+  setTabActive(simulationTabGames, showGames);
+  setTabActive(simulationTabPlayers, showPlayers);
+
+  // 個人成績サブタブの表示/切替
+  if (simulationPlayersTabsRow) {
+    simulationPlayersTabsRow.classList.toggle('hidden', !showPlayers);
+    simulationPlayersTabsRow.setAttribute('aria-hidden', showPlayers ? 'false' : 'true');
+  }
+  if (showPlayers) {
+    const teamView = stateCache.playersTeamView === 'home' ? 'home' : 'away';
+    const awayVisible = teamView === 'away';
+    if (simulationPlayersAwayPanel) {
+      simulationPlayersAwayPanel.classList.toggle('hidden', !awayVisible);
+      simulationPlayersAwayPanel.setAttribute('aria-hidden', awayVisible ? 'false' : 'true');
+    }
+    if (simulationPlayersHomePanel) {
+      simulationPlayersHomePanel.classList.toggle('hidden', awayVisible);
+      simulationPlayersHomePanel.setAttribute('aria-hidden', awayVisible ? 'true' : 'false');
+    }
+    setTabActive(elements.simulationPlayersTabAway, awayVisible);
+    setTabActive(elements.simulationPlayersTabHome, !awayVisible);
+  }
+}
+
+function pickLeader(candidates, key, opts = {}) {
+  const { minKey = null, minValue = 0, reverse = false } = opts;
+  const filtered = candidates.filter((p) => {
+    if (minKey) {
+      const v = Number(p[minKey]);
+      if (!Number.isFinite(v) || v < minValue) return false;
+    }
+    const val = Number(p[key]);
+    return Number.isFinite(val);
+  });
+  if (!filtered.length) return null;
+  filtered.sort((a, b) => {
+    const va = Number(a[key]);
+    const vb = Number(b[key]);
+    return reverse ? va - vb : vb - va;
+  });
+  return filtered[0];
+}
+
+function renderSimulationLeaders(lastRun) {
+  const { simulationLeadersList } = elements;
+  if (!simulationLeadersList) return;
+
+  simulationLeadersList.innerHTML = '';
+  if (!lastRun) return;
+
+  const teams = Array.isArray(lastRun.teams) ? lastRun.teams : [];
+  const batters = teams.flatMap((t) => (Array.isArray(t.batters) ? t.batters.map((b) => ({ ...b, team: t.name })) : []));
+  const pitchers = teams.flatMap((t) => (Array.isArray(t.pitchers) ? t.pitchers.map((p) => ({ ...p, team: t.name })) : []));
+
+  const minAB = 10;
+  const hitterAvg = pickLeader(batters, 'avg', { minKey: 'ab', minValue: minAB });
+  const hitterOPS = pickLeader(batters, 'ops', { minKey: 'ab', minValue: minAB });
+  const hrKing = pickLeader(batters, 'homeRuns');
+  const rbiKing = pickLeader(batters, 'rbi');
+
+  const minIP = 5; // 短いシムでもある程度の投球回を要求
+  const eraBest = pickLeader(pitchers, 'era', { minKey: 'ip', minValue: minIP, reverse: true });
+  const k9Best = pickLeader(pitchers, 'kPer9', { minKey: 'ip', minValue: minIP });
+  const whipBest = pickLeader(pitchers, 'whip', { minKey: 'ip', minValue: minIP, reverse: true });
+
+  const items = [];
+  const fmtName = (p) => `${p.name || '-'}（${p.team || '-'}）`;
+  if (hitterAvg) items.push(`首位打者: ${fmtName(hitterAvg)} AVG ${formatAverageDisplay(hitterAvg.avg)}`);
+  if (hrKing) items.push(`本塁打王: ${fmtName(hrKing)} HR ${Number(hrKing.homeRuns) || 0}`);
+  if (rbiKing) items.push(`打点王: ${fmtName(rbiKing)} RBI ${Number(rbiKing.rbi) || 0}`);
+  if (hitterOPS) items.push(`OPS 1位: ${fmtName(hitterOPS)} OPS ${formatAverageDisplay(hitterOPS.ops)}`);
+  if (eraBest) items.push(`最優秀防御率: ${fmtName(eraBest)} ERA ${formatNumberDisplay(eraBest.era, 2)}`);
+  if (k9Best) items.push(`最多奪三振率: ${fmtName(k9Best)} K/9 ${formatNumberDisplay(k9Best.kPer9, 2)}`);
+  if (whipBest) items.push(`最優秀WHIP: ${fmtName(whipBest)} WHIP ${formatNumberDisplay(whipBest.whip, 2)}`);
+
+  if (!items.length) {
+    const li = document.createElement('li');
+    li.textContent = '個人タイトルの対象者がいません。';
+    simulationLeadersList.appendChild(li);
+  } else {
+    items.forEach((text) => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      simulationLeadersList.appendChild(li);
+    });
+  }
+}
+
 function renderSimulationResults(simulationState) {
   const {
     simulationResultsSummary,
@@ -3216,6 +3344,7 @@ function renderSimulationResults(simulationState) {
     if (simulationAwayPitchingBody) simulationAwayPitchingBody.innerHTML = '';
     if (simulationHomePitchingBody) simulationHomePitchingBody.innerHTML = '';
     if (simulationResultsLog) simulationResultsLog.innerHTML = '';
+    updateSimulationResultsViewUI();
     return;
   }
 
@@ -3310,6 +3439,11 @@ function renderSimulationResults(simulationState) {
   renderBattingTable(simulationHomeBattingBody, homeTeam);
   renderPitchingTable(simulationAwayPitchingBody, awayTeam);
   renderPitchingTable(simulationHomePitchingBody, homeTeam);
+
+  // 要約用の個人タイトル表示
+  renderSimulationLeaders(lastRun);
+  // タブ/セクション表示更新
+  updateSimulationResultsViewUI();
 }
 
 export function updateStatsPanel(state) {
