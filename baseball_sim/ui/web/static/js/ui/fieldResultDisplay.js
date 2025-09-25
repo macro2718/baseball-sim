@@ -1,6 +1,7 @@
 import { elements } from '../dom.js';
 
 const HIT_RESULTS = new Set(['single', 'double', 'triple', 'bunt_single']);
+const STEAL_SUCCESS_RESULTS = new Set(['stolen_base']);
 const WALK_RESULTS = new Set(['walk']);
 const STRIKEOUT_RESULTS = new Set(['strikeout']);
 const HOMERUN_RESULTS = new Set(['home_run']);
@@ -14,6 +15,7 @@ const OUT_RESULTS = new Set([
   'sacrifice_bunt',
   'bunt_out',
   'bunt_failed',
+  'caught_stealing',
 ]);
 
 const LABEL_OVERRIDES = Object.freeze({
@@ -33,6 +35,8 @@ const LABEL_OVERRIDES = Object.freeze({
   bunt_out: 'Bunt Out',
   bunt_failed: 'Bunt Failed',
   bunt_single: 'Bunt Single',
+  stolen_base: 'Stolen Base',
+  caught_stealing: 'Caught Stealing',
 });
 
 const DISPLAY_DURATION = 1000;
@@ -105,6 +109,7 @@ function determineCategory(resultKey) {
   if (HOMERUN_RESULTS.has(resultKey)) return 'homerun';
   if (STRIKEOUT_RESULTS.has(resultKey)) return 'strikeout';
   if (WALK_RESULTS.has(resultKey)) return 'walk';
+  if (STEAL_SUCCESS_RESULTS.has(resultKey)) return 'walk';
   if (HIT_RESULTS.has(resultKey)) return 'hit';
   if (OUT_RESULTS.has(resultKey)) return 'out';
   return 'neutral';
