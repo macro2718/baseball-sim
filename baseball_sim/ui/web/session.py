@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from baseball_sim.config import GameResults, setup_project_environment
@@ -9,6 +10,7 @@ from baseball_sim.data.loader import DataLoader
 from baseball_sim.data.team_library import TeamLibrary, TeamLibraryError
 from baseball_sim.gameplay.game import GameState
 from baseball_sim.gameplay.substitutions import SubstitutionManager
+from baseball_sim.interface.simulation import simulate_games
 
 from .formatting import half_inning_banner
 from .logging import SessionLog
@@ -41,6 +43,15 @@ class WebGameSession:
         selection = self._team_library.ensure_selection_valid()
         self._home_team_id = selection.get("home")
         self._away_team_id = selection.get("away")
+        self._home_team_source: Optional[Dict[str, Any]] = None
+        self._away_team_source: Optional[Dict[str, Any]] = None
+        self._simulation_state: Dict[str, Any] = {
+            "running": False,
+            "last_run": None,
+            "log": [],
+            "default_games": 20,
+            "limits": {"min_games": 1, "max_games": 200},
+        }
         self.ensure_teams()
 
     # ------------------------------------------------------------------
@@ -59,6 +70,9 @@ class WebGameSession:
             if not self._home_team_id or not self._away_team_id:
                 self.home_team = None
                 self.away_team = None
+                self._home_team_source = None
+                self._away_team_source = None
+                self._clear_simulation_results()
                 return self.home_team, self.away_team
 
             try:
@@ -67,6 +81,9 @@ class WebGameSession:
             except TeamLibraryError as exc:
                 self.home_team = None
                 self.away_team = None
+                self._home_team_source = None
+                self._away_team_source = None
+                self._clear_simulation_results()
                 self._notifications.publish("danger", str(exc))
                 return self.home_team, self.away_team
 
@@ -75,9 +92,14 @@ class WebGameSession:
                     home_team_override=home_source,
                     away_team_override=away_source,
                 )
+                self._home_team_source = home_source
+                self._away_team_source = away_source
             except Exception as exc:
                 self.home_team = None
                 self.away_team = None
+                self._home_team_source = None
+                self._away_team_source = None
+                self._clear_simulation_results()
                 self._notifications.publish(
                     "danger", f"Failed to load teams: {exc}"
                 )
@@ -138,6 +160,7 @@ class WebGameSession:
         self._game_over_announced = False
         self._action_block_reason = None
         self._notifications.publish("info", "Team data reloaded.")
+        self._clear_simulation_results()
         return self.build_state()
 
     def get_team_library_state(self) -> Dict[str, object]:
@@ -177,12 +200,155 @@ class WebGameSession:
         self._log.clear()
         self._game_over_announced = False
         self._action_block_reason = None
+        self._clear_simulation_results()
 
         if self.home_team and self.away_team:
             self._notifications.publish(
                 "info",
                 f"Teams selected: {self.away_team.name} @ {self.home_team.name}",
             )
+        return self.build_state()
+
+    # ------------------------------------------------------------------
+    # Simulation helpers
+    # ------------------------------------------------------------------
+    def _clear_simulation_results(self) -> None:
+        self._simulation_state["last_run"] = None
+        self._simulation_state["log"] = []
+        self._simulation_state["running"] = False
+
+    def get_simulation_state(self) -> Dict[str, Any]:
+        state = {
+            "enabled": bool(self.home_team and self.away_team),
+            "running": bool(self._simulation_state.get("running", False)),
+            "default_games": int(self._simulation_state.get("default_games", 20) or 20),
+            "limits": self._simulation_state.get("limits", {"min_games": 1, "max_games": 200}),
+            "last_run": self._simulation_state.get("last_run"),
+            "log": list(self._simulation_state.get("log", []))[-20:],
+        }
+        return state
+
+    def run_simulation(self, num_games: int) -> Dict[str, Any]:
+        if num_games is None:
+            raise GameSessionError("シミュレーションする試合数を指定してください。")
+
+        limits = self._simulation_state.get("limits", {"min_games": 1, "max_games": 200})
+        min_games = int(limits.get("min_games", 1) or 1)
+        max_games = int(limits.get("max_games", 200) or 200)
+
+        if num_games < min_games:
+            raise GameSessionError(f"シミュレーション試合数は{min_games}以上で指定してください。")
+        if num_games > max_games:
+            raise GameSessionError(f"シミュレーション試合数は最大{max_games}試合までです。")
+
+        self.ensure_teams()
+        if not self.home_team or not self.away_team:
+            raise GameSessionError("チームが読み込まれていません。チームを選択してください。")
+
+        if not self._home_team_source or not self._away_team_source:
+            raise GameSessionError("チームデータを読み込めませんでした。チーム選択を確認してください。")
+
+        self._simulation_state["running"] = True
+
+        progress_messages: List[str] = [f"Simulating {num_games} games..."]
+
+        def handle_message(message: str) -> None:
+            if not message:
+                return
+            progress_messages.append(str(message))
+
+        try:
+            results = simulate_games(
+                num_games=num_games,
+                output_file=None,
+                progress_callback=None,
+                message_callback=handle_message,
+                home_team_data=self._home_team_source,
+                away_team_data=self._away_team_source,
+                save_to_file=False,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            self._simulation_state["running"] = False
+            raise GameSessionError(f"シミュレーションに失敗しました: {exc}") from exc
+
+        self._simulation_state["running"] = False
+        self._simulation_state["default_games"] = num_games
+        self._simulation_state["log"] = progress_messages[-20:]
+
+        team_stats = results.get("team_stats") or {}
+
+        def build_team_entry(team_key: str, team_obj) -> Dict[str, Any]:
+            name = getattr(team_obj, "name", team_key.title())
+            stats = team_stats.get(name, {})
+            wins = int(stats.get("wins", 0))
+            losses = int(stats.get("losses", 0))
+            draws = int(stats.get("draws", 0))
+            runs_scored = int(stats.get("runs_scored", 0))
+            runs_allowed = int(stats.get("runs_allowed", 0))
+            total = max(wins + losses + draws, 0)
+            win_pct = wins / total if total else 0.0
+            run_diff = runs_scored - runs_allowed
+            return {
+                "key": team_key,
+                "name": name,
+                "wins": wins,
+                "losses": losses,
+                "draws": draws,
+                "win_pct": win_pct,
+                "runs_scored": runs_scored,
+                "runs_allowed": runs_allowed,
+                "run_diff": run_diff,
+            }
+
+        teams_summary = [
+            build_team_entry("away", self.away_team),
+            build_team_entry("home", self.home_team),
+        ]
+
+        games = results.get("games") or []
+        recent_games: List[Dict[str, Any]] = []
+        for index, game in enumerate(games, start=1):
+            try:
+                home_score = int(game.get("home_score", 0))
+                away_score = int(game.get("away_score", 0))
+            except (TypeError, ValueError):  # pragma: no cover - fallback
+                home_score, away_score = 0, 0
+
+            winner: str
+            if home_score > away_score:
+                winner = "home"
+            elif home_score < away_score:
+                winner = "away"
+            else:
+                winner = "draw"
+
+            recent_games.append(
+                {
+                    "index": index,
+                    "home_team": game.get("home_team"),
+                    "away_team": game.get("away_team"),
+                    "home_score": home_score,
+                    "away_score": away_score,
+                    "innings": int(game.get("innings", 0) or 0),
+                    "winner": winner,
+                }
+            )
+
+        if recent_games:
+            recent_games = recent_games[-5:]
+
+        self._simulation_state["last_run"] = {
+            "total_games": int(num_games),
+            "timestamp": datetime.now().isoformat(timespec="seconds"),
+            "teams": teams_summary,
+            "recent_games": recent_games,
+        }
+
+        self._notifications.publish(
+            "success",
+            f"{num_games}試合のシミュレーションが完了しました。",
+        )
+
         return self.build_state()
 
     def get_team_definition(self, team_id: str) -> Dict[str, object]:

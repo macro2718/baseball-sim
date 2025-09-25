@@ -48,6 +48,26 @@ function setInsightsVisibility(visible) {
   }
 }
 
+function formatSimulationTimestamp(timestamp) {
+  if (!timestamp) return '';
+  try {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch (error) {
+    console.warn('Failed to format timestamp', error);
+    return '';
+  }
+}
+
 function hasAbilityData(team) {
   if (!team || !team.traits) return false;
   const { batting, pitching } = team.traits;
@@ -2871,6 +2891,163 @@ export function updateScreenVisibility() {
   }
 }
 
+function renderSimulationPanel(simulationState) {
+  const {
+    simulationCard,
+    simulationGamesInput,
+    simulationRunButton,
+    simulationStatus,
+    simulationSummary,
+    simulationTable,
+    simulationTableBody,
+    simulationRecentSection,
+    simulationRecentList,
+    simulationLogSection,
+    simulationLogList,
+  } = elements;
+
+  if (!simulationCard) {
+    return;
+  }
+
+  const enabled = Boolean(simulationState?.enabled);
+  const running = Boolean(simulationState?.running);
+  const defaultGames = Number.isFinite(simulationState?.defaultGames)
+    ? Number(simulationState.defaultGames)
+    : 20;
+  const limits = simulationState?.limits || {};
+  const minGames = Number.isFinite(limits.min) ? Number(limits.min) : 1;
+  const maxGames = Number.isFinite(limits.max) ? Number(limits.max) : 200;
+  const lastRun = simulationState?.lastRun || null;
+  const logEntries = Array.isArray(simulationState?.log)
+    ? simulationState.log.filter((entry) => typeof entry === 'string' && entry.trim())
+    : [];
+
+  simulationCard.classList.toggle('disabled', !enabled);
+
+  if (simulationGamesInput) {
+    simulationGamesInput.min = String(minGames);
+    simulationGamesInput.max = String(maxGames);
+    const isFocused = document.activeElement === simulationGamesInput;
+    const userModified = simulationGamesInput.dataset.userModified === 'true';
+    if (!isFocused && (!userModified || !simulationGamesInput.value)) {
+      simulationGamesInput.value = String(defaultGames);
+      if (userModified) {
+        simulationGamesInput.dataset.userModified = '';
+      }
+    }
+    simulationGamesInput.disabled = !enabled || running;
+  }
+
+  if (simulationRunButton) {
+    simulationRunButton.disabled = !enabled || running;
+    simulationRunButton.textContent = running ? '実行中…' : '実行';
+  }
+
+  if (simulationStatus) {
+    let statusText = '試合数を指定してシミュレーションを実行してください。';
+    if (!enabled) {
+      statusText = 'チームを読み込むとシミュレーションを実行できます。';
+    } else if (running) {
+      statusText = 'シミュレーションを実行中…';
+    } else if (lastRun) {
+      const timestamp = formatSimulationTimestamp(lastRun.timestamp);
+      statusText = `最新結果: ${lastRun.totalGames}試合${timestamp ? `（${timestamp}）` : ''}`;
+    }
+    simulationStatus.textContent = statusText;
+  }
+
+  if (simulationSummary) {
+    if (lastRun) {
+      simulationSummary.classList.remove('empty');
+      const timestamp = formatSimulationTimestamp(lastRun.timestamp);
+      const summaryLabel = `${lastRun.totalGames}試合をシミュレーションしました${timestamp ? `（${timestamp}）` : ''}`;
+      simulationSummary.innerHTML = `<strong>${escapeHtml(summaryLabel)}</strong>`;
+    } else {
+      simulationSummary.classList.add('empty');
+      simulationSummary.textContent = 'まだシミュレーション結果がありません。';
+    }
+  }
+
+  if (simulationTable && simulationTableBody) {
+    simulationTableBody.innerHTML = '';
+    const teams = Array.isArray(lastRun?.teams) ? lastRun.teams : [];
+    if (teams.length) {
+      simulationTable.classList.remove('hidden');
+      teams.forEach((team) => {
+        const row = document.createElement('tr');
+        const nameCell = document.createElement('th');
+        nameCell.scope = 'row';
+        nameCell.textContent = team.name || '-';
+        row.appendChild(nameCell);
+
+        const cells = [
+          Number.isFinite(team.wins) ? team.wins : 0,
+          Number.isFinite(team.losses) ? team.losses : 0,
+          Number.isFinite(team.draws) ? team.draws : 0,
+          Number.isFinite(team.winPct) ? team.winPct.toFixed(3) : '-',
+          Number.isFinite(team.runsScored) ? team.runsScored : 0,
+          Number.isFinite(team.runsAllowed) ? team.runsAllowed : 0,
+          Number.isFinite(team.runDiff)
+            ? (team.runDiff > 0 ? `+${team.runDiff}` : String(team.runDiff))
+            : '-',
+        ];
+
+        cells.forEach((value, index) => {
+          const cell = document.createElement('td');
+          cell.textContent = typeof value === 'number' ? String(value) : value;
+          if (index === 3 && typeof value === 'string' && value !== '-') {
+            cell.classList.add('simulation-winrate');
+          }
+          if (index === 6 && typeof value === 'string' && value.startsWith('+')) {
+            cell.classList.add('positive');
+          } else if (index === 6 && typeof value === 'string' && value.startsWith('-')) {
+            cell.classList.add('negative');
+          }
+          row.appendChild(cell);
+        });
+
+        simulationTableBody.appendChild(row);
+      });
+    } else {
+      simulationTable.classList.add('hidden');
+    }
+  }
+
+  if (simulationRecentSection && simulationRecentList) {
+    simulationRecentList.innerHTML = '';
+    const recentGames = Array.isArray(lastRun?.recentGames) ? lastRun.recentGames : [];
+    if (recentGames.length) {
+      simulationRecentSection.classList.remove('hidden');
+      recentGames.forEach((game) => {
+        const li = document.createElement('li');
+        const winnerLabel =
+          game.winner === 'home' ? 'ホーム勝利' : game.winner === 'away' ? 'アウェイ勝利' : '引き分け';
+        const inningsLabel = Number.isFinite(game.innings) && game.innings > 0 ? ` / ${game.innings}イニング` : '';
+        const text = `第${game.index}戦: ${(game.awayTeam ?? 'Away')} ${game.awayScore} - ${game.homeScore} ${(game.homeTeam ?? 'Home')}（${winnerLabel}${inningsLabel}）`;
+        li.textContent = text;
+        simulationRecentList.appendChild(li);
+      });
+    } else {
+      simulationRecentSection.classList.add('hidden');
+    }
+  }
+
+  if (simulationLogSection && simulationLogList) {
+    simulationLogList.innerHTML = '';
+    if (logEntries.length) {
+      simulationLogSection.classList.remove('hidden');
+      logEntries.slice(-6).forEach((entry) => {
+        const li = document.createElement('li');
+        li.textContent = entry;
+        simulationLogList.appendChild(li);
+      });
+    } else {
+      simulationLogSection.classList.add('hidden');
+    }
+  }
+}
+
 export function updateStatsPanel(state) {
   if (!state) return;
   const teams = state.teams || {};
@@ -3116,7 +3293,79 @@ export function render(data) {
     active: teamLibraryState.active || { home: null, away: null },
   };
 
+  const rawSimulation = data.simulation || {};
+  const rawLimits = rawSimulation.limits || {};
+  const simulationLog = Array.isArray(rawSimulation.log)
+    ? rawSimulation.log.filter((entry) => typeof entry === 'string').map((entry) => entry.trim()).filter(Boolean)
+    : [];
+
+  let lastRun = null;
+  if (rawSimulation.last_run && typeof rawSimulation.last_run === 'object') {
+    const rawLastRun = rawSimulation.last_run;
+    const teamEntries = Array.isArray(rawLastRun.teams)
+      ? rawLastRun.teams.map((team) => ({
+          key: team.key || null,
+          name: team.name || '',
+          wins: Number.isFinite(Number(team.wins)) ? Number(team.wins) : 0,
+          losses: Number.isFinite(Number(team.losses)) ? Number(team.losses) : 0,
+          draws: Number.isFinite(Number(team.draws)) ? Number(team.draws) : 0,
+          winPct: Number.isFinite(Number(team.win_pct)) ? Number(team.win_pct) : 0,
+          runsScored: Number.isFinite(Number(team.runs_scored)) ? Number(team.runs_scored) : 0,
+          runsAllowed: Number.isFinite(Number(team.runs_allowed)) ? Number(team.runs_allowed) : 0,
+          runDiff: Number.isFinite(Number(team.run_diff)) ? Number(team.run_diff) : 0,
+        }))
+      : [];
+
+    const recentGames = Array.isArray(rawLastRun.recent_games)
+      ? rawLastRun.recent_games.map((game, index) => {
+          const idx = Number.isFinite(Number(game.index)) ? Number(game.index) : index + 1;
+          const winner = typeof game.winner === 'string' ? game.winner : 'draw';
+          return {
+            index: idx,
+            homeTeam: game.home_team || game.homeTeam || 'Home',
+            awayTeam: game.away_team || game.awayTeam || 'Away',
+            homeScore: Number.isFinite(Number(game.home_score)) ? Number(game.home_score) : 0,
+            awayScore: Number.isFinite(Number(game.away_score)) ? Number(game.away_score) : 0,
+            innings: Number.isFinite(Number(game.innings)) ? Number(game.innings) : 0,
+            winner: ['home', 'away', 'draw'].includes(winner) ? winner : 'draw',
+          };
+        })
+      : [];
+
+    const totalGamesValue = Number(rawLastRun.total_games);
+    const computedTotalGames = teamEntries.reduce(
+      (sum, team) => sum + team.wins + team.losses + team.draws,
+      0,
+    );
+
+    lastRun = {
+      totalGames: Number.isFinite(totalGamesValue) && totalGamesValue > 0 ? totalGamesValue : computedTotalGames,
+      timestamp: rawLastRun.timestamp || '',
+      teams: teamEntries,
+      recentGames: recentGames.slice(-5),
+    };
+  }
+
+  stateCache.simulation = {
+    enabled: Boolean(rawSimulation.enabled),
+    running: Boolean(rawSimulation.running),
+    defaultGames: Number.isFinite(Number(rawSimulation.default_games))
+      ? Number(rawSimulation.default_games)
+      : 20,
+    limits: {
+      min: Number.isFinite(Number(rawLimits.min_games)) ? Number(rawLimits.min_games) : 1,
+      max: Number.isFinite(Number(rawLimits.max_games)) ? Number(rawLimits.max_games) : 200,
+    },
+    lastRun,
+    log: simulationLog.slice(-12),
+  };
+
+  const hasSimulationResults = Boolean(stateCache.simulation?.lastRun);
+
   if (data.game?.active) {
+    stateCache.uiView = 'game';
+    stateCache.forceGameView = false;
+  } else if (stateCache.forceGameView || hasSimulationResults) {
     stateCache.uiView = 'game';
   } else if (stateCache.uiView === 'game') {
     stateCache.uiView = 'title';
@@ -3127,6 +3376,7 @@ export function render(data) {
   renderTeamBuilder(stateCache.teamLibrary);
   renderTitle(data.title);
   renderGame(data.game, data.teams, data.log, previousData?.game || null);
+  renderSimulationPanel(stateCache.simulation);
   updateStatsPanel(data);
   updateAbilitiesPanel(data);
   updateScreenVisibility();

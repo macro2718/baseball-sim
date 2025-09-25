@@ -115,6 +115,7 @@
             <p class="lobby-description">ようこそ。以下から選択してください。</p>
             <div class="title-actions">
               <button id="open-match" class="primary">試合</button>
+              <button id="open-simulation">シミュレーション</button>
               <button id="open-team-builder">チーム作成/編集</button>
               <button id="open-player-builder">選手作成/編集</button>
               <button id="open-team-delete" class="danger">チーム削除</button>
@@ -671,6 +672,56 @@
               </div>
 
               <div class="defense-alert hidden" id="defense-errors"></div>
+
+              <div class="controls-card simulation-card" id="simulation-card">
+                <h3>シミュレーション</h3>
+                <form id="simulation-form" class="simulation-form">
+                  <label for="simulation-games">試合数</label>
+                  <div class="simulation-input-row">
+                    <input
+                      type="number"
+                      id="simulation-games"
+                      name="simulation-games"
+                      min="1"
+                      max="200"
+                      value="20"
+                      inputmode="numeric"
+                    />
+                    <button type="submit" id="simulation-run" class="primary">実行</button>
+                  </div>
+                </form>
+                <p class="simulation-status" id="simulation-status">
+                  選択中のチームでシミュレーションを実行できます。
+                </p>
+                <div class="simulation-results" id="simulation-results">
+                  <div class="simulation-summary empty" id="simulation-summary">
+                    まだシミュレーション結果がありません。
+                  </div>
+                  <table class="simulation-table hidden" id="simulation-team-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">チーム</th>
+                        <th scope="col">勝</th>
+                        <th scope="col">敗</th>
+                        <th scope="col">分</th>
+                        <th scope="col">勝率</th>
+                        <th scope="col">得点</th>
+                        <th scope="col">失点</th>
+                        <th scope="col">差</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                  <div class="simulation-recent hidden" id="simulation-recent-section">
+                    <h4>直近の試合</h4>
+                    <ol id="simulation-recent"></ol>
+                  </div>
+                  <div class="simulation-log hidden" id="simulation-log-section">
+                    <h4>進捗ログ</h4>
+                    <ul id="simulation-log"></ul>
+                  </div>
+                </div>
+              </div>
 
               <div class="log-panel hidden" id="log-panel">
                 <h3>試合ログ <small>(開発者用)</small></h3>
