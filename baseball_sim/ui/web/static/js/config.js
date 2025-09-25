@@ -6,7 +6,6 @@ export const CONFIG = {
     endpoints: {
       gameState: '/api/game/state',
       gameStart: '/api/game/start',
-      gameRestart: '/api/game/restart',
       gameStop: '/api/game/stop',
       gameSwing: '/api/game/swing',
       gameBunt: '/api/game/bunt',

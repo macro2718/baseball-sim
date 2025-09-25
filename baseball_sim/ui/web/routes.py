@@ -21,9 +21,6 @@ from .player_service import (
 )
 from .session import GameSessionError, WebGameSession
 
-# Create Blueprint for API routes
-api_bp = Blueprint('api', __name__, url_prefix='/api')
-
 
 def create_error_response(error: str, session: WebGameSession) -> Tuple[Response, int]:
     """Create a standardized error response."""
@@ -39,8 +36,13 @@ def parse_int_param(payload: dict, key: str, default: int = -1) -> int:
 
 
 def create_routes(session: WebGameSession) -> Blueprint:
-    """Create and configure API routes with the given session."""
+    """Create and configure API routes with the given session.
 
+    Note: Create a new Blueprint per app instance to avoid route duplication
+    across dev reloads or multiple app factories.
+    """
+
+    api_bp = Blueprint('api', __name__, url_prefix='/api')
     player_service = PlayerLibraryService()
 
     def load_players_dataset(auto_save: bool = True) -> PlayerDataset:
@@ -64,13 +66,7 @@ def create_routes(session: WebGameSession) -> Blueprint:
             return create_error_response(str(exc), session)
         return jsonify(state)
 
-    @api_bp.post("/game/restart")
-    def restart_game() -> Dict[str, Any]:
-        try:
-            state = session.start_new_game(reload_teams=True)
-        except GameSessionError as exc:
-            return create_error_response(str(exc), session)
-        return jsonify(state)
+    # Note: Restart merged into /game/start with { reload: true } on the client side.
 
     @api_bp.post("/game/stop")
     def stop_game() -> Dict[str, Any]:

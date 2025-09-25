@@ -60,6 +60,27 @@ class SessionStateBuilder:
     # Title helpers
     # ------------------------------------------------------------------
     def _build_title_state(self) -> Dict[str, object]:
+        # During an active game, avoid re-validating lineups on every state build
+        # to reduce repeated CPU work. Lineups were validated at game start and
+        # any substitutions are handled with their own validation flows.
+        if getattr(self._session, "game_state", None):
+            return {
+                "home": {
+                    "name": getattr(getattr(self._session, "home_team", None), "name", "-"),
+                    "valid": True,
+                    "message": "In-game",
+                    "errors": [],
+                },
+                "away": {
+                    "name": getattr(getattr(self._session, "away_team", None), "name", "-"),
+                    "valid": True,
+                    "message": "In-game",
+                    "errors": [],
+                },
+                "ready": True,
+                "hint": "Game in progress.",
+            }
+
         home_status = self._team_status(self._session.home_team)
         away_status = self._team_status(self._session.away_team)
         ready = bool(home_status["valid"] and away_status["valid"])
