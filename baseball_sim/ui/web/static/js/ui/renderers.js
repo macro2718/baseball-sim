@@ -3329,9 +3329,8 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
   const homeValue = simulationSetupHome?.value ?? '';
   const awayValue = simulationSetupAway?.value ?? '';
   const teamsChosen = Boolean(homeValue && awayValue);
-  const sameTeamSelected = teamsChosen && homeValue === awayValue;
   const running = Boolean(simulationState?.running);
-  const canStart = teamsChosen && !sameTeamSelected && !running;
+  const canStart = teamsChosen && !running;
 
   if (simulationStartButton) {
     simulationStartButton.disabled = !canStart;
@@ -3343,9 +3342,6 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
     if (running) {
       message = 'シミュレーションを実行中です…';
       level = 'info';
-    } else if (sameTeamSelected) {
-      message = '同じチームを両方に選択しています。別のチームを選んでください。';
-      level = 'danger';
     } else if (!teamsChosen) {
       message = 'ホームとアウェイのチーム、試合数を選択して実行してください。';
     } else if (teamLibraryState?.hint) {
@@ -3523,6 +3519,12 @@ function updateSimulationResultsViewUI() {
     simulationPlayersTabsRow,
     simulationPlayersAwayPanel,
     simulationPlayersHomePanel,
+    simulationPlayersTypeBatting,
+    simulationPlayersTypePitching,
+    simulationAwayBattingTable,
+    simulationAwayPitchingTable,
+    simulationHomeBattingTable,
+    simulationHomePitchingTable,
   } = elements;
   const { simulationTabSummary, simulationTabGames, simulationTabPlayers } = elements;
   const view = stateCache.simulationResultsView || 'summary';
@@ -3554,6 +3556,7 @@ function updateSimulationResultsViewUI() {
   }
   if (showPlayers) {
     const teamView = stateCache.playersTeamView === 'home' ? 'home' : 'away';
+    const typeView = stateCache.playersTypeView === 'pitching' ? 'pitching' : 'batting';
     const awayVisible = teamView === 'away';
     if (simulationPlayersAwayPanel) {
       simulationPlayersAwayPanel.classList.toggle('hidden', !awayVisible);
@@ -3565,6 +3568,18 @@ function updateSimulationResultsViewUI() {
     }
     setTabActive(elements.simulationPlayersTabAway, awayVisible);
     setTabActive(elements.simulationPlayersTabHome, !awayVisible);
+
+    // 種別タブのActive表示
+    setTabActive(simulationPlayersTypeBatting, typeView === 'batting');
+    setTabActive(simulationPlayersTypePitching, typeView === 'pitching');
+
+    // テーブルの表示切替（打者/投手）
+    const showBatting = typeView === 'batting';
+    const showPitching = typeView === 'pitching';
+    if (simulationAwayBattingTable) simulationAwayBattingTable.classList.toggle('hidden', !showBatting);
+    if (simulationAwayPitchingTable) simulationAwayPitchingTable.classList.toggle('hidden', !showPitching);
+    if (simulationHomeBattingTable) simulationHomeBattingTable.classList.toggle('hidden', !showBatting);
+    if (simulationHomePitchingTable) simulationHomePitchingTable.classList.toggle('hidden', !showPitching);
   }
 }
 
@@ -3609,26 +3624,77 @@ function renderSimulationLeaders(lastRun) {
   const k9Best = pickLeader(pitchers, 'kPer9', { minKey: 'ip', minValue: minIP });
   const whipBest = pickLeader(pitchers, 'whip', { minKey: 'ip', minValue: minIP, reverse: true });
 
-  const items = [];
   const fmtName = (p) => `${p.name || '-'}（${p.team || '-'}）`;
-  if (hitterAvg) items.push(`首位打者: ${fmtName(hitterAvg)} AVG ${formatAverageDisplay(hitterAvg.avg)}`);
-  if (hrKing) items.push(`本塁打王: ${fmtName(hrKing)} HR ${Number(hrKing.homeRuns) || 0}`);
-  if (rbiKing) items.push(`打点王: ${fmtName(rbiKing)} RBI ${Number(rbiKing.rbi) || 0}`);
-  if (hitterOPS) items.push(`OPS 1位: ${fmtName(hitterOPS)} OPS ${formatAverageDisplay(hitterOPS.ops)}`);
-  if (eraBest) items.push(`最優秀防御率: ${fmtName(eraBest)} ERA ${formatNumberDisplay(eraBest.era, 2)}`);
-  if (k9Best) items.push(`最多奪三振率: ${fmtName(k9Best)} K/9 ${formatNumberDisplay(k9Best.kPer9, 2)}`);
-  if (whipBest) items.push(`最優秀WHIP: ${fmtName(whipBest)} WHIP ${formatNumberDisplay(whipBest.whip, 2)}`);
-
-  if (!items.length) {
+  const addCard = (kind, icon, label, valueText, nameText) => {
     const li = document.createElement('li');
-    li.textContent = '個人タイトルの対象者がいません。';
+    li.className = `leader-card kind-${kind}`;
+    const title = document.createElement('div');
+    title.className = 'leader-title';
+    const iconEl = document.createElement('span');
+    iconEl.className = 'leader-icon';
+    iconEl.textContent = icon;
+    const labelEl = document.createElement('span');
+    labelEl.textContent = label;
+    const valueEl = document.createElement('div');
+    valueEl.className = 'leader-value';
+    valueEl.textContent = valueText;
+    const nameEl = document.createElement('div');
+    nameEl.className = 'leader-name';
+    nameEl.textContent = nameText;
+    title.appendChild(iconEl);
+    title.appendChild(labelEl);
+    li.appendChild(title);
+    li.appendChild(valueEl);
+    li.appendChild(nameEl);
     simulationLeadersList.appendChild(li);
-  } else {
-    items.forEach((text) => {
-      const li = document.createElement('li');
-      li.textContent = text;
-      simulationLeadersList.appendChild(li);
-    });
+  };
+
+  let added = 0;
+  if (hitterAvg) {
+    addCard('batting', '🥇', '首位打者', `AVG ${formatAverageDisplay(hitterAvg.avg)}`, fmtName(hitterAvg));
+    added += 1;
+  }
+  if (hrKing) {
+    addCard('batting', '⚾', '本塁打王', `HR ${Number(hrKing.homeRuns) || 0}`, fmtName(hrKing));
+    added += 1;
+  }
+  if (rbiKing) {
+    addCard('batting', '🎯', '打点王', `RBI ${Number(rbiKing.rbi) || 0}`, fmtName(rbiKing));
+    added += 1;
+  }
+  if (hitterOPS) {
+    addCard('batting', '🔥', 'OPS 1位', `OPS ${formatAverageDisplay(hitterOPS.ops)}`, fmtName(hitterOPS));
+    added += 1;
+  }
+  if (eraBest) {
+    addCard('pitching', '🧱', '最優秀防御率', `ERA ${formatNumberDisplay(eraBest.era, 2)}`, fmtName(eraBest));
+    added += 1;
+  }
+  if (k9Best) {
+    addCard('pitching', '⚡', '最多奪三振率', `K/9 ${formatNumberDisplay(k9Best.kPer9, 2)}`, fmtName(k9Best));
+    added += 1;
+  }
+  if (whipBest) {
+    addCard('pitching', '🧪', '最優秀WHIP', `WHIP ${formatNumberDisplay(whipBest.whip, 2)}`, fmtName(whipBest));
+    added += 1;
+  }
+
+  if (added === 0) {
+    const li = document.createElement('li');
+    li.className = 'leader-card';
+    const title = document.createElement('div');
+    title.className = 'leader-title';
+    title.textContent = '個人タイトル';
+    const valueEl = document.createElement('div');
+    valueEl.className = 'leader-value';
+    valueEl.textContent = '--';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'leader-name';
+    nameEl.textContent = '対象者がいません。';
+    li.appendChild(title);
+    li.appendChild(valueEl);
+    li.appendChild(nameEl);
+    simulationLeadersList.appendChild(li);
   }
 }
 
@@ -3637,7 +3703,8 @@ function renderSimulationResults(simulationState) {
     simulationResultsSummary,
     simulationResultsMeta,
     simulationResultsTableBody,
-    simulationGamesList,
+    simulationGamesTableBody,
+    simulationGamesStats,
     simulationAwayName,
     simulationHomeName,
     simulationAwaySummary,
@@ -3646,7 +3713,6 @@ function renderSimulationResults(simulationState) {
     simulationHomeBattingBody,
     simulationAwayPitchingBody,
     simulationHomePitchingBody,
-    simulationResultsLog,
   } = elements;
 
   const lastRun = simulationState?.lastRun || null;
@@ -3667,19 +3733,22 @@ function renderSimulationResults(simulationState) {
     if (simulationResultsTableBody) {
       simulationResultsTableBody.innerHTML = '';
     }
-    if (simulationGamesList) {
-      simulationGamesList.innerHTML = '';
-      const li = document.createElement('li');
-      li.textContent = 'シミュレーション結果が表示されるとここに試合一覧が表示されます。';
-      simulationGamesList.appendChild(li);
+    if (simulationGamesTableBody) {
+      simulationGamesTableBody.innerHTML = '';
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 6;
+      td.textContent = 'シミュレーション結果が表示されるとここに試合一覧が表示されます。';
+      tr.appendChild(td);
+      simulationGamesTableBody.appendChild(tr);
     }
+    if (simulationGamesStats) simulationGamesStats.textContent = '';
     if (simulationAwaySummary) simulationAwaySummary.textContent = '';
     if (simulationHomeSummary) simulationHomeSummary.textContent = '';
     if (simulationAwayBattingBody) simulationAwayBattingBody.innerHTML = '';
     if (simulationHomeBattingBody) simulationHomeBattingBody.innerHTML = '';
     if (simulationAwayPitchingBody) simulationAwayPitchingBody.innerHTML = '';
     if (simulationHomePitchingBody) simulationHomePitchingBody.innerHTML = '';
-    if (simulationResultsLog) simulationResultsLog.innerHTML = '';
     updateSimulationResultsViewUI();
     return;
   }
@@ -3726,42 +3795,81 @@ function renderSimulationResults(simulationState) {
     }
   }
 
-  if (simulationGamesList) {
-    simulationGamesList.innerHTML = '';
+  if (simulationGamesTableBody) {
+    simulationGamesTableBody.innerHTML = '';
     const games = Array.isArray(lastRun.games) ? lastRun.games : [];
     if (!games.length) {
-      const li = document.createElement('li');
-      li.textContent = '試合結果はまだありません。';
-      simulationGamesList.appendChild(li);
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 6;
+      td.textContent = '試合結果はまだありません。';
+      tr.appendChild(td);
+      simulationGamesTableBody.appendChild(tr);
     } else {
       games.forEach((game) => {
-        const li = document.createElement('li');
+        const tr = document.createElement('tr');
         const winnerLabel =
           game.winner === 'home' ? 'ホーム勝利' : game.winner === 'away' ? 'アウェイ勝利' : '引き分け';
-        const inningsLabel = Number.isFinite(game.innings) && game.innings > 0 ? ` / ${game.innings}イニング` : '';
-        const text = `第${game.index}戦: ${(game.awayTeam ?? 'Away')} ${game.awayScore} - ${game.homeScore} ${(game.homeTeam ?? 'Home')}（${winnerLabel}${inningsLabel}）`;
-        li.textContent = text;
-        simulationGamesList.appendChild(li);
+        const row = [
+          game.index,
+          game.awayTeam ?? 'Away',
+          game.homeTeam ?? 'Home',
+          `${game.awayScore} - ${game.homeScore}`,
+          Number.isFinite(game.innings) && game.innings > 0 ? `${game.innings}` : '-',
+          winnerLabel,
+        ];
+        row.forEach((cell, i) => {
+          const td = document.createElement('td');
+          td.textContent = String(cell);
+          if (i === 3) td.style.textAlign = 'center';
+          tr.appendChild(td);
+        });
+        simulationGamesTableBody.appendChild(tr);
       });
     }
   }
 
-  if (simulationResultsLog) {
-    simulationResultsLog.innerHTML = '';
-    const logEntries = Array.isArray(simulationState?.log)
-      ? simulationState.log.filter((entry) => typeof entry === 'string' && entry.trim())
-      : [];
-    if (!logEntries.length) {
-      const li = document.createElement('li');
-      li.textContent = '進捗ログはまだありません。';
-      simulationResultsLog.appendChild(li);
-    } else {
-      logEntries.forEach((entry) => {
-        const li = document.createElement('li');
-        li.textContent = entry;
-        simulationResultsLog.appendChild(li);
-      });
-    }
+  if (simulationGamesStats) {
+    const games = Array.isArray(lastRun.games) ? lastRun.games : [];
+    const total = games.length;
+    let homeWins = 0;
+    let awayWins = 0;
+    let draws = 0;
+    let totalRunsHome = 0;
+    let totalRunsAway = 0;
+    games.forEach((g) => {
+      if (g.winner === 'home') homeWins += 1;
+      else if (g.winner === 'away') awayWins += 1;
+      else draws += 1;
+      totalRunsHome += Number(g.homeScore) || 0;
+      totalRunsAway += Number(g.awayScore) || 0;
+    });
+    const avgHome = total ? (totalRunsHome / total).toFixed(2) : '0.00';
+    const avgAway = total ? (totalRunsAway / total).toFixed(2) : '0.00';
+    const avgTotal = total ? ((totalRunsHome + totalRunsAway) / total).toFixed(2) : '0.00';
+
+    simulationGamesStats.innerHTML = '';
+    const addCard = (label, value) => {
+      const card = document.createElement('div');
+      card.className = 'simulation-stats-card';
+      const labelEl = document.createElement('div');
+      labelEl.className = 'label';
+      labelEl.textContent = label;
+      const valueEl = document.createElement('div');
+      valueEl.className = 'value';
+      valueEl.textContent = String(value);
+      card.appendChild(labelEl);
+      card.appendChild(valueEl);
+      simulationGamesStats.appendChild(card);
+    };
+
+    addCard('総試合数', total);
+    addCard('ホーム勝利', homeWins);
+    addCard('アウェイ勝利', awayWins);
+    if (draws) addCard('引き分け', draws);
+    addCard('平均得点 (ホーム)', avgHome);
+    addCard('平均得点 (アウェイ)', avgAway);
+    addCard('平均合計得点', avgTotal);
   }
 
   if (simulationAwaySummary) {
@@ -4140,10 +4248,7 @@ export function render(data) {
       : [];
 
     const totalGamesValue = Number(rawLastRun.total_games);
-    const computedTotalGames = teamEntries.reduce((sum, team) => {
-      const rec = team.record || {};
-      return sum + (rec.wins || 0) + (rec.losses || 0) + (rec.draws || 0);
-    }, 0);
+    const computedTotalGames = Array.isArray(rawLastRun.games) ? rawLastRun.games.length : 0;
 
     lastRun = {
       totalGames:

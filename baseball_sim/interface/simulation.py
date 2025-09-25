@@ -53,9 +53,14 @@ def simulate_games(
         away_team_override=away_team_data,
     )
     
-    # ホームチーム、アウェイチームそれぞれの選手・投手をループでまとめて保存
+    # チーム参照を役割付きで保存（同名チーム対戦時の衝突を防ぐ）
+    results["teams"]["home"] = home_team
+    results["teams"]["away"] = away_team
+    results["teams"][f"{home_team.name} (Home)"] = home_team
+    results["teams"][f"{away_team.name} (Away)"] = away_team
+
+    # 選手・投手は名前で集約（こちらは同名衝突の影響は軽微）
     for team in (home_team, away_team):
-        results["teams"][team.name] = team
         for player in team.lineup:
             results["players"][player.name] = player
         for pitcher in team.pitchers:
@@ -200,8 +205,8 @@ def get_runs_from_message(message):
 
 def update_statistics(results, game, game_result):
     """チームの勝敗統計を更新する"""
-    # ホームチームの統計
-    home_name = game.home_team.name
+    # ホーム/アウェイを明確に区別（同一チーム対戦時の衝突防止）
+    home_name = f"{game.home_team.name} (Home)"
     if home_name not in results["team_stats"]:
         results["team_stats"][home_name] = {
             "wins": 0, "losses": 0, "draws": 0, 
@@ -209,7 +214,7 @@ def update_statistics(results, game, game_result):
         }
     
     # アウェイチームの統計
-    away_name = game.away_team.name
+    away_name = f"{game.away_team.name} (Away)"
     if away_name not in results["team_stats"]:
         results["team_stats"][away_name] = {
             "wins": 0, "losses": 0, "draws": 0, 

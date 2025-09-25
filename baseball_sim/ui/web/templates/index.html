@@ -254,7 +254,7 @@
 
               <article class="simulation-results-block">
                 <h3>個人タイトル</h3>
-                <ul id="simulation-leaders-list" class="simulation-leaders-list"></ul>
+                <ul id="simulation-leaders-list" class="simulation-leaders-list leaders-cards"></ul>
               </article>
             </div>
 
@@ -262,12 +262,26 @@
             <div id="simulation-games-section" class="simulation-results-grid simulation-view-section hidden" aria-hidden="true">
               <article class="simulation-results-block">
                 <h3>試合一覧</h3>
-                <ol id="simulation-game-list" class="simulation-game-list"></ol>
+                <div class="simulation-game-table-wrapper">
+                <table class="simulation-table" id="simulation-game-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">#</th>
+                      <th scope="col">アウェイ</th>
+                      <th scope="col">ホーム</th>
+                      <th scope="col">スコア</th>
+                      <th scope="col">イニング</th>
+                      <th scope="col">勝敗</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+                </div>
               </article>
 
               <article class="simulation-results-block">
-                <h3>進捗ログ</h3>
-                <ul id="simulation-results-log" class="simulation-log-list"></ul>
+                <h3>統計情報</h3>
+                <div id="simulation-game-stats" class="simulation-stats-cards"></div>
               </article>
             </div>
 
@@ -278,6 +292,10 @@
                   <button id="simulation-players-tab-away" type="button" class="tab active" aria-pressed="true">アウェイ</button>
                   <button id="simulation-players-tab-home" type="button" class="tab" aria-pressed="false">ホーム</button>
                 </div>
+                <div class="tab-group" role="tablist" aria-label="種別切替">
+                  <button id="simulation-players-type-batting" type="button" class="tab active" aria-pressed="true">打者成績</button>
+                  <button id="simulation-players-type-pitching" type="button" class="tab" aria-pressed="false">投手成績</button>
+                </div>
               </div>
 
               <section id="simulation-players-away-panel" class="simulation-team-panel">
@@ -286,7 +304,7 @@
                   <p id="simulation-away-summary" class="simulation-team-summary"></p>
                 </header>
                 <div class="simulation-team-tables">
-                  <div class="simulation-player-table">
+                  <div class="simulation-player-table" id="simulation-away-batting-table">
                     <h4>打者成績</h4>
                     <table class="simulation-player-stats">
                       <thead>
@@ -311,7 +329,7 @@
                       <tbody id="simulation-away-batting-body"></tbody>
                     </table>
                   </div>
-                  <div class="simulation-player-table">
+                  <div class="simulation-player-table" id="simulation-away-pitching-table">
                     <h4>投手成績</h4>
                     <table class="simulation-player-stats">
                       <thead>
@@ -342,7 +360,7 @@
                   <p id="simulation-home-summary" class="simulation-team-summary"></p>
                 </header>
                 <div class="simulation-team-tables">
-                  <div class="simulation-player-table">
+                  <div class="simulation-player-table" id="simulation-home-batting-table">
                     <h4>打者成績</h4>
                     <table class="simulation-player-stats">
                       <thead>
@@ -367,7 +385,7 @@
                       <tbody id="simulation-home-batting-body"></tbody>
                     </table>
                   </div>
-                  <div class="simulation-player-table">
+                  <div class="simulation-player-table" id="simulation-home-pitching-table">
                     <h4>投手成績</h4>
                     <table class="simulation-player-stats">
                       <thead>

@@ -434,6 +434,98 @@
   overflow-y: auto;
 }
 
+/* New: scrollable game table wrapper */
+.simulation-game-table-wrapper {
+  height: 320px; /* 固定ウィンドウ */
+  overflow-y: auto;
+  border-radius: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* New: stats cards for clearer visualization */
+.simulation-stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.simulation-stats-card {
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.simulation-stats-card .label {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.75);
+}
+
+.simulation-stats-card .value {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Leaders (個人タイトル) cards */
+.simulation-leaders-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.leaders-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.leader-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0.08) 100%);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.leader-card .leader-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.8);
+}
+
+.leader-card .leader-icon {
+  font-size: 16px;
+}
+
+.leader-card .leader-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.leader-card .leader-name {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Slight tint changes for pitching */
+.leader-card.kind-pitching {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.18) 0%, rgba(56, 189, 248, 0.08) 100%);
+}
+
 .simulation-team-panels {
   display: grid;
   gap: 22px;
@@ -448,6 +540,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow: hidden;
 }
 
 .simulation-team-header h3 {
@@ -464,6 +557,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow: hidden;
 }
 
 .simulation-player-table h4 {
@@ -475,6 +569,14 @@
   width: 100%;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
+}
+
+/* 個人成績テーブルの横スクロール許容で文字のはみ出しを防止 */
+.simulation-player-table {
+  overflow-x: auto;
+}
+.simulation-player-table table {
+  min-width: 760px;
 }
 
 .simulation-player-stats thead th {

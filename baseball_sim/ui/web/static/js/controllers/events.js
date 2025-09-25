@@ -6,6 +6,7 @@ import {
   getPinchRunSelectedBase,
   setSimulationResultsView,
   setPlayersTeamView,
+  setPlayersTypeView,
 } from '../state.js';
 import {
   hideDefenseMenu,
@@ -2675,6 +2676,7 @@ export function initEventListeners(actions) {
   if (elements.simulationTabPlayers) {
     elements.simulationTabPlayers.addEventListener('click', () => {
       setSimulationResultsView('players');
+      setPlayersTypeView('batting');
       refreshView();
     });
   }
@@ -2728,6 +2730,7 @@ export function initEventListeners(actions) {
         // 実行直後は要約ビューをデフォルト表示
         setSimulationResultsView('summary');
         setPlayersTeamView('away');
+        setPlayersTypeView('batting');
         if (elements.simulationGameCountInput) {
           elements.simulationGameCountInput.dataset.userModified = '';
         }
@@ -2750,6 +2753,20 @@ export function initEventListeners(actions) {
   if (elements.simulationPlayersTabHome) {
     elements.simulationPlayersTabHome.addEventListener('click', () => {
       setPlayersTeamView('home');
+      refreshView();
+    });
+  }
+
+  // 個人成績 種別切り替え（打者/投手）
+  if (elements.simulationPlayersTypeBatting) {
+    elements.simulationPlayersTypeBatting.addEventListener('click', () => {
+      setPlayersTypeView('batting');
+      refreshView();
+    });
+  }
+  if (elements.simulationPlayersTypePitching) {
+    elements.simulationPlayersTypePitching.addEventListener('click', () => {
+      setPlayersTypeView('pitching');
       refreshView();
     });
   }

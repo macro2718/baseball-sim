@@ -14,6 +14,7 @@ export const stateCache = {
   uiView: 'lobby',
   simulationResultsView: 'summary',
   playersTeamView: 'away',
+  playersTypeView: 'batting',
   simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min: 1, max: 200 } },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   titleLineup: {
@@ -61,6 +62,16 @@ export function setPlayersTeamView(team) {
 
 export function getPlayersTeamView() {
   return stateCache.playersTeamView === 'home' ? 'home' : 'away';
+}
+
+export function setPlayersTypeView(type) {
+  const next = type === 'pitching' ? 'pitching' : 'batting';
+  stateCache.playersTypeView = next;
+  return next;
+}
+
+export function getPlayersTypeView() {
+  return stateCache.playersTypeView === 'pitching' ? 'pitching' : 'batting';
 }
 
 export function getUIView() {

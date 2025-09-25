@@ -54,12 +54,21 @@ def _build_team_entry(
     team_stats: Mapping[str, Any],
 ) -> Dict[str, Any]:
     team_name = getattr(fallback_team, "name", None) or team_key.title()
-    team_obj = team_objects.get(team_name, fallback_team)
+    # Prefer role-specific mapping ('home'/'away'), then role-suffixed name, then plain name
+    role_suffixed = f"{team_name} ({'Away' if team_key == 'away' else 'Home'})"
+    if team_key in team_objects:
+        team_obj = team_objects[team_key]
+    elif role_suffixed in team_objects:
+        team_obj = team_objects[role_suffixed]
+    else:
+        team_obj = team_objects.get(team_name, fallback_team)
+    # Display name clarifies role for same-team matchups
+    display_name = f"{team_name} ({'Away' if team_key == 'away' else 'Home'})"
 
     return {
         "key": team_key,
-        "name": team_name,
-        "record": _build_team_record(team_name, team_stats),
+        "name": display_name,
+        "record": _build_team_record(team_name, team_stats, role=team_key),
         "batting": _compute_team_batting(team_obj),
         "pitching": _compute_team_pitching(team_obj),
         "batters": _build_batter_stats(team_obj),
@@ -67,8 +76,12 @@ def _build_team_entry(
     }
 
 
-def _build_team_record(team_name: str, team_stats: Mapping[str, Any]) -> Dict[str, Any]:
+def _build_team_record(team_name: str, team_stats: Mapping[str, Any], *, role: Optional[str] = None) -> Dict[str, Any]:
     stats = team_stats.get(team_name, {})
+    if (not stats) and role in {"home", "away"}:
+        suffix = "Home" if role == "home" else "Away"
+        role_key = f"{team_name} ({suffix})"
+        stats = team_stats.get(role_key, {})
     wins = int(stats.get("wins", 0))
     losses = int(stats.get("losses", 0))
     draws = int(stats.get("draws", 0))
@@ -340,4 +353,3 @@ def _build_game_summaries(
 
     recent_games = all_games[-5:] if all_games else []
     return all_games, recent_games
-
