@@ -201,7 +201,7 @@ class GameState:
         return True, ""
 
     def add_out(self, credit_pitcher: bool = True, advance_lineup: bool = True):
-        """アウトカウントを増やし、投手のIPも自動で更新する"""
+        """アウトカウントを増やし、必要なら投手のIPを更新する"""
 
         if credit_pitcher:
             pitching_stats = getattr(
@@ -215,7 +215,7 @@ class GameState:
             self.switch_sides(advance_lineup=advance_lineup)
 
     def can_bunt(self):
-        """バントが可能かどうかを判定"""
+        """バントが可能かどうかを判定（走者あり かつ 2アウト未満）"""
         if self._bases.is_empty():
             return False
         if self.outs >= 2:
@@ -223,13 +223,13 @@ class GameState:
         return True
 
     def can_squeeze(self):
-        """スクイズが可能かどうかを判定"""
+        """スクイズが可能かどうかを判定（三塁走者あり かつ 2アウト未満）"""
         if self.outs >= 2:
             return False
         return bool(self._bases[2])
 
     def can_steal(self) -> bool:
-        """盗塁が可能かどうかを判定"""
+        """盗塁（またはダブルスチール）の可能性があるか判定"""
         first_runner = self._bases[0]
         second_runner = self._bases[1]
         third_runner = self._bases[2]
@@ -243,7 +243,7 @@ class GameState:
         return False
 
     def record_play(self, result, message):
-        """記録されたプレー結果を保存し、連番を更新する"""
+        """プレー結果を記録し連番カウンタを進める"""
 
         result_key = str(result) if result is not None else None
         message_text = str(message) if message is not None else ""
@@ -255,14 +255,14 @@ class GameState:
         }
 
     def execute_bunt(self, batter, pitcher):
-        """バントを実行し、結果を返す"""
+        """バント処理を実行し結果メッセージを返す"""
         from baseball_sim.gameplay.utils import BuntProcessor
 
         bunt_processor = BuntProcessor(self)
         return bunt_processor.execute(batter, pitcher)
 
     def execute_squeeze(self, batter, pitcher):
-        """スクイズプレーを実行し、結果を返す"""
+        """スクイズ処理を実行し結果メッセージを返す"""
         from baseball_sim.gameplay.utils import SqueezeProcessor
 
         squeeze_processor = SqueezeProcessor(self)
@@ -289,9 +289,9 @@ class GameState:
             stats[steals_key] = stats.get(steals_key, 0) + 1
 
     def execute_steal(self):
-        """盗塁処理を実行し、結果を返す"""
+        """盗塁処理を実行し結果ペイロードを返す"""
         if not self.can_steal():
-            message = "盗塁はできません（進める塁が空いていません）。"
+            message = "Steal not allowed (no open base to advance)."
             self.record_play(GameResults.STEAL_NOT_ALLOWED, message)
             return {
                 "success": False,
@@ -338,8 +338,7 @@ class GameState:
                     out_runner = second_runner
                     safe_runner = first_runner
                     message = (
-                        f"ダブルスチール失敗。{out_runner.name}が三塁でアウト、"
-                        f"{safe_runner.name}は二塁を奪取。"
+                        f"ダブルスチール失敗。{out_runner.name}が三塁でアウト、{safe_runner.name}は二塁を奪取。"
                     )
                 elif not first_success and second_success:
                     # 一塁走者がアウト、二塁走者は三塁へ
@@ -349,8 +348,7 @@ class GameState:
                     out_runner = first_runner
                     safe_runner = second_runner
                     message = (
-                        f"ダブルスチール失敗。{out_runner.name}が二塁でアウト、"
-                        f"{safe_runner.name}は三塁へ進塁。"
+                        f"ダブルスチール失敗。{out_runner.name}が二塁でアウト、{safe_runner.name}は三塁へ進塁。"
                     )
                 else:
                     # 両者失敗だが仕様上アウトは1人のみ
@@ -360,16 +358,14 @@ class GameState:
                         self._bases[1] = second_runner
                         self._bases[2] = None
                         message = (
-                            f"ダブルスチール失敗。{first_runner.name}が二塁でアウト、"
-                            f"{second_runner.name}は二塁に戻った。"
+                            f"ダブルスチール失敗。{first_runner.name}が二塁でアウト、{second_runner.name}は二塁に戻った。"
                         )
                     else:
                         self._bases[0] = first_runner
                         self._bases[1] = None
                         self._bases[2] = None
                         message = (
-                            f"ダブルスチール失敗。{second_runner.name}が三塁でアウト、"
-                            f"{first_runner.name}は一塁に戻った。"
+                            f"ダブルスチール失敗。{second_runner.name}が三塁でアウト、{first_runner.name}は一塁に戻った。"
                         )
                 self.add_out(advance_lineup=False)
         elif second_runner and not third_runner:

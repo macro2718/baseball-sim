@@ -3472,7 +3472,7 @@ function renderLobby(teamLibraryState) {
   const fallbackHome = optionList.length > 0 ? optionList[0].value : '';
   if (homeSelect) {
     populateSelect(homeSelect, optionList, {
-      placeholder: 'チームを選択',
+      placeholder: 'チームを選択する',
       selected: selection.home,
       fallback: fallbackHome,
     });
@@ -3484,7 +3484,7 @@ function renderLobby(teamLibraryState) {
 
   if (awaySelect) {
     populateSelect(awaySelect, optionList, {
-      placeholder: 'チームを選択',
+      placeholder: 'チームを選択する',
       selected: selection.away,
       fallback: optionList.length > 1 ? optionList[1].value : fallbackHome,
     });
@@ -3646,7 +3646,7 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
 
   if (simulationSetupAway) {
     populateSelect(simulationSetupAway, options, {
-      placeholder: 'チームを選択',
+      placeholder: 'チームを選択する',
       selected: selection.away,
       fallback: fallbackAway,
     });
@@ -3658,7 +3658,7 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
 
   if (simulationSetupHome) {
     populateSelect(simulationSetupHome, options, {
-      placeholder: 'チームを選択',
+      placeholder: 'チームを選択する',
       selected: selection.home,
       fallback: fallbackHome,
     });

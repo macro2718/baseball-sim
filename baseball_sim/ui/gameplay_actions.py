@@ -22,6 +22,45 @@ from .exceptions import GameSessionError
 from .formatting import half_inning_banner
 
 
+def _standardize_player_event(player_name: str, raw: str, emoji: str = "") -> str:
+    """Return a standardized player event message.
+
+    Format: optional_emoji + space (if emoji) + "<Name>: <Result>".
+
+    If the raw message already begins with the player's name followed by a
+    colon, it is returned (with emoji applied if provided). Otherwise we try
+    to strip any leading player name phrases like "Name hits a DOUBLE!" and
+    convert to "Name: hits a DOUBLE!".
+    """
+    raw = raw.strip()
+    # If already "Name:" style
+    if raw.lower().startswith(player_name.lower() + ":"):
+        base = raw
+    else:
+        # Remove duplicated player name at start if followed by a verb or
+        # possessive pattern. Examples we normalize:
+        #   "Name hits a HOME RUN!" -> "Name: hits a HOME RUN!"
+        #   "Name gets a hit!" -> "Name: gets a hit!"
+        #   "Name's bunt attempt fails" -> "Name: bunt attempt fails"
+        lowered = raw.lower()
+        pname_lower = player_name.lower()
+        base = raw
+        if lowered.startswith(pname_lower + " "):
+            # Split once after player name
+            remainder = raw[len(player_name):].lstrip()
+            base = f"{player_name}: {remainder[0].lower() + remainder[1:] if remainder else ''}"
+        elif lowered.startswith(pname_lower + "'s "):
+            remainder = raw[len(player_name) + 2 :].lstrip()  # skip "'s"
+            base = f"{player_name}: {remainder}"
+        else:
+            # Fallback ensure player name prefix
+            base = f"{player_name}: {raw}"
+
+    if emoji:
+        return f"{emoji} {base}"
+    return base
+
+
 class GameplayActionsMixin:
     """Encapsulate the command handlers used by the browser UI."""
 
@@ -133,10 +172,12 @@ class GameplayActionsMixin:
 
         if "Cannot bunt" not in result_message and "バントはできません" not in result_message:
             self._log.append(result_message, variant="success")
-            self._notifications.publish("success", f"🏃 {batter.name} executes a bunt!")
+            notif = _standardize_player_event(batter.name, "bunt successful", "🏃")
+            self._notifications.publish("success", notif)
         else:
             self._log.append(result_message, variant="warning")
-            self._notifications.publish("warning", f"❌ {batter.name}'s bunt attempt fails")
+            notif = _standardize_player_event(batter.name, "bunt attempt fails", "❌")
+            self._notifications.publish("warning", notif)
 
         pitcher.decrease_stamina()
         self.game_state.batting_team.next_batter()
@@ -203,12 +244,14 @@ class GameplayActionsMixin:
 
         if "successful" in result_message:
             self._log.append(result_message, variant="success")
-            self._notifications.publish(
-                "success", f"🎯 {batter.name} lays down a perfect squeeze!"
+            notif = _standardize_player_event(
+                batter.name, "perfect squeeze!", "🎯"
             )
+            self._notifications.publish("success", notif)
         else:
             self._log.append(result_message, variant="warning")
-            self._notifications.publish("warning", f"❌ {batter.name}'s squeeze attempt fails")
+            notif = _standardize_player_event(batter.name, "squeeze attempt fails", "❌")
+            self._notifications.publish("warning", notif)
 
         pitcher.decrease_stamina()
         self.game_state.batting_team.next_batter()
@@ -565,7 +608,20 @@ class GameplayActionsMixin:
                 outcome_label = describe_steal_outcome(result_info)
                 self._log.append(f"{outcome_label}: {message}", variant=variant)
                 notification_type = "success" if success else "danger"
-                self._notifications.publish(notification_type, message)
+                # For single-runner messages like "<Name>が二塁への盗塁に成功！" we try to extract name
+                publish_message = message
+                try:
+                    # Simple heuristic: split at first Japanese "が" or space
+                    if "が" in message:
+                        name_part, rest = message.split("が", 1)
+                        candidate_name = name_part.strip().rstrip("は")
+                        if 1 <= len(candidate_name) <= 20 and rest:
+                            publish_message = _standardize_player_event(
+                                candidate_name, rest.strip(), "🏃" if success else "❌"
+                            )
+                except Exception:
+                    pass
+                self._notifications.publish(notification_type, publish_message)
 
                 inning_changed = (
                     prev_inning != self.game_state.inning
@@ -619,21 +675,28 @@ class GameplayActionsMixin:
     # ------------------------------------------------------------------
     def _publish_positive_result(self, result: str, batter) -> None:
         if result == GameResults.HOME_RUN:
-            self._notifications.publish("success", f"🚀 {batter.name} hits a HOME RUN!")
+            msg = _standardize_player_event(batter.name, "hits a HOME RUN!", "🚀")
+            self._notifications.publish("success", msg)
         elif result == GameResults.TRIPLE:
-            self._notifications.publish("success", f"⚡ {batter.name} hits a TRIPLE!")
+            msg = _standardize_player_event(batter.name, "hits a TRIPLE!", "⚡")
+            self._notifications.publish("success", msg)
         elif result == GameResults.DOUBLE:
-            self._notifications.publish("success", f"💨 {batter.name} hits a DOUBLE!")
+            msg = _standardize_player_event(batter.name, "hits a DOUBLE!", "💨")
+            self._notifications.publish("success", msg)
         elif result == GameResults.SINGLE:
-            self._notifications.publish("success", f"✅ {batter.name} gets a hit!")
+            msg = _standardize_player_event(batter.name, "gets a hit!", "✅")
+            self._notifications.publish("success", msg)
         elif result == GameResults.WALK:
-            self._notifications.publish("info", f"🚶 {batter.name} draws a walk")
+            msg = _standardize_player_event(batter.name, "draws a walk", "🚶")
+            self._notifications.publish("info", msg)
 
     def _publish_negative_result(self, result: str, batter) -> None:
         if result == GameResults.STRIKEOUT:
-            self._notifications.publish("warning", f"⚾ {batter.name} strikes out")
+            msg = _standardize_player_event(batter.name, "strikes out", "⚾")
+            self._notifications.publish("warning", msg)
         else:
-            self._notifications.publish("info", f"{batter.name}: {result}")
+            msg = _standardize_player_event(batter.name, result)
+            self._notifications.publish("info", msg)
 
     def _cpu_prepare_offense_strategy(self, offense_key: str) -> None:
         if getattr(self, "_control_mode", "manual") != "cpu":

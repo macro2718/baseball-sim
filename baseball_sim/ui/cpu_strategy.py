@@ -112,12 +112,12 @@ def plan_pitcher_change(game_state, cpu_team, substitution_manager) -> Optional[
 
     reason_bits = []
     if fatigue:
-        reason_bits.append("スタミナ低下")
+        reason_bits.append("fatigue")
     if late_inning_pressure:
-        reason_bits.append("終盤の接戦")
-    if long_inning_flag and "終盤の接戦" not in reason_bits:
-        reason_bits.append("イニング終盤")
-    reason = " / ".join(reason_bits) if reason_bits else "状況判断"
+        reason_bits.append("late close game")
+    if long_inning_flag and "late close game" not in reason_bits:
+        reason_bits.append("end of inning pressure")
+    reason = " / ".join(reason_bits) if reason_bits else "situational judgment"
 
     return PitcherChangePlan(
         pitcher_index=replacement_index,
@@ -287,7 +287,7 @@ def describe_steal_outcome(result_info: dict) -> str:
     result_key = result_info.get("result")
     message = str(result_info.get("message", ""))
     if result_key == GameResults.STOLEN_BASE:
-        if "ダブルスチール" in message:
+        if "ダブルスチール" in message or "Double steal" in message:
             return "ダブルスチール成功"
         return "盗塁成功"
     if result_key == GameResults.CAUGHT_STEALING:

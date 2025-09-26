@@ -3307,6 +3307,8 @@ export function initEventListeners(actions) {
         if (value === 'cpu' && setup.userTeam !== 'home' && setup.userTeam !== 'away') {
           setup.userTeam = 'home';
         }
+        // Reset team selects to placeholder when switching modes (CPU ↔ 全操作)
+        stateCache.resetTeamSelect = true;
         refreshView();
       });
     });
