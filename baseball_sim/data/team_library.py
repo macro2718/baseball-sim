@@ -320,11 +320,35 @@ class TeamLibrary:
             raise TeamLibraryError("ベンチリストは配列で指定してください。")
         bench = [str(name).strip() for name in bench_raw if str(name).strip()]
 
+        rotation: List[str] = []
+        rotation_raw = raw.get("rotation")
+        if isinstance(rotation_raw, list):
+            seen_rotation: set[str] = set()
+            for entry in rotation_raw:
+                if isinstance(entry, dict):
+                    name_value = entry.get("name")
+                else:
+                    name_value = entry
+                name = str(name_value or "").strip()
+                if not name:
+                    continue
+                if name not in pitchers:
+                    raise TeamLibraryError(
+                        f"ローテーション投手 '{name}' が投手リストに含まれていません。"
+                    )
+                if name in seen_rotation:
+                    raise TeamLibraryError(
+                        f"ローテーション投手 '{name}' が重複しています。"
+                    )
+                seen_rotation.add(name)
+                rotation.append(name)
+
         payload = dict(raw)
         payload["name"] = name
         payload["lineup"] = lineup
         payload["pitchers"] = pitchers
         payload["bench"] = bench
+        payload["rotation"] = rotation
         return payload
 
 

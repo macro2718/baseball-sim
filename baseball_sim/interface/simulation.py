@@ -8,10 +8,20 @@ from baseball_sim.gameplay.statistics import StatsCalculator
 setup_project_environment()
 
 
-def get_pitcher_rotation(pitchers):
-    """登録順に先発投手のローテーションリストを作成する"""
+def get_pitcher_rotation(pitchers, preferred_rotation=None):
+    """登録順または指定順で先発投手のローテーションリストを作成する"""
     if not pitchers:
         return []
+
+    if preferred_rotation:
+        rotation_list = []
+        seen = set()
+        for pitcher in preferred_rotation:
+            if pitcher and pitcher in pitchers and id(pitcher) not in seen:
+                rotation_list.append(pitcher)
+                seen.add(id(pitcher))
+        if rotation_list:
+            return rotation_list
 
     starters = [
         pitcher
@@ -94,8 +104,12 @@ def simulate_games(
     home_pitcher_pool = list(home_team.pitchers)
     away_pitcher_pool = list(away_team.pitchers)
 
-    home_rotation = get_pitcher_rotation(home_pitcher_pool)
-    away_rotation = get_pitcher_rotation(away_pitcher_pool)
+    home_rotation = get_pitcher_rotation(
+        home_pitcher_pool, getattr(home_team, "pitcher_rotation", None)
+    )
+    away_rotation = get_pitcher_rotation(
+        away_pitcher_pool, getattr(away_team, "pitcher_rotation", None)
+    )
 
     home_rotation_index = 0
     away_rotation_index = 0
@@ -174,6 +188,15 @@ def reset_team_and_players(
         home_team.pitchers = list(home_pitcher_pool)
     if away_pitcher_pool is not None:
         away_team.pitchers = list(away_pitcher_pool)
+
+    if hasattr(home_team, "pitcher_rotation"):
+        home_team.pitcher_rotation = [
+            pitcher for pitcher in home_team.pitcher_rotation if pitcher in home_team.pitchers
+        ]
+    if hasattr(away_team, "pitcher_rotation"):
+        away_team.pitcher_rotation = [
+            pitcher for pitcher in away_team.pitcher_rotation if pitcher in away_team.pitchers
+        ]
 
     # 各チームの投手のスタミナをリセット
     for pitcher in home_team.pitchers:
