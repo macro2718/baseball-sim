@@ -3457,24 +3457,7 @@ function renderLobby(teamLibraryState) {
     elements.controlTeamField.setAttribute('aria-hidden', hidden ? 'true' : 'false');
   }
 
-  if (elements.controlTeamSelect) {
-    const select = elements.controlTeamSelect;
-    const teamLookup = new Map(teams.map((team) => [team.id, team]));
-    const awayTeam = teamLookup.get(selection.away);
-    const homeTeam = teamLookup.get(selection.home);
-    const homeOption = select.querySelector('option[value="home"]');
-    const awayOption = select.querySelector('option[value="away"]');
-
-    if (homeOption) {
-      homeOption.textContent = homeTeam?.name ? `ホーム (${homeTeam.name})` : 'ホーム';
-    }
-    if (awayOption) {
-      awayOption.textContent = awayTeam?.name ? `アウェイ (${awayTeam.name})` : 'アウェイ';
-    }
-
-    select.value = selectedControlTeam;
-    select.disabled = matchMode !== 'cpu';
-  }
+  // Defer updating control team label until after team selects are populated
   const homeSelect = elements.lobbyHomeSelect;
   const awaySelect = elements.lobbyAwaySelect;
   const optionList = teams.map((team) => ({
@@ -3509,6 +3492,29 @@ function renderLobby(teamLibraryState) {
   // Clear the one-shot reset flag after applying
   if (stateCache.resetTeamSelect === true) {
     stateCache.resetTeamSelect = false;
+  }
+
+  // Now update the control team select labels.
+  // Show team names only when both home/away are explicitly chosen in the UI.
+  if (elements.controlTeamSelect) {
+    const select = elements.controlTeamSelect;
+    const teamLookup = new Map(teams.map((team) => [team.id, team]));
+    const awayTeam = teamLookup.get(selection.away);
+    const homeTeam = teamLookup.get(selection.home);
+    const homeOption = select.querySelector('option[value="home"]');
+    const awayOption = select.querySelector('option[value="away"]');
+
+    const bothChosen = Boolean(homeSelect?.value && awaySelect?.value);
+
+    if (homeOption) {
+      homeOption.textContent = bothChosen && homeTeam?.name ? `ホーム (${homeTeam.name})` : 'ホーム';
+    }
+    if (awayOption) {
+      awayOption.textContent = bothChosen && awayTeam?.name ? `アウェイ (${awayTeam.name})` : 'アウェイ';
+    }
+
+    select.value = selectedControlTeam;
+    select.disabled = matchMode !== 'cpu';
   }
 
   if (elements.lobbyHint) {
