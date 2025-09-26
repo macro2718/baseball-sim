@@ -26,6 +26,7 @@ requirements.txt は最小構成（Flask のみ）です。予測モデルや学
   - macOS/Linux: `export FLASK_APP=baseball_sim.ui.app:app && flask run`
   - Windows(PowerShell): `$Env:FLASK_APP='baseball_sim.ui.app:app'; flask run`
 - デフォルト: http://127.0.0.1:5000/
+- `.venv/bin/python -m flask --app baseball_sim.ui.app run`
 
 ## 設定
 - 設定ファイル: `baseball_sim/config/config.json`
