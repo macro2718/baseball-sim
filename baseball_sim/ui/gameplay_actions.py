@@ -12,11 +12,13 @@ from .cpu_strategy import (
     CPUPlayType,
     PitcherChangePlan,
     PinchRunPlan,
+    PinchHitPlan,
     describe_steal_outcome,
     DefensiveSubstitutionPlan,
     plan_pinch_run,
     plan_pitcher_change,
     plan_defensive_substitutions,
+    plan_pinch_hit,
     select_offense_play,
 )
 
@@ -509,6 +511,39 @@ class GameplayActionsMixin:
 
         offense_key = "home" if self.game_state.batting_team is self.home_team else "away"
         self._cpu_prepare_offense_strategy(offense_key)
+
+        # ---- CPU Pinch Hit Planning (before offense decision) ----
+        batting_team = self.game_state.batting_team
+        if batting_team is not None:
+            try:
+                ph_sub_manager = SubstitutionManager(batting_team)
+                ph_plan = plan_pinch_hit(self.game_state, batting_team, ph_sub_manager)
+            except Exception:
+                ph_plan = None
+            if ph_plan:
+                bench_list = ph_sub_manager.get_available_bench_players()
+                if 0 <= ph_plan.bench_index < len(bench_list):
+                    success, msg = ph_sub_manager.execute_pinch_hit(ph_plan.bench_index, ph_plan.lineup_index)
+                    if success:
+                        self._log.append(
+                            f"🤖 代打采配: {ph_plan.reason}。{ph_plan.incoming_name}が{ph_plan.outgoing_name}に代わり打席に入ります。{msg}",
+                            variant="highlight",
+                        )
+                        self._notifications.publish(
+                            "info",
+                            f"🤖 CPU代打: {ph_plan.outgoing_name}→{ph_plan.incoming_name}",
+                        )
+                        if hasattr(self, "_overlays"):
+                            try:
+                                self._overlays.publish(
+                                    "pinch_hit",
+                                    f"{ph_plan.incoming_name} pinch hits for {ph_plan.outgoing_name}",
+                                )
+                            except Exception:
+                                pass
+                    else:
+                        self._log.append(f"🤖 代打失敗: {msg}", variant="warning")
+
         decision = self._cpu_select_offense_decision(offense_key)
 
         batting_team = self.game_state.batting_team

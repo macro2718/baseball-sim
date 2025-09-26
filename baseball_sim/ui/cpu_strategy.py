@@ -75,6 +75,25 @@ class DefensiveSubstitutionPlan:
     bench_player: object
 
 
+@dataclass(frozen=True)
+class PinchHitPlan:
+    """Describe a CPU pinch-hit request.
+
+    Attributes:
+        lineup_index: 現在代打を出したい打者のラインナップインデックス
+        bench_index: 採用するベンチ選手インデックス
+        outgoing_name: 交代理由で表示する元打者名
+        incoming_name: 代打選手名
+        reason: 選定理由 (BB%-K%優位 / 終盤ビハインド 等)
+    """
+
+    lineup_index: int
+    bench_index: int
+    outgoing_name: str
+    incoming_name: str
+    reason: str
+
+
 # -----------------------
 # Defensive substitution planning
 # -----------------------
@@ -84,6 +103,13 @@ DEF_SUB_MIN_INNING = 7  # 終盤定義（守備固め発動条件）
 DEF_SUB_LEAD_MAX = 2  # 僅差リードの最大点差
 DEF_SUB_FIELDING_THRESHOLD = 80  # この値未満なら守備固め検討
 DEF_SUB_BENCH_MIN_FIELDING = 100  # ベンチ投入の最低守備力
+
+# -----------------------
+# Pinch hit planning constants
+# -----------------------
+PH_MIN_INNING = 7  # 終盤定義
+PH_SCORE_DIFF_MAX = 3  # 許容点差 |self_score - opp_score| <= 3 (ビハインド/僅差リード)
+PH_RUNNER_OUT_DIFF_MIN = 0  # (走者数 - アウト数) >= 0 で好機とみなす
 
 
 def plan_defensive_substitutions(game_state, cpu_team, substitution_manager) -> Sequence[DefensiveSubstitutionPlan]:
@@ -464,6 +490,119 @@ def plan_pinch_run(game_state, cpu_team, substitution_manager) -> Optional[Pinch
         reason=reason,
         outgoing_name=getattr(target_runner, "name", "runner"),
         incoming_name=getattr(bench_player, "name", "pinch runner"),
+    )
+
+
+def plan_pinch_hit(game_state, offense_team, substitution_manager) -> Optional[PinchHitPlan]:
+    """Return a pinch-hit plan according to specified strategic rules.
+
+    要件:
+      - (self_score - opp_score) が一定値以下 (ビハインド or 僅差リード) かつ 終盤 (PH_MIN_INNING 以降)
+      - ランナー数 - アウト数 >= PH_RUNNER_OUT_DIFF_MIN
+      - 現打者のポジションを守れるベンチ選手が少なくとも1人存在
+      - 次守備イニング時に守備固めロジック(plan_defensive_substitutions) が使用する可能性のあるベンチ選手集合 S を除外
+      - 現打者より (BB% - K%) が高い候補のうち S に含まれないもののみ
+      - その中で最も (BB% - K%) が高い選手を選択
+
+    返却: PinchHitPlan or None
+    """
+
+    if not offense_team or not substitution_manager:
+        return None
+
+    inning = getattr(game_state, "inning", 1)
+    if inning < PH_MIN_INNING:
+        return None
+
+    # スコア差 (打撃側視点 margin >0 = リード, <0 = ビハインド)
+    margin = _score_margin_for_offense(game_state, offense_team)
+    if abs(margin) > PH_SCORE_DIFF_MAX:
+        return None
+
+    outs = getattr(game_state, "outs", 0)
+    bases = list(getattr(game_state, "bases", []))
+    runners = sum(1 for r in bases[:3] if r is not None)
+    if (runners - outs) < PH_RUNNER_OUT_DIFF_MIN:
+        return None
+
+    lineup = getattr(offense_team, "lineup", [])
+    if not lineup:
+        return None
+    try:
+        current_batter = offense_team.current_batter  # property
+        lineup_index = offense_team.current_batter_index
+    except Exception:
+        return None
+
+    batter_pos = getattr(current_batter, "current_position", None)
+    if not batter_pos:
+        return None
+
+    bench_players = substitution_manager.get_available_bench_players()
+    if not bench_players:
+        return None
+
+    # 守備固め / 適性修正で使われ得るベンチ集合 S を推定
+    # 現在は守備側チーム=offense_teamとは限らないが「次の守備イニングで自軍守備に入る」と仮定し同チームで呼ぶ
+    # game_state から守備チームを切替えつつ simulate はせず現状の守備配置を使用
+    try:
+        defensive_plans = plan_defensive_substitutions(game_state, offense_team, substitution_manager)
+    except Exception:
+        defensive_plans = []
+    S = {p.bench_player for p in defensive_plans if getattr(p, "bench_player", None) is not None}
+
+    # 現打者のポジションを守れるベンチ選手リスト
+    eligible_same_position = [bp for bp in bench_players if getattr(bp, "can_play_position", lambda _x: False)(batter_pos)]
+    if not eligible_same_position:
+        # 守れる選手がいない → 代打不可
+        return None
+
+    # その守れる選手が全員 S に含まれるなら守備維持不能の恐れ → 代打しない
+    if all(bp in S for bp in eligible_same_position):
+        return None
+
+    def bb_k_value(player) -> float:
+        bb_pct = float(getattr(player, "bb_pct", 0.0) or 0.0)
+        k_pct = float(getattr(player, "k_pct", 0.0) or 0.0)
+        return bb_pct - k_pct
+
+    current_value = bb_k_value(current_batter)
+
+    candidates = []  # (value, bench_index, player)
+    for bench_index, bp in enumerate(bench_players):
+        if bp in S:
+            continue
+        # バッターのポジション守備可能性: 代打後そのまま守備に入れるか (DH の場合は不要)
+        if batter_pos != Positions.DESIGNATED_HITTER and not getattr(bp, "can_play_position", lambda _x: False)(batter_pos):
+            continue
+        value = bb_k_value(bp)
+        if value > current_value:  # strictly better
+            candidates.append((value, bench_index, bp))
+
+    if not candidates:
+        return None
+
+    # 最高値選択 (value 降順, 名前順安定化)
+    candidates.sort(key=lambda x: (-x[0], getattr(x[2], "name", "")))
+    best_value, bench_index, best_player = candidates[0]
+
+    reason_parts = []
+    diff = best_value - current_value
+    if margin < 0:
+        reason_parts.append("ビハインド終盤で出塁率向上")
+    elif margin <= 1:
+        reason_parts.append("僅差終盤で追加点狙い")
+    reason_parts.append(f"BB%-K% 改善 +{diff:.1f} (現{current_value:.1f}->代{best_value:.1f})")
+    if best_player in S:
+        reason_parts.append("(守備固め候補)※除外済み")  # 実際には除外されているので通常入らない
+    reason = ", ".join(reason_parts)
+
+    return PinchHitPlan(
+        lineup_index=lineup_index,
+        bench_index=bench_index,
+        outgoing_name=getattr(current_batter, "name", "batter"),
+        incoming_name=getattr(best_player, "name", "pinch hitter"),
+        reason=reason,
     )
 
 
