@@ -44,6 +44,7 @@ import {
 import { setStatusMessage } from './status.js';
 import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
 import { updateFieldResultDisplay, resetFieldResultDisplay } from './fieldResultDisplay.js';
+import { hideOffenseMenu, hideDefenseMenu } from './menus.js';
 
 function setInsightsVisibility(visible) {
   const { insightGrid } = elements;
@@ -81,6 +82,66 @@ function hasAbilityData(team) {
   const battingCount = Array.isArray(batting) ? batting.length : 0;
   const pitchingCount = Array.isArray(pitching) ? pitching.length : 0;
   return battingCount > 0 || pitchingCount > 0;
+}
+
+const CONTROL_TEAM_KEYS = new Set(['home', 'away']);
+
+function normalizeTeamKey(value) {
+  if (!value) return null;
+  const key = String(value).toLowerCase();
+  return CONTROL_TEAM_KEYS.has(key) ? key : null;
+}
+
+function createDefaultControlState() {
+  return {
+    mode: 'manual',
+    userTeam: null,
+    cpuTeam: null,
+    userTeamName: null,
+    cpuTeamName: null,
+    userIsOffense: true,
+    userIsDefense: true,
+    offenseAllowed: true,
+    defenseAllowed: true,
+    progressAvailable: false,
+    instruction: '',
+  };
+}
+
+function normalizeControlState(rawControl) {
+  const control = createDefaultControlState();
+  if (!rawControl || typeof rawControl !== 'object') {
+    return control;
+  }
+
+  const mode = rawControl.mode === 'cpu' ? 'cpu' : 'manual';
+  control.mode = mode;
+
+  const userTeamKey = normalizeTeamKey(rawControl.user_team ?? rawControl.userTeam);
+  const cpuTeamKey = normalizeTeamKey(rawControl.cpu_team ?? rawControl.cpuTeam);
+
+  control.userTeam = mode === 'cpu' ? userTeamKey : null;
+  control.cpuTeam = mode === 'cpu' ? cpuTeamKey : null;
+
+  const userName = rawControl.user_team_name ?? rawControl.userTeamName;
+  const cpuName = rawControl.cpu_team_name ?? rawControl.cpuTeamName;
+
+  control.userTeamName = typeof userName === 'string' && userName.trim() ? userName.trim() : null;
+  control.cpuTeamName = typeof cpuName === 'string' && cpuName.trim() ? cpuName.trim() : null;
+
+  if (mode === 'cpu') {
+    control.userIsOffense = Boolean(rawControl.user_is_offense ?? rawControl.userIsOffense ?? false);
+    control.userIsDefense = Boolean(rawControl.user_is_defense ?? rawControl.userIsDefense ?? false);
+    control.offenseAllowed = Boolean(rawControl.offense_allowed ?? rawControl.offenseAllowed ?? false);
+    control.defenseAllowed = Boolean(rawControl.defense_allowed ?? rawControl.defenseAllowed ?? false);
+    control.progressAvailable = Boolean(
+      rawControl.progress_available ?? rawControl.progressAvailable ?? false,
+    );
+    const instruction = rawControl.instruction ?? rawControl.control_instruction;
+    control.instruction = typeof instruction === 'string' ? instruction.trim() : '';
+  }
+
+  return control;
 }
 
 const ABILITY_METRIC_CONFIG = {
@@ -2375,6 +2436,12 @@ function updateStrategyControls(gameState, teams) {
 
   const isActive = Boolean(gameState.active);
   const isGameOver = Boolean(gameState.game_over);
+  const controlState = stateCache.gameControl || createDefaultControlState();
+  const isCpuMode = controlState.mode === 'cpu';
+  const offenseControlsAllowed = !isCpuMode || Boolean(controlState.offenseAllowed);
+  const defenseControlsAllowed = !isCpuMode || Boolean(controlState.defenseAllowed);
+  const offenseControlsEnabled = isActive && !isGameOver && offenseControlsAllowed;
+  const defenseControlsEnabled = isActive && !isGameOver && defenseControlsAllowed;
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const offenseLineup = offenseTeam?.lineup || [];
@@ -2455,16 +2522,26 @@ function updateStrategyControls(gameState, teams) {
     updateCurrentBatterCard(pinchCurrentCard, currentBatter);
   }
 
-  const canPinch = isActive && !isGameOver && Boolean(currentBatter) && offenseBench.length > 0;
+  const canPinch =
+    offenseControlsEnabled && Boolean(currentBatter) && offenseBench.length > 0;
   const canPinchRun =
-    isActive && !isGameOver && offenseBench.length > 0 && availableBaseOptions.length > 0;
+    offenseControlsEnabled && offenseBench.length > 0 && availableBaseOptions.length > 0;
+
+  if (!offenseControlsAllowed) {
+    hideOffenseMenu();
+  }
 
   if (pinchPlayer) {
-    const benchPlaceholder = !currentBatter
-      ? '現在の打者が見つかりません'
-      : offenseBench.length
-      ? 'カードまたはリストから選択'
-      : '選択可能な選手がいません';
+    let benchPlaceholder;
+    if (!offenseControlsEnabled) {
+      benchPlaceholder = 'CPUが攻撃中のため操作できません。';
+    } else if (!currentBatter) {
+      benchPlaceholder = '現在の打者が見つかりません';
+    } else if (offenseBench.length) {
+      benchPlaceholder = 'カードまたはリストから選択';
+    } else {
+      benchPlaceholder = '選択可能な選手がいません';
+    }
 
     populateSelectSimple(
       pinchPlayer,
@@ -2492,9 +2569,14 @@ function updateStrategyControls(gameState, teams) {
   }
 
   if (pinchRunBase) {
-    const basePlaceholder = !availableBaseOptions.length
-      ? '走者がいないため選択できません'
-      : 'カードまたはリストから選択';
+    let basePlaceholder;
+    if (!offenseControlsEnabled) {
+      basePlaceholder = 'CPUが攻撃中のため操作できません。';
+    } else if (!availableBaseOptions.length) {
+      basePlaceholder = '走者がいないため選択できません';
+    } else {
+      basePlaceholder = 'カードまたはリストから選択';
+    }
 
     populateSelectSimple(
       pinchRunBase,
@@ -2514,11 +2596,16 @@ function updateStrategyControls(gameState, teams) {
   }
 
   if (pinchRunPlayer) {
-    const benchPlaceholder = !availableBaseOptions.length
-      ? '走者がいないため選択できません'
-      : offenseBench.length
-      ? 'カードまたはリストから選択'
-      : '代走に使える選手がいません';
+    let benchPlaceholder;
+    if (!offenseControlsEnabled) {
+      benchPlaceholder = 'CPUが攻撃中のため操作できません。';
+    } else if (!availableBaseOptions.length) {
+      benchPlaceholder = '走者がいないため選択できません';
+    } else if (offenseBench.length) {
+      benchPlaceholder = 'カードまたはリストから選択';
+    } else {
+      benchPlaceholder = '代走に使える選手がいません';
+    }
 
     populateSelectSimple(
       pinchRunPlayer,
@@ -2555,6 +2642,8 @@ function updateStrategyControls(gameState, teams) {
       pinchHelperMessage = '現在の打者が確定するまで代打は選択できません。';
     } else if (!offenseBench.length) {
       pinchHelperMessage = '代打に使える選手がいません。';
+    } else if (!offenseControlsEnabled) {
+      pinchHelperMessage = 'CPUが攻撃中のため代打は行えません。';
     }
 
     updatePinchOptionGrid(pinchOptionGrid, offenseBench, pinchPlayer, pinchSelectHelper, pinchHelperMessage);
@@ -2570,6 +2659,8 @@ function updateStrategyControls(gameState, teams) {
       pinchRunHelperMessage = '走者がいないため代走を送れません。';
     } else if (!offenseBench.length) {
       pinchRunHelperMessage = '代走に使える選手がいません。';
+    } else if (!offenseControlsEnabled) {
+      pinchRunHelperMessage = 'CPUが攻撃中のため代走は行えません。';
     }
 
     updatePinchOptionGrid(
@@ -2580,7 +2671,9 @@ function updateStrategyControls(gameState, teams) {
       pinchRunHelperMessage,
       {
         emptyMessage: '代走に使える選手がいません。',
-        disabledMessage: '現在は代走を選択できません。',
+        disabledMessage: offenseControlsEnabled
+          ? '現在は代走を選択できません。'
+          : 'CPUが攻撃中のため代走は選択できません。',
       },
     );
   }
@@ -2593,6 +2686,8 @@ function updateStrategyControls(gameState, teams) {
       baseHelperMessage = '試合終了のため代走は行えません。';
     } else if (!availableBaseOptions.length) {
       baseHelperMessage = '走者がいないため代走を送れません。';
+    } else if (!offenseControlsEnabled) {
+      baseHelperMessage = 'CPUが攻撃中のため代走は指定できません。';
     }
 
     updatePinchRunBaseGrid(
@@ -2601,7 +2696,9 @@ function updateStrategyControls(gameState, teams) {
       pinchRunBase,
       pinchRunBaseHelper,
       baseHelperMessage,
-      '現在は代走を選択できません。',
+      offenseControlsEnabled
+        ? '現在は代走を選択できません。'
+        : 'CPUが攻撃中のため代走は指定できません。',
       pinchRunCurrentCard,
     );
   } else if (pinchRunCurrentCard) {
@@ -2609,8 +2706,9 @@ function updateStrategyControls(gameState, teams) {
   }
 
   if (openOffenseButton) {
-    openOffenseButton.disabled = !isActive || isGameOver;
-    openOffenseButton.textContent = isGameOver ? 'Game Over' : '攻撃戦略';
+    openOffenseButton.disabled = !offenseControlsEnabled;
+    const offenseLabel = !isGameOver && !offenseControlsAllowed ? '攻撃戦略 (CPU)' : '攻撃戦略';
+    openOffenseButton.textContent = isGameOver ? 'Game Over' : offenseLabel;
   }
 
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
@@ -2625,24 +2723,30 @@ function updateStrategyControls(gameState, teams) {
 
   resetDefenseSelectionsIfUnavailable(defenseLineup, defenseBenchPlayers);
 
-  const canDefenseSub =
-    isActive && !isGameOver && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
+  if (!defenseControlsAllowed) {
+    hideDefenseMenu();
+  }
 
-  stateCache.defenseContext.canSub = canDefenseSub && !isGameOver;
+  const canDefenseSub =
+    defenseControlsEnabled && defenseLineup.length > 0 && defenseBenchPlayers.length > 0;
+
+  stateCache.defenseContext.canSub = canDefenseSub;
   renderDefensePanel(defenseTeam, gameState);
   updateDefenseSelectionInfo();
 
   if (openDefenseButton) {
-    openDefenseButton.disabled = !isActive || isGameOver;
-    openDefenseButton.textContent = isGameOver ? 'Game Over' : '守備戦略';
+    openDefenseButton.disabled = !defenseControlsEnabled;
+    const defenseLabel = !isGameOver && !defenseControlsAllowed ? '守備戦略 (CPU)' : '守備戦略';
+    openDefenseButton.textContent = isGameOver ? 'Game Over' : defenseLabel;
   }
-  if (!isActive || isGameOver) {
+  if (!defenseControlsEnabled) {
     updateDefenseBenchAvailability();
     applyDefenseSelectionHighlights();
   }
   if (defenseSubMenuButton) {
-    defenseSubMenuButton.disabled = !canDefenseSub || isGameOver;
-    defenseSubMenuButton.textContent = isGameOver ? 'Game Over' : '守備交代';
+    defenseSubMenuButton.disabled = !canDefenseSub;
+    const defenseSubLabel = !isGameOver && !defenseControlsAllowed ? '守備交代 (CPU)' : '守備交代';
+    defenseSubMenuButton.textContent = isGameOver ? 'Game Over' : defenseSubLabel;
   }
 
   if (pitcherSelect && pitcherButton) {
@@ -2659,10 +2763,10 @@ function updateStrategyControls(gameState, teams) {
       pitcherPlaceholder,
     );
 
-    const canChangePitcher = isActive && !isGameOver && pitcherOptions.length > 0;
-    pitcherButton.disabled = !canChangePitcher || isGameOver;
-    pitcherSelect.disabled = !canChangePitcher || isGameOver;
-    if (!canChangePitcher || isGameOver) {
+    const canChangePitcher = defenseControlsEnabled && pitcherOptions.length > 0;
+    pitcherButton.disabled = !canChangePitcher;
+    pitcherSelect.disabled = !canChangePitcher;
+    if (!canChangePitcher) {
       pitcherSelect.value = '';
     }
 
@@ -2671,7 +2775,7 @@ function updateStrategyControls(gameState, teams) {
     pitcherButton.textContent = isGameOver ? 'Game Over' : '投手交代';
 
     if (pitcherMenuButton) {
-      pitcherMenuButton.disabled = !canChangePitcher || isGameOver;
+      pitcherMenuButton.disabled = !canChangePitcher;
       pitcherMenuButton.textContent = isGameOver ? 'Game Over' : '投手交代';
     }
   } else {
@@ -2699,6 +2803,7 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   updateBatterAlignment(gameState, teams);
   const isActiveGame = Boolean(gameState && gameState.active);
   const showGameView = stateCache.uiView === 'game';
+  const controlInfo = stateCache.gameControl || createDefaultControlState();
   setInsightsVisibility(isActiveGame && showGameView);
 
   if (!isActiveGame) {
@@ -2712,6 +2817,15 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     if (elements.stealButton) {
       elements.stealButton.disabled = true;
       elements.stealButton.textContent = '盗塁';
+    }
+    if (elements.progressButton) {
+      elements.progressButton.classList.add('hidden');
+      elements.progressButton.disabled = true;
+    }
+    elements.swingButton.classList.remove('hidden');
+    elements.buntButton.classList.remove('hidden');
+    if (elements.stealButton) {
+      elements.stealButton.classList.remove('hidden');
     }
     if (elements.batterAlignment) {
       elements.batterAlignment.innerHTML = '';
@@ -2784,6 +2898,10 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
       elements.stealButton.disabled = true;
       elements.stealButton.textContent = 'Game Over';
     }
+    if (elements.progressButton) {
+      elements.progressButton.classList.add('hidden');
+      elements.progressButton.disabled = true;
+    }
     elements.actionWarning.textContent = 'ゲーム終了 - 新しい試合を開始するか、タイトルに戻ってください';
   } else {
     elements.swingButton.disabled = !gameState.actions?.swing;
@@ -2794,7 +2912,28 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
       elements.stealButton.disabled = !gameState.actions?.steal;
       elements.stealButton.textContent = '盗塁';
     }
-    elements.actionWarning.textContent = gameState.action_block_reason || '';
+    const progressAllowed = Boolean(gameState.actions?.progress);
+    if (elements.progressButton) {
+      elements.progressButton.classList.toggle('hidden', !progressAllowed);
+      elements.progressButton.disabled = !progressAllowed;
+    }
+    const hideOffenseActions = progressAllowed && controlInfo.mode === 'cpu';
+    elements.swingButton.classList.toggle('hidden', hideOffenseActions);
+    elements.buntButton.classList.toggle('hidden', hideOffenseActions);
+    if (elements.stealButton) {
+      elements.stealButton.classList.toggle('hidden', hideOffenseActions);
+    }
+    if (!hideOffenseActions && elements.progressButton) {
+      elements.progressButton.classList.add('hidden');
+    }
+    const actionMessages = [];
+    if (gameState.action_block_reason) {
+      actionMessages.push(gameState.action_block_reason);
+    }
+    if (controlInfo.instruction) {
+      actionMessages.push(controlInfo.instruction);
+    }
+    elements.actionWarning.textContent = actionMessages.join(' / ');
   }
 
   const errors = gameState.defensive_errors || [];
@@ -3125,6 +3264,8 @@ export function renderTitle(titleState) {
   const awayMessage = document.querySelector('.team-message[data-team="away"]');
   const homeErrors = document.querySelector('.team-errors[data-team="home"]');
   const awayErrors = document.querySelector('.team-errors[data-team="away"]');
+  const homeControl = elements.teamControlHome;
+  const awayControl = elements.teamControlAway;
 
   if (titleState.home) {
     homeName.textContent = titleState.home.name;
@@ -3156,8 +3297,66 @@ export function renderTitle(titleState) {
   renderTitlePitcher('home', teamsData.home, Boolean(teamsData?.home));
   renderTitlePitcher('away', teamsData.away, Boolean(teamsData?.away));
 
+  if (homeControl) {
+    if (teamsData.home) {
+      const label = teamsData.home.control_label || 'あなた';
+      homeControl.textContent = `操作: ${label}`;
+      homeControl.classList.remove('hidden');
+    } else {
+      homeControl.textContent = '';
+      homeControl.classList.add('hidden');
+    }
+  }
+  if (awayControl) {
+    if (teamsData.away) {
+      const label = teamsData.away.control_label || 'あなた';
+      awayControl.textContent = `操作: ${label}`;
+      awayControl.classList.remove('hidden');
+    } else {
+      awayControl.textContent = '';
+      awayControl.classList.add('hidden');
+    }
+  }
+
   elements.titleHint.textContent = titleState.hint || '';
   elements.startButton.disabled = !titleState.ready;
+
+  if (elements.titleControlHint) {
+    let hintMode = stateCache.gameControl?.mode || 'manual';
+    let hintUserTeam = stateCache.gameControl?.userTeam || null;
+    let hintCpuTeam = stateCache.gameControl?.cpuTeam || null;
+    let hintUserName = stateCache.gameControl?.userTeamName || null;
+    let hintCpuName = stateCache.gameControl?.cpuTeamName || null;
+
+    const upcomingSetup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
+    const gameActive = Boolean(stateCache.data?.game?.active);
+    if (!gameActive && upcomingSetup.mode === 'cpu') {
+      hintMode = 'cpu';
+      hintUserTeam = upcomingSetup.userTeam === 'away' ? 'away' : 'home';
+      hintCpuTeam = hintUserTeam === 'home' ? 'away' : 'home';
+      const teamLookup = new Map(
+        (stateCache.teamLibrary?.teams || []).map((team) => [team.id, team]),
+      );
+      const homeTeam = teamLookup.get(stateCache.teamLibrary?.selection?.home);
+      const awayTeam = teamLookup.get(stateCache.teamLibrary?.selection?.away);
+      hintUserName = hintUserTeam === 'home' ? homeTeam?.name : awayTeam?.name;
+      hintCpuName = hintCpuTeam === 'home' ? homeTeam?.name : awayTeam?.name;
+    }
+
+    if (hintMode === 'cpu') {
+      if (!hintUserTeam) {
+        elements.titleControlHint.textContent = 'CPU対戦: 自操作チームを選択してください。';
+      } else {
+        const userLabel = hintUserName
+          || (hintUserTeam === 'away' ? 'アウェイチーム' : 'ホームチーム');
+        const cpuLabel = hintCpuName
+          || (hintCpuTeam === 'away' ? 'アウェイチーム' : 'ホームチーム');
+        elements.titleControlHint.textContent = `${userLabel} を操作します。${cpuLabel} はCPUが操作します。`;
+      }
+    } else {
+      elements.titleControlHint.textContent = '全操作対戦: 両チームを自分で操作します。';
+    }
+  }
 }
 
 function populateSelect(select, options, { placeholder, selected, fallback }) {
@@ -3197,6 +3396,40 @@ function renderLobby(teamLibraryState) {
   }
   const teams = Array.isArray(teamLibraryState.teams) ? teamLibraryState.teams : [];
   const selection = teamLibraryState.selection || {};
+  const setup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
+  const matchMode = setup.mode === 'cpu' ? 'cpu' : 'manual';
+  const selectedControlTeam = matchMode === 'cpu' && setup.userTeam === 'away' ? 'away' : 'home';
+
+  (elements.matchModeRadios || []).forEach((radio) => {
+    if (!radio) return;
+    const value = radio.value === 'cpu' ? 'cpu' : 'manual';
+    radio.checked = value === matchMode;
+  });
+
+  if (elements.controlTeamField) {
+    const hidden = matchMode !== 'cpu';
+    elements.controlTeamField.classList.toggle('hidden', hidden);
+    elements.controlTeamField.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  }
+
+  if (elements.controlTeamSelect) {
+    const select = elements.controlTeamSelect;
+    const teamLookup = new Map(teams.map((team) => [team.id, team]));
+    const awayTeam = teamLookup.get(selection.away);
+    const homeTeam = teamLookup.get(selection.home);
+    const homeOption = select.querySelector('option[value="home"]');
+    const awayOption = select.querySelector('option[value="away"]');
+
+    if (homeOption) {
+      homeOption.textContent = homeTeam?.name ? `ホーム (${homeTeam.name})` : 'ホーム';
+    }
+    if (awayOption) {
+      awayOption.textContent = awayTeam?.name ? `アウェイ (${awayTeam.name})` : 'アウェイ';
+    }
+
+    select.value = selectedControlTeam;
+    select.disabled = matchMode !== 'cpu';
+  }
   const homeSelect = elements.lobbyHomeSelect;
   const awaySelect = elements.lobbyAwaySelect;
   const optionList = teams.map((team) => ({
@@ -4205,6 +4438,27 @@ export function updateAbilitiesPanel(state) {
 export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;
+
+  const controlState = normalizeControlState(data?.game?.control);
+  stateCache.gameControl = controlState;
+
+  const existingSetup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
+  let normalizedMode = existingSetup.mode === 'cpu' ? 'cpu' : 'manual';
+  let normalizedUserTeam = existingSetup.userTeam === 'away' ? 'away' : 'home';
+
+  if (normalizedMode === 'cpu' && !CONTROL_TEAM_KEYS.has(normalizedUserTeam)) {
+    normalizedUserTeam = 'home';
+  }
+
+  if (data?.game?.active && controlState.mode === 'cpu') {
+    normalizedMode = 'cpu';
+    normalizedUserTeam = controlState.userTeam || 'home';
+  }
+
+  stateCache.matchSetup = {
+    mode: normalizedMode,
+    userTeam: normalizedUserTeam,
+  };
 
   const teamLibraryState = data.team_library || {};
   stateCache.teamLibrary = {

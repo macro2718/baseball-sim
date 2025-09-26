@@ -60,8 +60,14 @@ def create_routes(session: WebGameSession) -> Blueprint:
     def start_game() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}
         reload_teams = bool(payload.get("reload", False))
+        control_mode = payload.get("mode")
+        user_team = payload.get("user_team")
         try:
-            state = session.start_new_game(reload_teams=reload_teams)
+            state = session.start_new_game(
+                reload_teams=reload_teams,
+                control_mode=control_mode,
+                user_team=user_team,
+            )
         except GameSessionError as exc:
             return create_error_response(str(exc), session)
         return jsonify(state)
@@ -85,6 +91,14 @@ def create_routes(session: WebGameSession) -> Blueprint:
     def bunt() -> Dict[str, Any]:
         try:
             state = session.execute_bunt()
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
+    @api_bp.post("/game/progress")
+    def progress() -> Dict[str, Any]:
+        try:
+            state = session.execute_cpu_progress()
         except GameSessionError as exc:
             return create_error_response(str(exc), session)
         return jsonify(state)

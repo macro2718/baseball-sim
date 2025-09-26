@@ -60,8 +60,21 @@ class TeamManagementMixin:
 
         return self.home_team, self.away_team
 
-    def start_new_game(self, reload_teams: bool = False) -> Dict[str, Any]:
+    def start_new_game(
+        self,
+        reload_teams: bool = False,
+        *,
+        control_mode: Optional[str] = None,
+        user_team: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Create a new :class:`GameState` and reset bookkeeping."""
+
+        if hasattr(self, "_configure_control_mode"):
+            try:
+                self._configure_control_mode(control_mode, user_team)
+            except Exception:
+                # Fallback to manual control if configuration fails unexpectedly
+                self._configure_control_mode(None, None)  # type: ignore[call-arg]
 
         self.ensure_teams(force_reload=reload_teams)
         self._ensure_lineups_are_valid()
@@ -84,6 +97,31 @@ class TeamManagementMixin:
             f"⚾ {self.away_team.name} (Away) @ {self.home_team.name} (Home)", variant="info"
         )
         self._log.append("📅 Starting at inning 1", variant="info")
+
+        control_state = None
+        if hasattr(self, "get_control_state"):
+            try:
+                control_state = self.get_control_state()
+            except Exception:
+                control_state = None
+
+        if isinstance(control_state, dict) and control_state.get("mode") == "cpu":
+            user_key = control_state.get("user_team")
+            cpu_key = control_state.get("cpu_team")
+
+            def resolve_name(key: Optional[str]) -> str:
+                if key == "home":
+                    return getattr(self.home_team, "name", "Home")
+                if key == "away":
+                    return getattr(self.away_team, "name", "Away")
+                return "-"
+
+            user_team_name = control_state.get("user_team_name") or resolve_name(user_key)
+            cpu_team_name = control_state.get("cpu_team_name") or resolve_name(cpu_key)
+            summary = f"🎮 CPU対戦モード: あなた={user_team_name} / CPU={cpu_team_name}"
+            self._log.append(summary, variant="info")
+            self._notifications.publish("info", summary)
+
         self._log.append("=" * 60, variant="highlight")
         banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
         self._log.extend_banner(banner)

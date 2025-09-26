@@ -9,6 +9,7 @@ export const CONFIG = {
       gameStop: '/api/game/stop',
       gameSwing: '/api/game/swing',
       gameBunt: '/api/game/bunt',
+      gameProgress: '/api/game/progress',
       strategySteal: '/api/strategy/steal',
       pinchHit: '/api/strategy/pinch_hit',
       pinchRun: '/api/strategy/pinch_run',

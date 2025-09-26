@@ -2512,15 +2512,38 @@ export function initEventListeners(actions) {
 
   updatePlayerRoleUI(elements.playerEditorRole?.value || 'batter');
 
-  elements.startButton.addEventListener('click', () => actions.handleStart(false));
+  function ensureMatchSetup() {
+    if (!stateCache.matchSetup) {
+      stateCache.matchSetup = { mode: 'manual', userTeam: 'home' };
+    }
+    return stateCache.matchSetup;
+  }
+
+  function getMatchSetupOptions() {
+    const setup = ensureMatchSetup();
+    const mode = setup.mode === 'cpu' ? 'cpu' : 'manual';
+    const userTeam = setup.userTeam === 'away' ? 'away' : 'home';
+    return { mode, userTeam };
+  }
+
+  elements.startButton.addEventListener('click', () => {
+    const setup = getMatchSetupOptions();
+    actions.handleStart({ ...setup, reload: false });
+  });
   elements.reloadTeams.addEventListener('click', actions.handleReloadTeams);
-  elements.restartButton.addEventListener('click', () => actions.handleStart(true));
+  elements.restartButton.addEventListener('click', () => {
+    const setup = getMatchSetupOptions();
+    actions.handleStart({ ...setup, reload: true });
+  });
   elements.returnTitle.addEventListener('click', actions.handleReturnToTitle);
   elements.clearLog.addEventListener('click', actions.handleClearLog);
   elements.swingButton.addEventListener('click', actions.handleSwing);
   elements.buntButton.addEventListener('click', actions.handleBunt);
   if (elements.stealButton) {
     elements.stealButton.addEventListener('click', actions.handleSteal);
+  }
+  if (elements.progressButton) {
+    elements.progressButton.addEventListener('click', actions.handleProgress);
   }
 
   if (elements.pinchButton) {
@@ -2729,6 +2752,29 @@ export function initEventListeners(actions) {
   if (elements.openMatchButton) {
     elements.openMatchButton.addEventListener('click', () => {
       setUIView('team-select');
+      refreshView();
+    });
+  }
+
+  if (elements.matchModeRadios?.length) {
+    elements.matchModeRadios.forEach((radio) => {
+      radio.addEventListener('change', () => {
+        const value = radio.value === 'cpu' ? 'cpu' : 'manual';
+        const setup = ensureMatchSetup();
+        setup.mode = value;
+        if (value === 'cpu' && setup.userTeam !== 'home' && setup.userTeam !== 'away') {
+          setup.userTeam = 'home';
+        }
+        refreshView();
+      });
+    });
+  }
+
+  if (elements.controlTeamSelect) {
+    elements.controlTeamSelect.addEventListener('change', (event) => {
+      const setup = ensureMatchSetup();
+      const selectedValue = event.target.value === 'away' ? 'away' : 'home';
+      setup.userTeam = selectedValue;
       refreshView();
     });
   }
