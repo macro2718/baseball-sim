@@ -1,0 +1,12 @@
+# Minimal runtime requirements
+Flask>=2.3
+
+# Optional (uncomment as needed)
+# joblib>=1.3           # linear model loader
+# torch                 # NN model loader (install per official instructions)
+# scikit-learn         # training scripts under prediction_models/
+# pandas
+# numpy
+# matplotlib
+# tqdm
+# pybaseball
