@@ -308,6 +308,10 @@ class SessionStateBuilder:
                 }
             )
 
+        bunt_visible = not (
+            game_state.can_squeeze() and not game_state.bases[0]
+        )
+
         return (
             {
                 "active": True,
@@ -336,11 +340,16 @@ class SessionStateBuilder:
                     and not game_state.game_ended
                     and offense_allowed
                     and game_state.can_bunt(),
+                    "squeeze": allowed
+                    and not game_state.game_ended
+                    and offense_allowed
+                    and game_state.can_squeeze(),
                     "steal": allowed
                     and not game_state.game_ended
                     and offense_allowed
                     and game_state.can_steal(),
                     "progress": progress_available and not game_state.game_ended,
+                    "show_bunt": bunt_visible,
                 },
                 "action_block_reason": action_block_reason if not allowed else None,
                 "defensive_errors": list(game_state.defensive_error_messages),

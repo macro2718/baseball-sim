@@ -3041,6 +3041,9 @@ export function initEventListeners(actions) {
   elements.clearLog.addEventListener('click', actions.handleClearLog);
   elements.swingButton.addEventListener('click', actions.handleSwing);
   elements.buntButton.addEventListener('click', actions.handleBunt);
+  if (elements.squeezeButton) {
+    elements.squeezeButton.addEventListener('click', actions.handleSqueeze);
+  }
   if (elements.stealButton) {
     elements.stealButton.addEventListener('click', actions.handleSteal);
   }

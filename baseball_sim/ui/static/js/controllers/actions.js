@@ -138,6 +138,15 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleSqueeze() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameSqueeze, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
   async function handleProgress() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameProgress, { method: 'POST' });
@@ -551,6 +560,7 @@ export function createGameActions(render) {
     startSimulation: handleSimulationStart,
     handleSwing,
     handleBunt,
+    handleSqueeze,
     handleProgress,
     handleSteal,
     handlePinchHit,

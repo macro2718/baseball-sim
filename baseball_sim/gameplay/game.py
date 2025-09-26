@@ -222,6 +222,12 @@ class GameState:
             return False
         return True
 
+    def can_squeeze(self):
+        """スクイズが可能かどうかを判定"""
+        if self.outs >= 2:
+            return False
+        return bool(self._bases[2])
+
     def can_steal(self) -> bool:
         """盗塁が可能かどうかを判定"""
         first_runner = self._bases[0]
@@ -254,6 +260,13 @@ class GameState:
 
         bunt_processor = BuntProcessor(self)
         return bunt_processor.execute(batter, pitcher)
+
+    def execute_squeeze(self, batter, pitcher):
+        """スクイズプレーを実行し、結果を返す"""
+        from baseball_sim.gameplay.utils import SqueezeProcessor
+
+        squeeze_processor = SqueezeProcessor(self)
+        return squeeze_processor.execute(batter, pitcher)
 
     def _steal_success_probability(self, runner) -> float:
         base_rate = 0.7
