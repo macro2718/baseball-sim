@@ -491,6 +491,19 @@
   color: var(--text);
 }
 
+/* SP/RP colored variants */
+.pitcher-role-badge.sp {
+  background: rgba(248, 113, 113, 0.18); /* red tone */
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}
+
+.pitcher-role-badge.rp {
+  background: rgba(236, 72, 153, 0.2); /* pink tone */
+  border-color: rgba(236, 72, 153, 0.45);
+  color: #fbcfe8;
+}
+
 .pitcher-throws-badge {
   font-size: 12px;
   letter-spacing: 0.12em;
@@ -499,6 +512,13 @@
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.35);
   color: rgba(226, 232, 240, 0.85);
+}
+
+/* Yellow highlight for throws, matching batter bats */
+.pitcher-throws-badge.throws-colored {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: rgba(253, 230, 138, 0.95);
 }
 
 .batter-bats-badge {

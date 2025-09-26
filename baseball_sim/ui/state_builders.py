@@ -793,12 +793,41 @@ class SessionStateBuilder:
 
     @staticmethod
     def _serialize_pitcher(pitcher, is_current: bool) -> Dict[str, object]:
+        # Attach quick stat snapshot for UI lineup display (ERA/IP/SO)
+        raw_stats = getattr(pitcher, "pitching_stats", {}) or {}
+        innings = raw_stats.get("IP", 0)
+        # IP display
+        try:
+            ip_display = StatsCalculator.format_inning_display(innings)
+        except Exception:
+            ip_display = "0.0"
+        # ERA display
+        if innings and innings > 0:
+            try:
+                era_value = float(getattr(pitcher, "get_era")()) if hasattr(pitcher, "get_era") else None
+            except Exception:
+                era_value = None
+            if era_value is None:
+                try:
+                    era_value = StatsCalculator.calculate_era(raw_stats.get("ER", 0), innings)
+                except Exception:
+                    era_value = 0.0
+            era_display = StatsCalculator.format_average(era_value, 2)
+        else:
+            era_display = "-.--"
+        # SO display
+        strikeouts = raw_stats.get("SO", raw_stats.get("K", 0))
+
         return {
-            "name": pitcher.name,
+            "name": getattr(pitcher, "name", "-"),
             "stamina": round(getattr(pitcher, "current_stamina", 0), 1),
             "pitcher_type": getattr(pitcher, "pitcher_type", "P"),
             "throws": getattr(pitcher, "throws", None),
             "is_current": is_current,
+            # Display-friendly stat fields
+            "era": era_display,
+            "ip": ip_display,
+            "so": strikeouts,
         }
 
     @staticmethod

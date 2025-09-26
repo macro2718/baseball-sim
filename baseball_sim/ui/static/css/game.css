@@ -1071,6 +1071,26 @@
   font-size: 12px;
   letter-spacing: 0.08em;
   font-family: var(--font-heading);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* Color variants for current pitcher info */
+.matchup-tag.sp {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecaca;
+}
+
+.matchup-tag.rp {
+  background: rgba(236, 72, 153, 0.2);
+  border-color: rgba(236, 72, 153, 0.45);
+  color: #fbcfe8;
+}
+
+.matchup-tag.throws-colored {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.4);
+  color: rgba(253, 230, 138, 0.95);
 }
 
 .matchup-player-name {
@@ -1712,7 +1732,7 @@
 }
 
 .position-token.pos-color-rp {
-  color: #c084fc;
+  color: #ec4899; /* pink */
 }
 
 .position-token.pos-color-c {

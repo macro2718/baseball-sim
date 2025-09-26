@@ -767,9 +767,10 @@ function updateDefenseAlignment(gameState, teams) {
       }
     }
 
+    const posTagHtml = renderPositionToken(slot.label, player.pitcher_type, 'pos-tag');
     slotEl.innerHTML = `
       <div class="player-chip">
-        <span class="pos-tag">${slot.label}</span>
+        ${posTagHtml}
         <div class="player-info">
           <span class="player-name">${escapeHtml(player.name ?? '-')}</span>
           <span class="player-rating">${escapeHtml(ratingText)}</span>
@@ -1188,28 +1189,70 @@ function updatePitchers(listEl, pitchers) {
   }
 
   if (!hasPitchers) {
+    // Remove any existing dynamic pitcher table
+    if (section) {
+      const existing = section.querySelector('table.pitcher-table');
+      if (existing) existing.remove();
+    }
     return;
   }
 
+  // Build or update a table just like the batter lineup style
+  let table = section ? section.querySelector('table.pitcher-table') : null;
+  if (!table) {
+    table = document.createElement('table');
+    table.className = 'pitcher-table';
+    // Reuse roster table styling
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+
+    const thead = document.createElement('thead');
+    const tr = document.createElement('tr');
+    ['Pos', '選手', 'ERA', 'IP', 'SO'].forEach((label, idx) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      if (idx >= 2) th.className = 'stat-col';
+      if (idx === 1) th.className = 'player-col';
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+
+    if (section) {
+      // Insert after UL to keep layout
+      listEl.insertAdjacentElement('afterend', table);
+    }
+  }
+
+  const tbody = table.querySelector('tbody');
+  if (tbody) tbody.innerHTML = '';
+
   visiblePitchers.forEach((pitcher) => {
-    const li = document.createElement('li');
+    const tr = document.createElement('tr');
     if (pitcher.is_current) {
-      li.classList.add('current');
+      tr.classList.add('active');
     }
 
-    const nameSpan = document.createElement('span');
-    const typeRaw = pitcher.pitcher_type != null ? String(pitcher.pitcher_type) : 'P';
-    const typeLabel = typeRaw.trim() || 'P';
-    const nameLabel = pitcher.name != null ? String(pitcher.name).trim() : '';
-    nameSpan.textContent = `${nameLabel || '-'} (${typeLabel})`;
+    const typeRaw = pitcher.pitcher_type != null ? String(pitcher.pitcher_type).toUpperCase() : 'P';
+    const typeLabel = typeRaw === 'SP' || typeRaw === 'RP' ? typeRaw : 'P';
+    const positionHtml = renderPositionToken(typeLabel, typeLabel);
+    const nameLabel = pitcher.name != null ? String(pitcher.name).trim() : '-';
+    const eraText = pitcher.era != null && String(pitcher.era).trim() !== '' ? String(pitcher.era) : '-';
+    const ipText = pitcher.ip != null && String(pitcher.ip).trim() !== '' ? String(pitcher.ip) : '-';
+    const soRaw = pitcher.so != null ? pitcher.so : pitcher.strikeouts != null ? pitcher.strikeouts : null;
+    const soText = soRaw != null && String(soRaw).trim() !== '' ? String(soRaw) : '-';
 
-    const staminaSpan = document.createElement('span');
-    const staminaValue = pitcher.stamina != null ? `${pitcher.stamina}` : '-';
-    staminaSpan.textContent = staminaValue;
-
-    li.appendChild(nameSpan);
-    li.appendChild(staminaSpan);
-    listEl.appendChild(li);
+    tr.innerHTML = `
+      <td>${positionHtml}</td>
+      <td class="player-name">${escapeHtml(nameLabel)}</td>
+      <td class="stat-col">${escapeHtml(eraText)}</td>
+      <td class="stat-col">${escapeHtml(ipText)}</td>
+      <td class="stat-col">${escapeHtml(soText)}</td>
+    `;
+    if (tbody) tbody.appendChild(tr);
   });
 }
 
@@ -1436,7 +1479,21 @@ function updateMatchupPanel(gameState, teams) {
 
   setMatchupText(matchupPitcherName, pitcherDisplay.name);
   setMatchupText(matchupPitcherType, pitcherDisplay.pitcher_type);
-  setMatchupText(matchupPitcherThrows, pitcherDisplay.throws);
+  setMatchupText(matchupPitcherThrows, formatThrowsLabel(pitcherDisplay.throws));
+
+  // Apply color classes for SP/RP and throws
+  if (matchupPitcherType) {
+    const t = (pitcherDisplay.pitcher_type || '').toString().toUpperCase();
+    matchupPitcherType.classList.remove('sp', 'rp');
+    if (t === 'SP') matchupPitcherType.classList.add('sp');
+    else if (t === 'RP') matchupPitcherType.classList.add('rp');
+  }
+
+  if (matchupPitcherThrows) {
+    const th = (pitcherDisplay.throws || '').toString().trim();
+    matchupPitcherThrows.classList.remove('throws-colored');
+    if (th) matchupPitcherThrows.classList.add('throws-colored');
+  }
   setMatchupText(matchupPitcherK, pitcherDisplay.k_pct, 'k_pct');
   setMatchupText(matchupPitcherBB, pitcherDisplay.bb_pct, 'bb_pct', { invert: true });
   setMatchupText(matchupPitcherHard, pitcherDisplay.hard_pct, 'hard_pct', { invert: true });
@@ -1481,12 +1538,18 @@ function updateCurrentPitcherCard(cardEl, pitcher) {
   const throwsRaw = pitcher.throws ? String(pitcher.throws) : '';
   const typeLabel = escapeHtml(typeRaw);
   const nameLabel = escapeHtml(nameRaw);
-  const throwsLabel = throwsRaw ? escapeHtml(throwsRaw) : '';
+  const throwsLabel = throwsRaw ? escapeHtml(formatThrowsLabel(throwsRaw)) : '';
+  const typeClass = (() => {
+    const t = String(typeRaw).toUpperCase();
+    if (t === 'SP') return 'sp';
+    if (t === 'RP') return 'rp';
+    return '';
+  })();
   const throwsBlock = throwsLabel
     ? `
         <div class="pitcher-meta-block">
           <span class="pitcher-meta-label">投球腕</span>
-          <span class="pitcher-meta-value">${throwsLabel}</span>
+          <span class="pitcher-meta-value"><span class="pitcher-throws-badge throws-colored">${throwsLabel}</span></span>
         </div>
       `
     : '';
@@ -1494,7 +1557,7 @@ function updateCurrentPitcherCard(cardEl, pitcher) {
   cardEl.innerHTML = `
     <div class="current-pitcher-header">
       <span class="card-label">現在の投手</span>
-      <span class="pitcher-role-badge">${typeLabel}</span>
+      <span class="pitcher-role-badge ${typeClass}">${typeLabel}</span>
     </div>
     <div class="current-pitcher-body">
       <h4 class="pitcher-name">${nameLabel}</h4>
@@ -1523,6 +1586,16 @@ function formatBatsLabel(rawBats) {
   if (normalized === 'L') return '左打';
   if (normalized === 'R') return '右打';
   if (normalized === 'S' || normalized === 'B') return '両打';
+  return normalized;
+}
+
+function formatThrowsLabel(rawThrows) {
+  if (!rawThrows) return '';
+  const normalized = String(rawThrows).trim().toUpperCase();
+  if (!normalized) return '';
+  if (normalized === 'L') return '左投';
+  if (normalized === 'R') return '右投';
+  if (normalized === 'S' || normalized === 'B') return '両投';
   return normalized;
 }
 
@@ -1825,7 +1898,7 @@ function updatePitcherOptionGrid(gridEl, options, selectEl, helperEl) {
     const throwsRaw = pitcher.throws ? String(pitcher.throws) : '';
     const typeLabel = escapeHtml(typeRaw);
     const nameLabel = escapeHtml(nameRaw);
-    const throwsLabel = throwsRaw ? escapeHtml(throwsRaw) : '';
+    const throwsLabel = throwsRaw ? escapeHtml(formatThrowsLabel(throwsRaw)) : '';
 
     const button = document.createElement('button');
     button.type = 'button';
@@ -1834,10 +1907,17 @@ function updatePitcherOptionGrid(gridEl, options, selectEl, helperEl) {
     button.setAttribute('aria-pressed', 'false');
     button.setAttribute('role', 'listitem');
     button.title = `${nameRaw} (${typeRaw}${throwsRaw ? `/${throwsRaw}` : ''})`;
+    const typeClass = (() => {
+      const t = String(typeRaw).toUpperCase();
+      if (t === 'SP') return 'sp';
+      if (t === 'RP') return 'rp';
+      return '';
+    })();
+
     button.innerHTML = `
       <div class="pitcher-card-top">
-        <span class="pitcher-role-badge">${typeLabel}</span>
-        ${throwsLabel ? `<span class="pitcher-throws-badge" aria-label="投球腕">${throwsLabel}</span>` : ''}
+        <span class="pitcher-role-badge ${typeClass}">${typeLabel}</span>
+        ${throwsLabel ? `<span class=\"pitcher-throws-badge throws-colored\" aria-label=\"投球腕\">${throwsLabel}</span>` : ''}
       </div>
       <h4 class="pitcher-card-name">${nameLabel}</h4>
       <div class="pitcher-card-bottom">
