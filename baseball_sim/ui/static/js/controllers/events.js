@@ -663,6 +663,8 @@ function clearRotationSlot(form, slotIndex) {
 
 function syncRotationWithPitchers(form) {
   if (!form) return;
+  const hadNameProperty = Object.prototype.hasOwnProperty.call(form, 'name');
+  const originalName = form.name;
   ensureRotationSlots(form);
   const pitchers = Array.isArray(form.pitchers) ? form.pitchers : [];
   const availableById = new Map();
@@ -691,6 +693,10 @@ function syncRotationWithPitchers(form) {
       form.rotation[index] = createEmptyRotationSlot(index);
     }
   });
+
+  if (hadNameProperty && form.name !== originalName) {
+    form.name = originalName;
+  }
 }
 
 function autoAssignPitcherToRotation(form, pitcherEntry, pitcherIndex) {
