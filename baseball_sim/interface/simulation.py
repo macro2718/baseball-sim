@@ -4,6 +4,15 @@ from datetime import datetime
 from baseball_sim.config import get_project_paths, setup_project_environment
 from baseball_sim.gameplay.game import GameState
 from baseball_sim.gameplay.statistics import StatsCalculator
+from baseball_sim.gameplay.substitutions import SubstitutionManager
+from baseball_sim.ui.cpu_strategy import (
+    CPUPlayType,
+    plan_pitcher_change,
+    plan_defensive_substitutions,
+    plan_pinch_hit,
+    plan_pinch_run,
+    select_offense_play,
+)
 
 setup_project_environment()
 
@@ -222,80 +231,178 @@ def reset_team_and_players(
     )
 
 def simulate_single_game(game):
-    """1試合をシミュレーション実行し、結果を返す"""
-    game_over = False
+    """1試合をCPU対CPUのロジックでシミュレーション実行し、結果を返す"""
     game_result = {
         "home_team": game.home_team.name,
         "away_team": game.away_team.name,
         "home_score": 0,
         "away_score": 0,
         "innings": 0,
-        "events": []
+        "events": [],
     }
-    
-    while not game_over:
-        # 打席の結果を計算
-        batter = game.batting_team.current_batter
-        pitcher = game.fielding_team.current_pitcher
-        
-        result = game.calculate_result(batter, pitcher)
-        message = game.apply_result(result, batter)
-        
-        # 注: 打者と投手の統計は apply_result 内で更新されるため、ここでの更新は削除
-        
-        # 得点情報を抽出
-        runs_scored = get_runs_from_message(message)
-        
-        # イベントを記録（得点情報を追加）
+
+    # コンテキストを使って同一盤面での重複CPU判断を抑制
+    last_context = None
+
+    appeared_pitchers = set()
+
+    while not game.game_ended:
+        batting_team = game.batting_team
+        fielding_team = game.fielding_team
+        batter = batting_team.current_batter
+        pitcher = fielding_team.current_pitcher
+
+        if batter is None or pitcher is None:
+            # 何らかの不整合（交代直後等）に備えて安全に抜ける
+            break
+
+        # 登板数(G)のカウント: この試合で初めて登板した投手のみ+1
+        pid = id(pitcher)
+        if pid not in appeared_pitchers:
+            appeared_pitchers.add(pid)
+            try:
+                pitcher.pitching_stats["G"] = pitcher.pitching_stats.get("G", 0) + 1
+            except Exception:
+                pass
+
+        # 盤面コンテキストが変わったときのみ、CPUの守備采配/代打・代走検討を行う
+        base_sig = tuple(1 if r is not None else 0 for r in game.bases[:3])
+        context = (game.last_play.get("sequence") if game.last_play else None, game.inning, game.is_top_inning, game.outs, base_sig)
+        if context != last_context:
+            last_context = context
+
+            # 守備側CPU: 投手交代・守備交代
+            def apply_defense_plans():
+                sub = SubstitutionManager(fielding_team)
+                # 先に守備交代（適性/守備固め）を適用
+                try:
+                    dplans = list(plan_defensive_substitutions(game, fielding_team, sub))
+                except Exception:
+                    dplans = []
+                if dplans:
+                    bench = sub.get_available_bench_players()
+                    for plan in dplans:
+                        # 現在のベンチから対象選手のインデックスを検索
+                        try:
+                            bench_index = bench.index(plan.bench_player)
+                        except ValueError:
+                            continue
+                        sub.execute_defensive_substitution(bench_index, plan.lineup_index)
+                # 投手交代
+                try:
+                    pplan = plan_pitcher_change(game, fielding_team, sub)
+                except Exception:
+                    pplan = None
+                if pplan is not None:
+                    sub.execute_pitcher_change(pplan.pitcher_index)
+
+            apply_defense_plans()
+
+            # 攻撃側CPU: 代打・代走の検討
+            try:
+                offense_sub = SubstitutionManager(batting_team)
+                ph_plan = plan_pinch_hit(game, batting_team, offense_sub)
+            except Exception:
+                ph_plan = None
+            if ph_plan is not None:
+                offense_sub.execute_pinch_hit(ph_plan.bench_index, ph_plan.lineup_index)
+
+            try:
+                pr_plan = plan_pinch_run(game, batting_team, offense_sub)
+            except Exception:
+                pr_plan = None
+            if pr_plan is not None:
+                success, _ = offense_sub.execute_defensive_substitution(
+                    pr_plan.bench_index, pr_plan.lineup_index
+                )
+                if success:
+                    # ベース上の走者を差し替える
+                    try:
+                        new_runner = batting_team.lineup[pr_plan.lineup_index]
+                        game.bases[pr_plan.base_index] = new_runner
+                    except Exception:
+                        pass
+
+        # 攻撃側のプレー選択
+        decision = select_offense_play(game, batting_team)
+
+        # スコア差分の計算用に事前スコアを保持
+        pre_home, pre_away = game.home_score, game.away_score
+        prev_inning, prev_half = game.inning, game.is_top_inning
+
+        action_label = None
+        result_key = None
+        message = ""
+
+        if decision.play is CPUPlayType.SQUEEZE:
+            # 条件を満たさなければ通常打撃
+            if game.can_squeeze():
+                action_label = "squeeze"
+                message = game.execute_squeeze(batter, pitcher)
+            else:
+                decision = select_offense_play(game, batting_team)
+
+        if result_key is None and decision.play is CPUPlayType.BUNT:
+            if game.can_bunt():
+                action_label = "bunt"
+                message = game.execute_bunt(batter, pitcher)
+            else:
+                decision = select_offense_play(game, batting_team)
+
+        if result_key is None and decision.play is CPUPlayType.STEAL:
+            # 盗塁は打席結果を伴わない進行
+            if game.can_steal():
+                action_label = "steal"
+                info = game.execute_steal()
+                result_key = info.get("result")
+                message = info.get("message", "")
+            else:
+                decision = select_offense_play(game, batting_team)
+
+        if result_key is None:
+            # 通常打撃
+            action_label = action_label or "swing"
+            result_key = game.calculate_result(batter, pitcher)
+            message = game.apply_result(result_key, batter)
+
+        # イベントの集計
+        inning_changed = (prev_inning != game.inning) or (prev_half != game.is_top_inning)
+        if action_label in ("swing", "bunt", "squeeze"):
+            # 打席を消費するアクションでは投手スタミナ減少
+            pitcher.decrease_stamina()
+            if not inning_changed:
+                game.batting_team.next_batter()
+
+        # 盗塁では打者は据え置き、イニング変化時はそのまま
+
+        # ランの差分（打者側に入った得点）を算出
+        post_home, post_away = game.home_score, game.away_score
+        if batting_team is game.home_team:
+            runs_scored = max(0, post_home - pre_home)
+        else:
+            runs_scored = max(0, post_away - pre_away)
+
         event = {
-            "inning": f"{game.inning} {'Top' if game.is_top_inning else 'Bottom'}",
-            "batter": batter.name,
-            "pitcher": pitcher.name,
-            "result": result,
+            "inning": f"{prev_inning} {'Top' if prev_half else 'Bottom'}",
+            "batter": getattr(batter, 'name', 'Unknown'),
+            "pitcher": getattr(pitcher, 'name', 'Unknown'),
+            "action": action_label,
+            "result": result_key,
             "message": message,
-            "runs_scored": runs_scored,  # メッセージから得点情報を抽出
-            "batting_team": game.batting_team.name,
-            "fielding_team": game.fielding_team.name
+            "runs_scored": runs_scored,
+            "batting_team": getattr(batting_team, 'name', ''),
+            "fielding_team": getattr(fielding_team, 'name', ''),
         }
         game_result["events"].append(event)
-        
-        # 投手のスタミナを減少
-        pitcher.decrease_stamina()
-        
-        # 次の打者へ
-        game.batting_team.next_batter()
-        
-        # 試合終了チェック - 修正
-        # イニング終了時の判定（9回以降、両チームの点数が異なる場合）
-        if game.game_ended:
-            game_over = True
-        
-        # サヨナラ勝ち判定（9回裏以降、ホームチームがリードした時点で即終了）
-        if game.inning >= 9 and not game.is_top_inning and game.home_score > game.away_score:
-            game_over = True
-        
-        # 最大12イニングまで
-        if game.inning > 12:
-            game_over = True
-    
+
+        # 終了判定は GameState に委譲（サヨナラ/延長制限を含む）
+
     # 最終結果を更新
     game_result["home_score"] = game.home_score
     game_result["away_score"] = game.away_score
     game_result["innings"] = game.inning
-    
-    return game_result
 
-# メッセージから得点情報を抽出する関数を追加
-def get_runs_from_message(message):
-    """メッセージから得点情報を抽出する"""
-    # "得点" または "score" という単語が含まれているかチェック
-    if "得点" in message or "score" in message:
-        # 数字を探す（1得点、2得点など）
-        for i in range(4, 0, -1):  # 最大4点まで想定（グランドスラム）
-            if str(i) in message:
-                return i
-        return 1  # 具体的な数字がなければ1点とみなす
-    return 0  # 得点がない場合は0
+    return game_result
 
 def update_statistics(results, game, game_result):
     """チームの勝敗統計を更新する"""
@@ -673,6 +780,22 @@ def output_results(results, output_file):
             f.write(f"{name:<15} {team_name:<10} {ip:<5.1f} {h:<4} {bb:<4} {so:<4} {r:<4} {er:<4} {hr:<4} "
                   f"{era:<5.2f} {whip:<5.2f} {k_per_9:<5.2f} {bb_per_9:<5.2f} {hr_per_9:<5.2f}\n")
         
+        # 投手登板数の出力（追加）
+        f.write("\n===== 投手登板数 (G) =====\n")
+        f.write(f"{'選手名':<15} {'チーム':<10} {'G':<3}\n")
+        f.write("-" * 36 + "\n")
+        # チームに所属する投手をキーとして保存（再利用）
+        pitcher_team = {}
+        for team_name, team in results["teams"].items():
+            for pitcher in team.pitchers:
+                pitcher_team[pitcher.name] = team_name
+        for name, pitcher in results["pitchers"].items():
+            g = int(getattr(pitcher, 'pitching_stats', {}).get('G', 0) or 0)
+            if g <= 0:
+                continue
+            team_name = pitcher_team.get(name, "不明")
+            f.write(f"{name:<15} {team_name:<10} {g:<3}\n")
+
         # 各試合の結果サマリー
         f.write("\n===== 試合結果サマリー =====\n")
         for i, game in enumerate(results["games"], 1):

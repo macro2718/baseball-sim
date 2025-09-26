@@ -3881,7 +3881,7 @@ function renderPitchingTable(tbody, teamEntry) {
   if (!rows.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 12;
+    td.colSpan = 13;
     td.textContent = 'データがありません。';
     td.classList.add('empty');
     tr.appendChild(td);
@@ -3893,6 +3893,7 @@ function renderPitchingTable(tbody, teamEntry) {
     const tr = document.createElement('tr');
     const cells = [
       row.name || '-',
+      row.appearances ?? 0,
       formatInningsDisplay(row.ip),
       row.hits ?? 0,
       row.runs ?? 0,
@@ -4651,6 +4652,7 @@ export function render(data) {
       const pitchers = Array.isArray(team.pitchers)
         ? team.pitchers.map((pitcher) => ({
             name: pitcher.name || '',
+            appearances: Number.isFinite(Number(pitcher.appearances)) ? Number(pitcher.appearances) : 0,
             ip: Number.isFinite(Number(pitcher.ip)) ? Number(pitcher.ip) : 0,
             hits: Number.isFinite(Number(pitcher.hits)) ? Number(pitcher.hits) : 0,
             runs: Number.isFinite(Number(pitcher.runs)) ? Number(pitcher.runs) : 0,

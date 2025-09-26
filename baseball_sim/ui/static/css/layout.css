@@ -597,6 +597,15 @@
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+/* 個人成績: タブ行は上、テーブル群は下に左寄せで配置 */
+.simulation-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .simulation-team-panel {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 20px;

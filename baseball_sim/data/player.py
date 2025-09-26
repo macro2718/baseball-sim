@@ -100,7 +100,17 @@ class Pitcher(Player):
         self.throws = throws    # 投球腕（"R"または"L"）
         self.pitcher_type = pitcher_type  # "SP"（先発投手）または"RP"（中継ぎ投手）
         
-        self.pitching_stats = {"IP": 0, "H": 0, "R": 0, "ER": 0, "BB": 0, "SO": 0, "HR": 0}
+        # 投手成績: IP=投球回, H=被安打, R=失点, ER=自責点, BB=与四球, SO=奪三振, HR=被本塁打, G=登板数
+        self.pitching_stats = {
+            "IP": 0,
+            "H": 0,
+            "R": 0,
+            "ER": 0,
+            "BB": 0,
+            "SO": 0,
+            "HR": 0,
+            "G": 0,
+        }
 
     def __str__(self):
         return f"{self.name} ({self.pitcher_type}) - Stamina: {int(self.current_stamina)}%"

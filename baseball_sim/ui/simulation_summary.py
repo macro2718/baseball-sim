@@ -301,6 +301,7 @@ def _build_pitcher_stats(team_obj: Optional[object]) -> List[Dict[str, Any]]:
         walks = int(stats.get("BB", 0) or 0)
         strikeouts = int(stats.get("SO", stats.get("K", 0)) or 0)
         homers = int(stats.get("HR", 0) or 0)
+        games = int(stats.get("G", 0) or 0)
 
         era, whip, k_per_9, bb_per_9 = _safe_pitching_metrics(pitcher)
         hr_per_9 = StatsCalculator.calculate_hr_per_9(homers, ip)
@@ -308,6 +309,7 @@ def _build_pitcher_stats(team_obj: Optional[object]) -> List[Dict[str, Any]]:
         pitchers.append(
             {
                 "name": getattr(pitcher, "name", ""),
+                "appearances": games,
                 "ip": ip,
                 "hits": hits,
                 "runs": runs,
