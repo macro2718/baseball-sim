@@ -30,21 +30,6 @@ class NotificationCenter:
         self._current = notification
         return notification
 
-    def set(self, notification: Optional[Notification]) -> None:
-        """Directly replace the stored notification."""
-
-        self._current = notification
-
-    def clear(self) -> None:
-        """Discard any stored notification."""
-
-        self._current = None
-
-    def peek(self) -> Optional[Notification]:
-        """Return the stored notification without clearing it."""
-
-        return self._current
-
     def consume(self) -> Optional[Notification]:
         """Return and clear the stored notification."""
 
