@@ -53,6 +53,8 @@ class WebGameSession(
         self._control_mode: str = "manual"
         self._user_team_key: Optional[str] = None
         self._cpu_team_key: Optional[str] = None
+        self._cpu_defense_context: Optional[tuple] = None
+        self._cpu_offense_context: Optional[tuple] = None
         self.ensure_teams()
 
     # ------------------------------------------------------------------
@@ -83,12 +85,16 @@ class WebGameSession(
             self._control_mode = "manual"
             self._user_team_key = None
             self._cpu_team_key = None
+            self._cpu_defense_context = None
+            self._cpu_offense_context = None
             return
 
         normalized_team = "home" if str(user_team or "home").lower() == "home" else "away"
         self._control_mode = "cpu"
         self._user_team_key = normalized_team
         self._cpu_team_key = "away" if normalized_team == "home" else "home"
+        self._cpu_defense_context = None
+        self._cpu_offense_context = None
 
     def _get_team_by_key(self, key: Optional[str]):
         if key == "home":
@@ -98,6 +104,10 @@ class WebGameSession(
         return None
 
     def _guard_offense_action(self) -> None:
+        if getattr(self, "_control_mode", "manual") == "cpu":
+            prepare = getattr(self, "_cpu_prepare_defense_strategy", None)
+            if callable(prepare):
+                prepare()
         if not self._is_offense_action_allowed():
             raise GameSessionError(
                 "守備中は攻撃操作を行えません。進行ボタンでCPUの攻撃を進めてください。"
@@ -182,6 +192,20 @@ class WebGameSession(
                         )
                     elif user_is_defense and not user_is_offense:
                         instruction = "守備中は進行ボタンでCPUの攻撃を進めてください。"
+                flow_parts = []
+                if user_is_offense:
+                    flow_parts.append(
+                        "【攻撃の流れ】CPUが打席前に守備采配→あなたが攻撃采配(盗塁除く)→"
+                        "通常打撃/バント/盗塁を選択→盤面更新後に繰り返し。"
+                    )
+                if user_is_defense and not user_is_offense:
+                    flow_parts.append(
+                        "【守備の流れ】あなたが守備采配→CPUが攻撃采配(盗塁除く)→"
+                        "CPUが通常打撃/バント/盗塁を実行→盤面更新後に繰り返し。"
+                    )
+                if flow_parts:
+                    flow_text = " ".join(flow_parts)
+                    instruction = f"{instruction} {flow_text}".strip() if instruction else flow_text
             else:
                 user_is_offense = True
                 user_is_defense = True

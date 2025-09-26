@@ -2,37 +2,31 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from enum import Enum
-
 from typing import Any, Dict, List, Optional
 
 from baseball_sim.config import GameResults
 from baseball_sim.gameplay.substitutions import SubstitutionManager
 
+from .cpu_strategy import (
+    CPUOffenseDecision,
+    CPUPlayType,
+    PitcherChangePlan,
+    PinchRunPlan,
+    describe_steal_outcome,
+    plan_pinch_run,
+    plan_pitcher_change,
+    select_offense_play,
+)
+
 from .exceptions import GameSessionError
 from .formatting import half_inning_banner
 
 
-class CPUPlayType(str, Enum):
-    """Enumerate the kinds of offensive actions the CPU can initiate."""
-
-    SWING = "swing"
-    BUNT = "bunt"
-    STEAL = "steal"
-
-
-@dataclass(frozen=True)
-class CPUOffenseDecision:
-    """Structured description of what the CPU wants to do on offense."""
-
-    play: CPUPlayType
-    label: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-
 class GameplayActionsMixin:
     """Encapsulate the command handlers used by the browser UI."""
+
+    _cpu_defense_context: Optional[tuple]
+    _cpu_offense_context: Optional[tuple]
 
     def execute_normal_play(self) -> Dict[str, Any]:
         """Simulate a standard plate appearance."""
@@ -377,6 +371,7 @@ class GameplayActionsMixin:
         self._action_block_reason = None
 
         offense_key = "home" if self.game_state.batting_team is self.home_team else "away"
+        self._cpu_prepare_offense_strategy(offense_key)
         decision = self._cpu_select_offense_decision(offense_key)
 
         batting_team = self.game_state.batting_team
@@ -396,14 +391,71 @@ class GameplayActionsMixin:
         prev_inning = self.game_state.inning
         prev_half = self.game_state.is_top_inning
 
-        if decision.play is not CPUPlayType.SWING:
-            fallback_message = (
-                decision.label
-                or "CPU strategy actions are not yet implemented."
-            )
-            self._log.append(fallback_message, variant="info")
-            self._log.append("⚠️ 通常打撃に切り替えます。", variant="warning")
-            decision = CPUOffenseDecision(play=CPUPlayType.SWING)
+        if decision.label:
+            self._log.append(f"🤖 CPU判断: {decision.label}", variant="info")
+
+        if decision.play is CPUPlayType.BUNT:
+            if not self.game_state.can_bunt():
+                self._log.append("⚠️ CPUはバントを選択しましたが条件を満たしません。", variant="warning")
+                decision = CPUOffenseDecision(play=CPUPlayType.SWING)
+            else:
+                self._log.append(
+                    f"🤖 CPU: {batter.name}が{pitcher.name}に対してバントを試みます", variant="header"
+                )
+                result_message = self.game_state.execute_bunt(batter, pitcher)
+                if "Cannot bunt" in result_message or "バントはできません" in result_message:
+                    self._log.append(result_message, variant="warning")
+                    self._notifications.publish("warning", result_message)
+                else:
+                    self._log.append(result_message, variant="success")
+                    self._notifications.publish("info", f"🤖 CPUのバント: {result_message}")
+                pitcher.decrease_stamina()
+                self.game_state.batting_team.next_batter()
+
+                inning_changed = (
+                    prev_inning != self.game_state.inning
+                    or prev_half != self.game_state.is_top_inning
+                )
+                if inning_changed:
+                    banner = half_inning_banner(
+                        self.game_state, self.home_team, self.away_team
+                    )
+                    self._log.extend_banner(banner)
+
+                if self.game_state.game_ended:
+                    self._record_game_over()
+
+                return self.build_state()
+
+        if decision.play is CPUPlayType.STEAL:
+            if not self.game_state.can_steal():
+                self._log.append("⚠️ CPUは盗塁を選択しましたが条件を満たしません。", variant="warning")
+                decision = CPUOffenseDecision(play=CPUPlayType.SWING)
+            else:
+                self._log.append("🤖 CPU: 盗塁を試みます", variant="header")
+                result_info = self.game_state.execute_steal()
+                message = result_info.get("message", "CPUが盗塁を試みました。")
+                success = bool(result_info.get("success"))
+                variant = "success" if success else "danger"
+                outcome_label = describe_steal_outcome(result_info)
+                self._log.append(f"{outcome_label}: {message}", variant=variant)
+                notification_type = "success" if success else "danger"
+                self._notifications.publish(notification_type, message)
+
+                inning_changed = (
+                    prev_inning != self.game_state.inning
+                    or prev_half != self.game_state.is_top_inning
+                )
+                if inning_changed:
+                    banner = half_inning_banner(
+                        self.game_state, self.home_team, self.away_team
+                    )
+                    self._log.extend_banner(banner)
+
+                if self.game_state.game_ended:
+                    self._record_game_over()
+
+                return self.build_state()
 
         result = self.game_state.calculate_result(batter, pitcher)
         message = self.game_state.apply_result(result, batter)
@@ -458,6 +510,120 @@ class GameplayActionsMixin:
         else:
             self._notifications.publish("info", f"{batter.name}: {result}")
 
+    def _cpu_prepare_offense_strategy(self, offense_key: str) -> None:
+        if getattr(self, "_control_mode", "manual") != "cpu":
+            return
+        if not self.game_state:
+            return
+
+        cpu_team_key = getattr(self, "_cpu_team_key", None)
+        if offense_key != cpu_team_key:
+            return
+
+        team_getter = getattr(self, "_get_team_by_key", None)
+        offense_team = team_getter(offense_key) if callable(team_getter) else None
+        if not offense_team:
+            return
+
+        base_signature = tuple(1 if base is not None else 0 for base in self.game_state.bases[:3])
+        context = (
+            self.game_state.last_play.get("sequence") if self.game_state.last_play else None,
+            self.game_state.inning,
+            self.game_state.is_top_inning,
+            self.game_state.outs,
+            base_signature,
+        )
+
+        if getattr(self, "_cpu_offense_context", None) == context:
+            return
+
+        self._cpu_offense_context = context
+
+        substitution_manager = SubstitutionManager(offense_team)
+        plan: Optional[PinchRunPlan] = plan_pinch_run(
+            self.game_state, offense_team, substitution_manager
+        )
+        if not plan:
+            return
+
+        success, message = substitution_manager.execute_defensive_substitution(
+            plan.bench_index, plan.lineup_index
+        )
+        if not success:
+            self._log.append(f"🤖 CPU攻撃采配失敗: {message}", variant="warning")
+            return
+
+        new_runner = offense_team.lineup[plan.lineup_index]
+        self.game_state.bases[plan.base_index] = new_runner
+
+        base_labels = ["一塁", "二塁", "三塁"]
+        if plan.base_index < len(base_labels):
+            base_label = base_labels[plan.base_index]
+        else:
+            base_label = f"{plan.base_index + 1}塁"
+
+        log_message = (
+            f"🤖 CPU攻撃采配: {plan.reason}。{plan.incoming_name}が{plan.outgoing_name}に代わり"
+            f"{base_label}の代走に入ります。{message}"
+        )
+        self._log.append(log_message, variant="highlight")
+        self._notifications.publish(
+            "info", f"🤖 CPUが{plan.incoming_name}を{base_label}の代走として起用"
+        )
+
+    def _cpu_prepare_defense_strategy(self) -> None:
+        if getattr(self, "_control_mode", "manual") != "cpu":
+            return
+        if not self.game_state:
+            return
+
+        team_getter = getattr(self, "_get_team_by_key", None)
+        user_team_key = getattr(self, "_user_team_key", None)
+        cpu_team_key = getattr(self, "_cpu_team_key", None)
+        user_team = team_getter(user_team_key) if callable(team_getter) else None
+        cpu_team = team_getter(cpu_team_key) if callable(team_getter) else None
+
+        if not user_team or not cpu_team:
+            return
+        if self.game_state.batting_team is not user_team:
+            return
+
+        base_signature = tuple(1 if base is not None else 0 for base in self.game_state.bases[:3])
+        context = (
+            self.game_state.last_play.get("sequence") if self.game_state.last_play else None,
+            self.game_state.inning,
+            self.game_state.is_top_inning,
+            self.game_state.outs,
+            base_signature,
+        )
+
+        if getattr(self, "_cpu_defense_context", None) == context:
+            return
+
+        self._cpu_defense_context = context
+
+        substitution_manager = SubstitutionManager(cpu_team)
+        plan: Optional[PitcherChangePlan] = plan_pitcher_change(
+            self.game_state, cpu_team, substitution_manager
+        )
+        if not plan:
+            return
+
+        success, message = substitution_manager.execute_pitcher_change(plan.pitcher_index)
+        if success:
+            log_message = (
+                f"🤖 CPU守備采配: {plan.reason}。"
+                f"{plan.replacement_name}が{plan.current_name}に代わって登板します。{message}"
+            )
+            self._log.append(log_message, variant="highlight")
+            self._notifications.publish(
+                "info",
+                f"🤖 CPUが投手交代: {plan.current_name}→{plan.replacement_name}",
+            )
+            self._refresh_defense_status()
+        else:
+            self._log.append(f"🤖 CPU守備采配失敗: {message}", variant="warning")
+
     def _cpu_select_offense_decision(self, offense_key: str) -> CPUOffenseDecision:
         """Return the CPU's chosen offensive play for the given half-inning.
 
@@ -467,8 +633,11 @@ class GameplayActionsMixin:
         without needing to rewrite :meth:`execute_cpu_progress`.
         """
 
-        _ = offense_key  # Reserved for future heuristics.
-        return CPUOffenseDecision(play=CPUPlayType.SWING)
+        team_getter = getattr(self, "_get_team_by_key", None)
+        team = team_getter(offense_key) if callable(team_getter) else None
+        if not self.game_state or not team:
+            return CPUOffenseDecision(play=CPUPlayType.SWING)
+        return select_offense_play(self.game_state, team)
 
     def _refresh_defense_status(self) -> None:
         if not self.game_state:
