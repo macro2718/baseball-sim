@@ -181,8 +181,17 @@ def _compute_team_pitching(team_obj: Optional[object]) -> Dict[str, Any]:
         "home_runs": 0,
     }
 
-    for pitcher in getattr(team_obj, "pitchers", []) or []:
-        stats = getattr(pitcher, "pitching_stats", {}) or {}
+    # Build a unique set of pitchers who have or could have pitched
+    seen: set[int] = set()
+
+    def add_pitcher(p) -> None:
+        if p is None:
+            return
+        pid = id(p)
+        if pid in seen:
+            return
+        seen.add(pid)
+        stats = getattr(p, "pitching_stats", {}) or {}
         totals["ip"] += float(stats.get("IP", 0) or 0.0)
         totals["hits_allowed"] += int(stats.get("H", 0) or 0)
         totals["runs_allowed"] += int(stats.get("R", 0) or 0)
@@ -190,6 +199,13 @@ def _compute_team_pitching(team_obj: Optional[object]) -> Dict[str, Any]:
         totals["walks"] += int(stats.get("BB", 0) or 0)
         totals["strikeouts"] += int(stats.get("SO", stats.get("K", 0)) or 0)
         totals["home_runs"] += int(stats.get("HR", 0) or 0)
+
+    add_pitcher(getattr(team_obj, "current_pitcher", None))
+    for p in getattr(team_obj, "pitchers", []) or []:
+        add_pitcher(p)
+    for p in getattr(team_obj, "ejected_players", []) or []:
+        if hasattr(p, "pitcher_type") or hasattr(p, "pitching_stats"):
+            add_pitcher(p)
 
     era = StatsCalculator.calculate_era(totals["earned_runs"], totals["ip"])
     whip = StatsCalculator.calculate_whip(
@@ -272,7 +288,8 @@ def _safe_hitting_metrics(player: object) -> tuple:
 
 def _build_pitcher_stats(team_obj: Optional[object]) -> List[Dict[str, Any]]:
     pitchers: List[Dict[str, Any]] = []
-    for pitcher in getattr(team_obj, "pitchers", []) or []:
+
+    def append_pitcher(pitcher) -> None:
         stats = getattr(pitcher, "pitching_stats", {}) or {}
         ip = float(stats.get("IP", 0) or 0.0)
         hits = int(stats.get("H", 0) or 0)
@@ -302,6 +319,24 @@ def _build_pitcher_stats(team_obj: Optional[object]) -> List[Dict[str, Any]]:
                 "hr_per_9": hr_per_9,
             }
         )
+
+    seen: set[int] = set()
+
+    def add_unique(p) -> None:
+        if p is None:
+            return
+        pid = id(p)
+        if pid in seen:
+            return
+        seen.add(pid)
+        append_pitcher(p)
+
+    add_unique(getattr(team_obj, "current_pitcher", None))
+    for p in getattr(team_obj, "pitchers", []) or []:
+        add_unique(p)
+    for p in getattr(team_obj, "ejected_players", []) or []:
+        if hasattr(p, "pitcher_type") or hasattr(p, "pitching_stats"):
+            add_unique(p)
 
     return pitchers
 

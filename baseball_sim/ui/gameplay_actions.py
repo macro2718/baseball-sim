@@ -237,6 +237,11 @@ class GameplayActionsMixin:
 
         self._notifications.publish("success" if success else "danger", message)
         self._log.append(message, variant="highlight" if success else "danger")
+        if success and hasattr(self, "_overlays"):
+            try:
+                self._overlays.publish("pinch_hit", message)
+            except Exception:
+                pass
         return self.build_state()
 
     def execute_pinch_run(self, base_index: int, bench_index: int) -> Dict[str, Any]:
@@ -287,6 +292,11 @@ class GameplayActionsMixin:
         self._notifications.publish("success" if success else "danger", message)
         variant = "highlight" if success else "danger"
         self._log.append(message, variant=variant)
+        if success and hasattr(self, "_overlays"):
+            try:
+                self._overlays.publish("pinch_run", message)
+            except Exception:
+                pass
         return self.build_state()
 
     def execute_defensive_substitution(
@@ -324,6 +334,11 @@ class GameplayActionsMixin:
         self._log.append(message, variant=variant)
         if success:
             self._refresh_defense_status()
+            if hasattr(self, "_overlays"):
+                try:
+                    self._overlays.publish("defense_sub", message)
+                except Exception:
+                    pass
         return self.build_state()
 
     def execute_pitcher_change(self, pitcher_index: int) -> Dict[str, object]:
@@ -344,6 +359,11 @@ class GameplayActionsMixin:
         self._log.append(message, variant=variant)
         if success:
             self._refresh_defense_status()
+            if hasattr(self, "_overlays"):
+                try:
+                    self._overlays.publish("pitching_change", message)
+                except Exception:
+                    pass
         return self.build_state()
 
     def execute_cpu_progress(self) -> Dict[str, Any]:
@@ -570,6 +590,15 @@ class GameplayActionsMixin:
         self._notifications.publish(
             "info", f"🤖 CPUが{plan.incoming_name}を{base_label}の代走として起用"
         )
+        # Independent overlay event
+        if hasattr(self, "_overlays"):
+            try:
+                self._overlays.publish(
+                    "pinch_run",
+                    f"{plan.incoming_name} pinch runs for {plan.outgoing_name} ({base_label})",
+                )
+            except Exception:
+                pass
 
     def _cpu_prepare_defense_strategy(self) -> None:
         if getattr(self, "_control_mode", "manual") != "cpu":
@@ -621,6 +650,15 @@ class GameplayActionsMixin:
                 f"🤖 CPUが投手交代: {plan.current_name}→{plan.replacement_name}",
             )
             self._refresh_defense_status()
+            # Independent overlay event
+            if hasattr(self, "_overlays"):
+                try:
+                    self._overlays.publish(
+                        "pitching_change",
+                        f"{plan.replacement_name} replaces {plan.current_name}",
+                    )
+                except Exception:
+                    pass
         else:
             self._log.append(f"🤖 CPU守備采配失敗: {message}", variant="warning")
 
@@ -716,4 +754,3 @@ def _find_lineup_index(lineup: List[object], runner: object) -> Optional[int]:
                 if getattr(player, "name", None) == runner_name:
                     return idx
     return None
-

@@ -37,6 +37,11 @@ const LABEL_OVERRIDES = Object.freeze({
   bunt_single: 'Bunt Single',
   stolen_base: 'Stolen Base',
   caught_stealing: 'Caught Stealing',
+  // Substitution overlays
+  pinch_run: 'Pinch Runner',
+  pinch_hit: 'Pinch Hitter',
+  defense_sub: 'Defensive Sub',
+  pitching_change: 'Pitching Change',
 });
 
 const DISPLAY_DURATION = 1000;

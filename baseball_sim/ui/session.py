@@ -11,6 +11,7 @@ from .exceptions import GameSessionError
 from .gameplay_actions import GameplayActionsMixin
 from .logging import SessionLog
 from .notifications import NotificationCenter
+from .overlays import OverlayEventCenter
 from .simulation_controls import SimulationControlsMixin
 from .state_builders import SessionStateBuilder
 from .team_management import TeamManagementMixin
@@ -33,6 +34,7 @@ class WebGameSession(
         self.game_state = None
         self._log = SessionLog(self.MAX_LOG_ENTRIES)
         self._notifications = NotificationCenter()
+        self._overlays = OverlayEventCenter()
         self._state_builder = SessionStateBuilder(self)
         self._game_over_announced = False
         self._action_block_reason: Optional[str] = None
@@ -64,9 +66,11 @@ class WebGameSession(
         """Return a dictionary representing the entire UI state."""
 
         notification = self._notifications.consume()
+        overlays = self._overlays.consume()
         payload, updated_reason = self._state_builder.build_state(
             log_entries=self._log.as_list(),
             notification=notification,
+            overlays=overlays,
             action_block_reason=self._action_block_reason,
         )
         self._action_block_reason = updated_reason
@@ -226,4 +230,3 @@ class WebGameSession(
             "progress_available": progress_available,
             "instruction": instruction,
         }
-

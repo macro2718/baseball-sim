@@ -45,6 +45,7 @@ import { setStatusMessage } from './status.js';
 import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
 import { updateFieldResultDisplay, resetFieldResultDisplay } from './fieldResultDisplay.js';
 import { hideOffenseMenu, hideDefenseMenu } from './menus.js';
+import { updateOverlayEvents } from './overlayEvents.js';
 
 function setInsightsVisibility(visible) {
   const { insightGrid } = elements;
@@ -2873,6 +2874,13 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   });
   triggerPlayAnimation(gameState.last_play || null, { isActive: true });
   updateFieldResultDisplay(gameState, previousGameState || null);
+  if (Array.isArray(gameState.overlays)) {
+    try {
+      updateOverlayEvents(gameState.overlays);
+    } catch (_) {
+      // no-op if overlay handler not loaded
+    }
+  }
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;

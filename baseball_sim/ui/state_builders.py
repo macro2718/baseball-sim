@@ -37,12 +37,13 @@ class SessionStateBuilder:
         *,
         log_entries: List[Dict[str, str]],
         notification: Optional[Notification],
+        overlays: List[Dict[str, str]],
         action_block_reason: Optional[str],
     ) -> Tuple[Dict[str, object], Optional[str]]:
         title = self._build_title_state()
         teams = self._build_teams_state()
         team_library = self._build_team_library_state()
-        game, updated_reason = self._build_game_state(teams, action_block_reason)
+        game, updated_reason = self._build_game_state(teams, action_block_reason, overlays)
         simulation = self._build_simulation_state()
 
         payload: Dict[str, object] = {
@@ -167,6 +168,7 @@ class SessionStateBuilder:
         self,
         teams: Dict[str, Optional[Dict[str, object]]],
         action_block_reason: Optional[str],
+        overlays: Optional[List[Dict[str, str]]],
     ) -> Tuple[Dict[str, object], Optional[str]]:
         control_state: Dict[str, object] = {}
         if hasattr(self._session, "get_control_state"):
@@ -191,6 +193,7 @@ class SessionStateBuilder:
                     "situation": "Waiting for a new game.",
                     "max_innings": 9,
                     "control": control_state,
+                    "overlays": [],
                 },
                 action_block_reason,
             )
@@ -350,6 +353,7 @@ class SessionStateBuilder:
                     "message": message_text,
                     "sequence": sequence_number,
                 },
+                "overlays": list(overlays or []),
                 "control": control_state,
             },
             action_block_reason,
@@ -554,14 +558,27 @@ class SessionStateBuilder:
             seen_pitchers.add(player_id)
             pitching.append(self._serialize_pitcher_stats(player))
 
+        # Ensure active pitcher is included (relievers after a change)
+        current_pitcher = getattr(team, "current_pitcher", None)
+        if current_pitcher is not None:
+            add_pitcher(current_pitcher)
+
+        # Registered pitchers on the staff
+        for pitcher in getattr(team, "pitchers", []):
+            add_pitcher(pitcher)
+
+        # Some data sources may tag pitchers in lineup/bench with position
         for pitcher in getattr(team, "lineup", []):
             if getattr(pitcher, "position", "").upper() == "P":
                 add_pitcher(pitcher)
-        for pitcher in getattr(team, "pitchers", []):
-            add_pitcher(pitcher)
         for pitcher in getattr(team, "bench", []):
             if getattr(pitcher, "position", "").upper() == "P":
                 add_pitcher(pitcher)
+
+        # Previously used pitchers may be moved to ejected list; include them
+        for player in getattr(team, "ejected_players", []) or []:
+            if self._is_pitcher(player):
+                add_pitcher(player)
 
         return {"batting": batting, "pitching": pitching}
 

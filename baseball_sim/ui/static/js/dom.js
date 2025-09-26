@@ -129,6 +129,7 @@ export const elements = {
   runnerAnimationLayer: document.getElementById('runner-animation-layer'),
   playAnimationLayer: document.getElementById('play-animation-layer'),
   fieldResultDisplay: document.getElementById('field-result-display'),
+  overlayEvents: document.getElementById('overlay-events'),
   defenseAlignment: document.getElementById('defense-alignment'),
   batterAlignment: document.getElementById('batter-alignment'),
   pinchPlayer: document.getElementById('pinch-player'),

@@ -711,6 +711,36 @@
   --result-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(15, 23, 42, 0.72));
 }
 
+/* Independent overlay event badges (substitutions, etc.) */
+.overlay-events {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.overlay-event {
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.overlay-event.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.overlay-event.is-fading-out {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 .play-ball {
   position: absolute;
   width: clamp(10px, calc(var(--field-size) * 0.038), 18px);
