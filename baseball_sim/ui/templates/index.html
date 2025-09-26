@@ -167,6 +167,26 @@
                 <select id="lobby-home-team" class="team-select"></select>
               </div>
             </div>
+            <div class="match-mode-section">
+              <p class="match-mode-label">試合モード</p>
+              <div class="match-mode-options">
+                <label class="match-mode-option">
+                  <input type="radio" name="match-mode" value="manual" checked />
+                  <span>全操作対戦</span>
+                </label>
+                <label class="match-mode-option">
+                  <input type="radio" name="match-mode" value="cpu" />
+                  <span>CPU対戦</span>
+                </label>
+              </div>
+              <div class="team-selection-field control-team-field hidden" id="control-team-field">
+                <label for="control-team-select">自操作チーム</label>
+                <select id="control-team-select" class="team-select">
+                  <option value="home">ホーム</option>
+                  <option value="away">アウェイ</option>
+                </select>
+              </div>
+            </div>
             <p class="title-hint" id="lobby-hint"></p>
             <div class="title-actions">
               <button id="enter-title" class="primary">決定</button>
@@ -704,6 +724,7 @@
               <div class="team-card" id="away-team-card">
                 <h3 class="team-name" data-team="away">Away</h3>
                 <p class="team-message" data-team="away"></p>
+                <p class="team-control" data-team-control="away"></p>
                 <ul class="team-errors" data-team="away"></ul>
                 <div class="title-roster-section">
                   <div class="title-lineup-section">
@@ -736,6 +757,7 @@
               <div class="team-card" id="home-team-card">
                 <h3 class="team-name" data-team="home">Home</h3>
                 <p class="team-message" data-team="home"></p>
+                <p class="team-control" data-team-control="home"></p>
                 <ul class="team-errors" data-team="home"></ul>
                 <div class="title-roster-section">
                   <div class="title-lineup-section">
@@ -767,6 +789,7 @@
               </div>
             </div>
             <p class="title-hint" id="title-hint"></p>
+            <p class="title-control-hint" id="title-control-hint"></p>
             <div class="title-actions">
               <button id="start-game" class="primary">ゲーム開始</button>
               <button id="reload-teams">データ再読込</button>
@@ -967,6 +990,7 @@
                   <button id="swing-button" class="primary">通常打撃</button>
                   <button id="bunt-button">バント</button>
                   <button id="steal-button">盗塁</button>
+                  <button id="progress-button" class="primary hidden">進行</button>
                   <button id="open-offense-strategy">攻撃側采配</button>
                   <button id="open-defense-strategy">守備側采配</button>
                   <button id="open-stats">成績</button>

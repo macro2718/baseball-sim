@@ -168,12 +168,19 @@ class SessionStateBuilder:
         teams: Dict[str, Optional[Dict[str, object]]],
         action_block_reason: Optional[str],
     ) -> Tuple[Dict[str, object], Optional[str]]:
+        control_state: Dict[str, object] = {}
+        if hasattr(self._session, "get_control_state"):
+            try:
+                control_state = self._session.get_control_state()
+            except Exception:
+                control_state = {}
+
         game_state = self._session.game_state
         if not game_state:
             return (
                 {
                     "active": False,
-                    "actions": {"swing": False, "bunt": False},
+                    "actions": {"swing": False, "bunt": False, "steal": False, "progress": False},
                     "action_block_reason": action_block_reason,
                     "game_over": False,
                     "defensive_errors": [],
@@ -183,6 +190,7 @@ class SessionStateBuilder:
                     "inning_scores": {"home": [], "away": []},
                     "situation": "Waiting for a new game.",
                     "max_innings": 9,
+                    "control": control_state,
                 },
                 action_block_reason,
             )
@@ -237,6 +245,14 @@ class SessionStateBuilder:
 
         max_innings = max(len(scoreboard["away"]), len(scoreboard["home"]), 9)
         situation = format_situation(game_state)
+
+        offense_allowed = True
+        defense_allowed = True
+        progress_available = False
+        if isinstance(control_state, dict):
+            offense_allowed = bool(control_state.get("offense_allowed", True))
+            defense_allowed = bool(control_state.get("defense_allowed", True))
+            progress_available = bool(control_state.get("progress_available", False))
 
         last_play_raw = getattr(game_state, "last_play", None)
         if isinstance(last_play_raw, dict):
@@ -312,13 +328,16 @@ class SessionStateBuilder:
                 "errors": {"home": 0, "away": 0},
                 "inning_scores": scoreboard,
                 "actions": {
-                    "swing": allowed and not game_state.game_ended,
+                    "swing": allowed and not game_state.game_ended and offense_allowed,
                     "bunt": allowed
                     and not game_state.game_ended
+                    and offense_allowed
                     and game_state.can_bunt(),
                     "steal": allowed
                     and not game_state.game_ended
+                    and offense_allowed
                     and game_state.can_steal(),
+                    "progress": progress_available and not game_state.game_ended,
                 },
                 "action_block_reason": action_block_reason if not allowed else None,
                 "defensive_errors": list(game_state.defensive_error_messages),
@@ -331,6 +350,7 @@ class SessionStateBuilder:
                     "message": message_text,
                     "sequence": sequence_number,
                 },
+                "control": control_state,
             },
             action_block_reason,
         )
@@ -340,6 +360,17 @@ class SessionStateBuilder:
     # ------------------------------------------------------------------
     def _build_teams_state(self) -> Dict[str, Optional[Dict[str, object]]]:
         teams: Dict[str, Optional[Dict[str, object]]] = {"home": None, "away": None}
+        control_state: Dict[str, object] = {}
+        if hasattr(self._session, "get_control_state"):
+            try:
+                control_state = self._session.get_control_state()
+            except Exception:
+                control_state = {}
+
+        mode_cpu = isinstance(control_state, dict) and control_state.get("mode") == "cpu"
+        user_team_key = control_state.get("user_team") if isinstance(control_state, dict) else None
+        cpu_team_key = control_state.get("cpu_team") if isinstance(control_state, dict) else None
+
         game_state = self._session.game_state
 
         for key, team in (("home", self._session.home_team), ("away", self._session.away_team)):
@@ -465,6 +496,12 @@ class SessionStateBuilder:
                 "pitcher_options": pitcher_options,
                 "stats": self._build_team_stats(team),
                 "traits": self._build_team_traits(team),
+                "controlled_by": (
+                    "cpu" if mode_cpu and key == cpu_team_key else "user"
+                ),
+                "control_label": (
+                    "CPU" if mode_cpu and key == cpu_team_key else "あなた"
+                ),
             }
 
         return teams

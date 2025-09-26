@@ -28,11 +28,21 @@ function handleApiError(error, render) {
 }
 
 export function createGameActions(render) {
-  async function handleStart(reload) {
+  async function handleStart(options = {}) {
+    const payloadBody = {
+      reload: Boolean(options?.reload),
+    };
+    if (options?.mode) {
+      payloadBody.mode = options.mode;
+    }
+    if (options?.userTeam) {
+      payloadBody.user_team = options.userTeam;
+    }
+
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameStart, {
         method: 'POST',
-        body: JSON.stringify({ reload }),
+        body: JSON.stringify(payloadBody),
       });
       render(payload);
     } catch (error) {
@@ -122,6 +132,15 @@ export function createGameActions(render) {
   async function handleBunt() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameBunt, { method: 'POST' });
+      render(payload);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
+  async function handleProgress() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameProgress, { method: 'POST' });
       render(payload);
     } catch (error) {
       handleApiError(error, render);
@@ -532,6 +551,7 @@ export function createGameActions(render) {
     startSimulation: handleSimulationStart,
     handleSwing,
     handleBunt,
+    handleProgress,
     handleSteal,
     handlePinchHit,
     handlePinchRun,

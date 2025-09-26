@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from enum import Enum
+
 from typing import Any, Dict, List, Optional
 
 from baseball_sim.config import GameResults
@@ -9,6 +12,23 @@ from baseball_sim.gameplay.substitutions import SubstitutionManager
 
 from .exceptions import GameSessionError
 from .formatting import half_inning_banner
+
+
+class CPUPlayType(str, Enum):
+    """Enumerate the kinds of offensive actions the CPU can initiate."""
+
+    SWING = "swing"
+    BUNT = "bunt"
+    STEAL = "steal"
+
+
+@dataclass(frozen=True)
+class CPUOffenseDecision:
+    """Structured description of what the CPU wants to do on offense."""
+
+    play: CPUPlayType
+    label: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class GameplayActionsMixin:
@@ -24,6 +44,10 @@ class GameplayActionsMixin:
             self._action_block_reason = "The game has already ended."
             self._log.append(self._action_block_reason, variant="warning")
             return self.build_state()
+
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
 
         allowed, reason = self.game_state.is_game_action_allowed()
         if not allowed:
@@ -77,6 +101,10 @@ class GameplayActionsMixin:
             self._action_block_reason = "The game has already ended."
             self._log.append(self._action_block_reason, variant="warning")
             return self.build_state()
+
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
 
         allowed, reason = self.game_state.is_game_action_allowed()
         if not allowed:
@@ -149,6 +177,10 @@ class GameplayActionsMixin:
             self._log.append(self._action_block_reason, variant="warning")
             return self.build_state()
 
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
+
         allowed, reason = self.game_state.is_game_action_allowed()
         if not allowed:
             self._action_block_reason = reason
@@ -202,6 +234,10 @@ class GameplayActionsMixin:
         if not self.game_state or not self.game_state.batting_team:
             raise GameSessionError("Game has not started yet.")
 
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
+
         substitution_manager = SubstitutionManager(self.game_state.batting_team)
         success, message = substitution_manager.execute_pinch_hit(bench_index, lineup_index)
 
@@ -229,6 +265,10 @@ class GameplayActionsMixin:
 
         if lineup_index is None:
             raise GameSessionError("Could not match the selected runner to the lineup.")
+
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
 
         substitution_manager = SubstitutionManager(batting_team)
         success, result_message = substitution_manager.execute_defensive_substitution(
@@ -268,6 +308,10 @@ class GameplayActionsMixin:
         if not self.game_state or not self.game_state.fielding_team:
             raise GameSessionError("Game has not started yet.")
 
+        guard = getattr(self, "_guard_defense_action", None)
+        if callable(guard):
+            guard()
+
         substitution_manager = SubstitutionManager(self.game_state.fielding_team)
 
         if swaps is not None:
@@ -294,6 +338,10 @@ class GameplayActionsMixin:
         if not self.game_state or not self.game_state.fielding_team:
             raise GameSessionError("Game has not started yet.")
 
+        guard = getattr(self, "_guard_defense_action", None)
+        if callable(guard):
+            guard()
+
         substitution_manager = SubstitutionManager(self.game_state.fielding_team)
         success, message = substitution_manager.execute_pitcher_change(pitcher_index)
 
@@ -302,6 +350,91 @@ class GameplayActionsMixin:
         self._log.append(message, variant=variant)
         if success:
             self._refresh_defense_status()
+        return self.build_state()
+
+    def execute_cpu_progress(self) -> Dict[str, Any]:
+        """Advance the game by letting the CPU control the current offense."""
+
+        if not self.game_state:
+            raise GameSessionError("Game has not started yet.")
+
+        guard = getattr(self, "_guard_progress_action", None)
+        if callable(guard):
+            guard()
+
+        if self.game_state.game_ended:
+            self._action_block_reason = "The game has already ended."
+            self._log.append(self._action_block_reason, variant="warning")
+            return self.build_state()
+
+        allowed, reason = self.game_state.is_game_action_allowed()
+        if not allowed:
+            self._action_block_reason = reason
+            if reason:
+                self._log.append(f"❌ {reason}", variant="danger")
+            return self.build_state()
+
+        self._action_block_reason = None
+
+        offense_key = "home" if self.game_state.batting_team is self.home_team else "away"
+        decision = self._cpu_select_offense_decision(offense_key)
+
+        batting_team = self.game_state.batting_team
+        fielding_team = self.game_state.fielding_team
+        if not batting_team or not fielding_team:
+            self._action_block_reason = "現在の対戦情報を取得できません。"
+            self._log.append(self._action_block_reason, variant="warning")
+            return self.build_state()
+
+        batter = batting_team.current_batter
+        pitcher = fielding_team.current_pitcher
+        if batter is None or pitcher is None:
+            self._action_block_reason = "現在の打者または投手情報を取得できません。"
+            self._log.append(self._action_block_reason, variant="warning")
+            return self.build_state()
+
+        prev_inning = self.game_state.inning
+        prev_half = self.game_state.is_top_inning
+
+        if decision.play is not CPUPlayType.SWING:
+            fallback_message = (
+                decision.label
+                or "CPU strategy actions are not yet implemented."
+            )
+            self._log.append(fallback_message, variant="info")
+            self._log.append("⚠️ 通常打撃に切り替えます。", variant="warning")
+            decision = CPUOffenseDecision(play=CPUPlayType.SWING)
+
+        result = self.game_state.calculate_result(batter, pitcher)
+        message = self.game_state.apply_result(result, batter)
+
+        self._log.append(
+            f"🤖 CPU: {batter.name} vs {pitcher.name}",
+            variant="header",
+        )
+        variant = "success" if result in GameResults.POSITIVE_RESULTS else "danger"
+        self._log.append(message, variant=variant)
+
+        if result in GameResults.POSITIVE_RESULTS:
+            self._publish_positive_result(result, batter)
+        else:
+            self._publish_negative_result(result, batter)
+
+        pitcher.decrease_stamina()
+
+        inning_changed = (
+            prev_inning != self.game_state.inning
+            or prev_half != self.game_state.is_top_inning
+        )
+        if not inning_changed:
+            self.game_state.batting_team.next_batter()
+        else:
+            banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
+            self._log.extend_banner(banner)
+
+        if self.game_state.game_ended:
+            self._record_game_over()
+
         return self.build_state()
 
     # ------------------------------------------------------------------
@@ -324,6 +457,18 @@ class GameplayActionsMixin:
             self._notifications.publish("warning", f"⚾ {batter.name} strikes out")
         else:
             self._notifications.publish("info", f"{batter.name}: {result}")
+
+    def _cpu_select_offense_decision(self, offense_key: str) -> CPUOffenseDecision:
+        """Return the CPU's chosen offensive play for the given half-inning.
+
+        The initial implementation is intentionally conservative: the CPU
+        always swings away.  The structured return value keeps the door open for
+        richer logic (e.g. bunts, steals, hit-and-run) in later iterations
+        without needing to rewrite :meth:`execute_cpu_progress`.
+        """
+
+        _ = offense_key  # Reserved for future heuristics.
+        return CPUOffenseDecision(play=CPUPlayType.SWING)
 
     def _refresh_defense_status(self) -> None:
         if not self.game_state:

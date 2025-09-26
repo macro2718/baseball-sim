@@ -147,6 +147,57 @@
   margin-top: 24px;
 }
 
+.match-mode-section {
+  margin-top: 28px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(12, 22, 45, 0.68);
+  display: grid;
+  gap: 16px;
+}
+
+.match-mode-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.match-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.match-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  background: rgba(10, 19, 40, 0.82);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.match-mode-option input {
+  accent-color: var(--accent);
+}
+
+.match-mode-option.active {
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.22);
+  background: rgba(14, 28, 56, 0.94);
+}
+
+.control-team-field select {
+  margin-top: 0;
+}
+
 .team-selection-field label {
   display: block;
   font-size: 13px;
@@ -177,6 +228,20 @@
 .team-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.team-control {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.title-control-hint {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .team-builder-card {
