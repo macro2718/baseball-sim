@@ -57,8 +57,30 @@ class DataLoader:
     @staticmethod
     def setup_team_pitchers(team: Team, team_data: Dict, players_dict: Dict[str, Player]) -> None:
         """チームの投手陣をセットアップ"""
+        rotation_raw = team_data.get("rotation")
+        rotation_names = []
+        if isinstance(rotation_raw, list):
+            for entry in rotation_raw:
+                if isinstance(entry, dict):
+                    name_value = entry.get("name")
+                else:
+                    name_value = entry
+                name = str(name_value or "").strip()
+                if name:
+                    rotation_names.append(name)
+
         for pitcher_name in team_data["pitchers"]:
             team.add_pitcher(players_dict[pitcher_name])
+
+        rotation_players = []
+        if rotation_names:
+            name_map = {pitcher.name: pitcher for pitcher in team.pitchers}
+            for name in rotation_names:
+                pitcher = name_map.get(name)
+                if pitcher and pitcher not in rotation_players:
+                    rotation_players.append(pitcher)
+
+        team.set_pitcher_rotation(rotation_players)
 
     @staticmethod
     def setup_team_bench(team: Team, team_data: Dict, players_dict: Dict[str, Player]) -> None:

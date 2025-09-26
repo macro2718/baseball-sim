@@ -213,6 +213,11 @@ class PlayerLibraryService:
         for bench_name in team_obj.get("bench", []) or []:
             if isinstance(bench_name, str) and bench_name == target_name:
                 return True
+        for rotation_entry in team_obj.get("rotation", []) or []:
+            if isinstance(rotation_entry, str) and rotation_entry == target_name:
+                return True
+            if isinstance(rotation_entry, dict) and rotation_entry.get("name") == target_name:
+                return True
         return False
 
     def find_referencing_teams(self, target_name: str) -> List[str]:
@@ -282,6 +287,16 @@ class PlayerLibraryService:
             for index, entry in enumerate(pitchers):
                 if isinstance(entry, str) and entry == old_name:
                     pitchers[index] = new_name
+                    changed = True
+
+        rotation_list = team_obj.get("rotation")
+        if isinstance(rotation_list, list):
+            for index, entry in enumerate(rotation_list):
+                if isinstance(entry, str) and entry == old_name:
+                    rotation_list[index] = new_name
+                    changed = True
+                elif isinstance(entry, dict) and entry.get("name") == old_name:
+                    rotation_list[index] = new_name
                     changed = True
         return changed
 

@@ -8,6 +8,7 @@ class Team:
         self.pitchers = []  # 投手リスト
         self.current_pitcher = None
         self.current_batter_index = 0
+        self.pitcher_rotation = []  # シミュレーション用の先発ローテーション
         
         # 一度退いた選手のリスト（再出場不可）
         self.ejected_players = []
@@ -77,6 +78,25 @@ class Team:
         self.pitchers.append(pitcher)
         if not self.current_pitcher:
             self.current_pitcher = pitcher
+
+    def set_pitcher_rotation(self, rotation_players):
+        """ローテーション用に先発投手の順序を設定する"""
+
+        valid_rotation = []
+        for pitcher in rotation_players or []:
+            if pitcher and pitcher in self.pitchers and pitcher not in valid_rotation:
+                valid_rotation.append(pitcher)
+
+        if not valid_rotation:
+            valid_rotation = [
+                pitcher
+                for pitcher in self.pitchers
+                if getattr(pitcher, "pitcher_type", "").upper() == "SP"
+            ]
+
+        self.pitcher_rotation = list(valid_rotation)
+        if self.pitcher_rotation:
+            self.current_pitcher = self.pitcher_rotation[0]
 
     def next_batter(self):
         if len(self.lineup) == 0:

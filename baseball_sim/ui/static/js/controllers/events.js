@@ -70,6 +70,7 @@ const DEFAULT_LINEUP_POSITIONS = ['CF', 'SS', '2B', '1B', '3B', 'LF', 'RF', 'C',
 const POSITION_CHOICES = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'P'];
 const TEAM_BUILDER_DEFAULT_BENCH_SLOTS = 3;
 const TEAM_BUILDER_DEFAULT_PITCHER_SLOTS = 5;
+const TEAM_BUILDER_DEFAULT_ROTATION_SLOTS = 5;
 
 function clonePlayerTemplate(role = 'batter') {
   const template = DEFAULT_PLAYER_TEMPLATES[role] || DEFAULT_PLAYER_TEMPLATES.batter;
@@ -508,6 +509,7 @@ function ensureTeamBuilderState() {
   if (!stateCache.teamBuilder.initialForm) {
     stateCache.teamBuilder.initialForm = cloneTeamForm(stateCache.teamBuilder.form);
   }
+  ensureRotationSlots(stateCache.teamBuilder.form);
 }
 
 function createEmptyLineupSlot(order) {
@@ -531,11 +533,24 @@ function createEmptyPitcherEntry() {
   return { playerId: null, playerName: '', playerRole: 'pitcher', player: null, eligible: ['P'] };
 }
 
+function createEmptyRotationSlot(order) {
+  return {
+    order,
+    playerId: null,
+    playerName: '',
+    player: null,
+    pitcherIndex: null,
+  };
+}
+
 function createDefaultTeamForm() {
   const lineup = Array.from({ length: LINEUP_SIZE }, (_, index) => createEmptyLineupSlot(index));
   const bench = Array.from({ length: TEAM_BUILDER_DEFAULT_BENCH_SLOTS }, () => createEmptyBenchEntry());
   const pitchers = Array.from({ length: TEAM_BUILDER_DEFAULT_PITCHER_SLOTS }, () => createEmptyPitcherEntry());
-  return { name: '', lineup, bench, pitchers };
+  const rotation = Array.from({ length: TEAM_BUILDER_DEFAULT_ROTATION_SLOTS }, (_, index) =>
+    createEmptyRotationSlot(index),
+  );
+  return { name: '', lineup, bench, pitchers, rotation };
 }
 
 function cloneLineupSlotData(slot, index) {
@@ -573,6 +588,16 @@ function clonePitcherEntryData(entry) {
   };
 }
 
+function cloneRotationSlotData(slot, index) {
+  return {
+    order: Number.isInteger(slot?.order) ? slot.order : index,
+    playerId: slot?.playerId || null,
+    playerName: slot?.playerName || '',
+    player: slot?.player || null,
+    pitcherIndex: Number.isInteger(slot?.pitcherIndex) ? slot.pitcherIndex : null,
+  };
+}
+
 function cloneTeamForm(form) {
   if (!form) {
     return createDefaultTeamForm();
@@ -586,7 +611,119 @@ function cloneTeamForm(form) {
   const pitchers = Array.isArray(form.pitchers)
     ? form.pitchers.map((entry) => clonePitcherEntryData(entry))
     : [];
-  return { name: form.name || '', lineup, bench, pitchers };
+  const rotationLength = Math.max(
+    TEAM_BUILDER_DEFAULT_ROTATION_SLOTS,
+    Array.isArray(form.rotation) ? form.rotation.length : 0,
+  );
+  const rotation = Array.from({ length: rotationLength }, (_, index) =>
+    cloneRotationSlotData(form.rotation?.[index], index),
+  );
+  return { name: form.name || '', lineup, bench, pitchers, rotation };
+}
+
+function ensureRotationSlots(form, desiredLength = TEAM_BUILDER_DEFAULT_ROTATION_SLOTS) {
+  if (!form) return;
+  if (!Array.isArray(form.rotation)) {
+    form.rotation = [];
+  }
+  const minimumLength = Math.max(desiredLength, form.rotation.length);
+  for (let index = 0; index < minimumLength; index += 1) {
+    if (!form.rotation[index]) {
+      form.rotation[index] = createEmptyRotationSlot(index);
+    } else {
+      form.rotation[index].order = index;
+      if (!('pitcherIndex' in form.rotation[index])) {
+        form.rotation[index].pitcherIndex = null;
+      }
+    }
+  }
+  form.rotation = form.rotation.slice(0, minimumLength);
+}
+
+function applyPitcherToRotationSlot(form, slotIndex, pitcherEntry, pitcherIndex = null) {
+  if (!form || slotIndex == null || slotIndex < 0) return;
+  ensureRotationSlots(form, slotIndex + 1);
+  const slot = form.rotation[slotIndex];
+  if (!pitcherEntry || !pitcherEntry.playerName) {
+    form.rotation[slotIndex] = createEmptyRotationSlot(slotIndex);
+    return;
+  }
+  slot.order = slotIndex;
+  slot.playerId = pitcherEntry.playerId || null;
+  slot.playerName = pitcherEntry.playerName || '';
+  slot.player = pitcherEntry.player || null;
+  slot.pitcherIndex = Number.isInteger(pitcherIndex) ? pitcherIndex : null;
+}
+
+function clearRotationSlot(form, slotIndex) {
+  if (!form || slotIndex == null || slotIndex < 0) return;
+  ensureRotationSlots(form, slotIndex + 1);
+  form.rotation[slotIndex] = createEmptyRotationSlot(slotIndex);
+}
+
+function syncRotationWithPitchers(form) {
+  if (!form) return;
+  ensureRotationSlots(form);
+  const pitchers = Array.isArray(form.pitchers) ? form.pitchers : [];
+  const availableById = new Map();
+  const availableByName = new Map();
+  pitchers.forEach((entry, index) => {
+    if (!entry || !entry.playerName) return;
+    const name = String(entry.playerName).trim();
+    const data = { entry, index };
+    availableByName.set(name, data);
+    if (entry.playerId) {
+      availableById.set(String(entry.playerId), data);
+    }
+  });
+
+  form.rotation.forEach((slot, index) => {
+    if (!slot) {
+      form.rotation[index] = createEmptyRotationSlot(index);
+      return;
+    }
+    const byId = slot.playerId ? availableById.get(String(slot.playerId)) : null;
+    const byName = slot.playerName ? availableByName.get(String(slot.playerName).trim()) : null;
+    const match = byId || byName;
+    if (match) {
+      applyPitcherToRotationSlot(form, index, match.entry, match.index);
+    } else {
+      form.rotation[index] = createEmptyRotationSlot(index);
+    }
+  });
+}
+
+function autoAssignPitcherToRotation(form, pitcherEntry, pitcherIndex) {
+  if (!form || !pitcherEntry || !pitcherEntry.playerName) return;
+  const type = (pitcherEntry.player?.pitcher_type || pitcherEntry.playerRole || '').toString().toUpperCase();
+  if (type !== 'SP') return;
+  ensureRotationSlots(form);
+  const alreadyAssigned = form.rotation.some(
+    (slot) => slot && slot.playerName && slot.playerName === pitcherEntry.playerName,
+  );
+  if (alreadyAssigned) {
+    return;
+  }
+  const emptyIndex = form.rotation.findIndex((slot) => !slot || !slot.playerName);
+  if (emptyIndex >= 0) {
+    applyPitcherToRotationSlot(form, emptyIndex, pitcherEntry, pitcherIndex);
+  }
+}
+
+function getRotationAssignmentMap(form) {
+  const map = new Map();
+  if (!form || !Array.isArray(form.rotation)) {
+    return map;
+  }
+  form.rotation.forEach((slot, index) => {
+    if (!slot || !slot.playerName) return;
+    const order = index + 1;
+    if (slot.playerId) {
+      map.set(`id:${slot.playerId}`, order);
+    }
+    map.set(`name:${slot.playerName}`, order);
+  });
+  return map;
 }
 
 function captureTeamBuilderSnapshot(form = null) {
@@ -921,6 +1058,9 @@ function relinkFormPlayers(targetForm = null) {
     entry.playerRole = null;
     entry.playerId = null;
   });
+
+  ensureRotationSlots(form);
+  syncRotationWithPitchers(form);
 }
 
 function getTeamBuilderForm() {
@@ -1157,6 +1297,8 @@ function clearPitcherEntry(index) {
   const form = getTeamBuilderForm();
   if (!form || !form.pitchers || index < 0 || index >= form.pitchers.length) return;
   form.pitchers[index] = createEmptyPitcherEntry();
+  clearRotationSlot(form, index);
+  syncRotationWithPitchers(form);
 }
 
 function removeBenchSlot(index) {
@@ -1186,6 +1328,7 @@ function removePitcherSlot(index) {
   if (!form || !Array.isArray(form.pitchers) || index < 0 || index >= form.pitchers.length) return;
   form.pitchers.splice(index, 1);
   stateCache.teamBuilder.editorDirty = true;
+  syncRotationWithPitchers(form);
   if (stateCache.teamBuilder.selection?.group === 'pitchers') {
     const currentIndex = Number.isInteger(stateCache.teamBuilder.selection.index)
       ? stateCache.teamBuilder.selection.index
@@ -1220,6 +1363,8 @@ function addPitcherSlot() {
   const index = form.pitchers.length;
   form.pitchers.push(createEmptyPitcherEntry());
   stateCache.teamBuilder.editorDirty = true;
+  ensureRotationSlots(form);
+  syncRotationWithPitchers(form);
   selectTeamBuilderSlot('pitchers', index);
 }
 
@@ -1606,6 +1751,8 @@ function assignPlayerToPitchers(index, record) {
   entry.playerName = record.name;
   entry.player = record;
   entry.playerRole = record.role;
+  autoAssignPitcherToRotation(form, entry, index);
+  syncRotationWithPitchers(form);
   setSelectionAndCatalog('pitchers', index);
   stateCache.teamBuilder.editorDirty = true;
   setTeamBuilderFeedback(`${record.name} を投手リストに追加しました。`, 'success');
@@ -1858,6 +2005,7 @@ function renderTeamBuilderPitchers() {
   container.innerHTML = '';
   const form = getTeamBuilderForm();
   const selection = stateCache.teamBuilder.selection || {};
+  const rotationAssignments = getRotationAssignmentMap(form);
 
   if (!form.pitchers.length) {
     const empty = document.createElement('p');
@@ -1901,6 +2049,18 @@ function renderTeamBuilderPitchers() {
       colorizeAbilityChips(abilityRow, 'pitcher');
     }
 
+    if (entry?.playerName) {
+      const orderById = entry.playerId ? rotationAssignments.get(`id:${entry.playerId}`) : null;
+      const orderByName = rotationAssignments.get(`name:${entry.playerName}`);
+      const rotationOrder = orderById || orderByName || null;
+      if (rotationOrder) {
+        const rotationBadge = document.createElement('span');
+        rotationBadge.className = 'rotation-badge';
+        rotationBadge.textContent = `${rotationOrder} 番手`;
+        meta.appendChild(rotationBadge);
+      }
+    }
+
     button.appendChild(meta);
     slotDiv.appendChild(button);
 
@@ -1914,6 +2074,187 @@ function renderTeamBuilderPitchers() {
 
     container.appendChild(slotDiv);
   });
+}
+
+function renderTeamBuilderRotation() {
+  const container = elements.teamBuilderRotation;
+  if (!container) return;
+  container.innerHTML = '';
+  const form = getTeamBuilderForm();
+  ensureRotationSlots(form);
+  syncRotationWithPitchers(form);
+
+  const pitchers = Array.isArray(form.pitchers) ? form.pitchers : [];
+  const options = pitchers
+    .map((entry, index) => {
+      if (!entry || !entry.playerName) return null;
+      const type = (entry.player?.pitcher_type || entry.playerRole || '').toString().toUpperCase();
+      return { index, name: entry.playerName, type };
+    })
+    .filter((value) => value);
+
+  const optionMap = new Map(options.map((option) => [option.name, option]));
+  let hasUnmatched = false;
+  form.rotation.forEach((slot) => {
+    if (slot?.playerName && !optionMap.has(slot.playerName)) {
+      hasUnmatched = true;
+    }
+  });
+
+  const nameCounts = new Map();
+  form.rotation.forEach((slot) => {
+    if (!slot?.playerName) return;
+    const count = nameCounts.get(slot.playerName) || 0;
+    nameCounts.set(slot.playerName, count + 1);
+  });
+  const hasDuplicates = Array.from(nameCounts.values()).some((count) => count > 1);
+  const totalSlots = Array.isArray(form.rotation) ? form.rotation.length : 0;
+
+  if (!options.length) {
+    const empty = document.createElement('p');
+    empty.className = 'rotation-message';
+    empty.textContent = '投手リストに登録された投手がありません。投手を追加してください。';
+    container.appendChild(empty);
+    return;
+  }
+
+  form.rotation.forEach((slot, index) => {
+    const row = document.createElement('div');
+    row.className = 'rotation-slot';
+
+    const label = document.createElement('label');
+    label.setAttribute('for', `rotation-slot-${index}`);
+    label.textContent = `${index + 1} 番手`;
+    row.appendChild(label);
+
+    const select = document.createElement('select');
+    select.id = `rotation-slot-${index}`;
+    select.dataset.rotationIndex = String(index);
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '未設定';
+    select.appendChild(placeholder);
+
+    const currentIndex = Number.isInteger(slot?.pitcherIndex)
+      ? slot.pitcherIndex
+      : optionMap.get(slot?.playerName || '')?.index ?? null;
+
+    const takenIndices = new Set(
+      form.rotation
+        .map((entry, idx) => (idx !== index && Number.isInteger(entry?.pitcherIndex) ? entry.pitcherIndex : null))
+        .filter((value) => value != null),
+    );
+
+    options.forEach((option) => {
+      const optionEl = document.createElement('option');
+      optionEl.value = String(option.index);
+      const typeLabel = option.type ? ` (${option.type})` : '';
+      optionEl.textContent = `${option.name}${typeLabel}`;
+      if (currentIndex === option.index) {
+        optionEl.selected = true;
+      } else if (takenIndices.has(option.index)) {
+        optionEl.disabled = true;
+      }
+      select.appendChild(optionEl);
+    });
+
+    row.appendChild(select);
+
+    const controls = document.createElement('div');
+    controls.className = 'rotation-slot-controls';
+
+    const moveUp = document.createElement('button');
+    moveUp.type = 'button';
+    moveUp.className = 'rotation-move-button rotation-move-up';
+    moveUp.dataset.rotationAction = 'move-up';
+    moveUp.dataset.rotationIndex = String(index);
+    moveUp.textContent = '▲';
+    moveUp.title = `${index + 1} 番手を上に移動`;
+    moveUp.setAttribute('aria-label', `${index + 1} 番手を上に移動`);
+    moveUp.disabled = index === 0;
+
+    const moveDown = document.createElement('button');
+    moveDown.type = 'button';
+    moveDown.className = 'rotation-move-button rotation-move-down';
+    moveDown.dataset.rotationAction = 'move-down';
+    moveDown.dataset.rotationIndex = String(index);
+    moveDown.textContent = '▼';
+    moveDown.title = `${index + 1} 番手を下に移動`;
+    moveDown.setAttribute('aria-label', `${index + 1} 番手を下に移動`);
+    moveDown.disabled = index === totalSlots - 1;
+
+    controls.appendChild(moveUp);
+    controls.appendChild(moveDown);
+    row.appendChild(controls);
+    container.appendChild(row);
+  });
+
+  if (hasDuplicates) {
+    const warning = document.createElement('p');
+    warning.className = 'rotation-message danger';
+    warning.textContent = '同じ投手が複数の枠に設定されています。順番を見直してください。';
+    container.appendChild(warning);
+  } else if (hasUnmatched) {
+    const warning = document.createElement('p');
+    warning.className = 'rotation-message danger';
+    warning.textContent = 'ローテーションに投手リスト外の投手が含まれています。リストから再選択してください。';
+    container.appendChild(warning);
+  }
+}
+
+function updateRotationSlot(slotIndex, value) {
+  const form = getTeamBuilderForm();
+  if (!form) return;
+  const pitchers = Array.isArray(form.pitchers) ? form.pitchers : [];
+  if (value === '' || value == null) {
+    clearRotationSlot(form, slotIndex);
+  } else {
+    const indexValue = Number.parseInt(value, 10);
+    if (Number.isInteger(indexValue) && indexValue >= 0 && indexValue < pitchers.length) {
+      const entry = pitchers[indexValue];
+      if (entry && entry.playerName) {
+        applyPitcherToRotationSlot(form, slotIndex, entry, indexValue);
+      } else {
+        clearRotationSlot(form, slotIndex);
+      }
+    } else {
+      clearRotationSlot(form, slotIndex);
+    }
+  }
+  syncRotationWithPitchers(form);
+  stateCache.teamBuilder.editorDirty = true;
+  renderTeamBuilderView();
+}
+
+function reorderRotationSlot(slotIndex, targetIndex) {
+  const form = getTeamBuilderForm();
+  if (!form) return;
+  ensureRotationSlots(form);
+  const rotation = Array.isArray(form.rotation) ? form.rotation : [];
+  if (
+    slotIndex < 0 ||
+    targetIndex < 0 ||
+    slotIndex >= rotation.length ||
+    targetIndex >= rotation.length ||
+    slotIndex === targetIndex
+  ) {
+    return;
+  }
+
+  const [entry] = rotation.splice(slotIndex, 1);
+  rotation.splice(targetIndex, 0, entry || createEmptyRotationSlot(targetIndex));
+  rotation.forEach((slot, index) => {
+    if (!slot) {
+      rotation[index] = createEmptyRotationSlot(index);
+    } else {
+      slot.order = index;
+    }
+  });
+
+  syncRotationWithPitchers(form);
+  stateCache.teamBuilder.editorDirty = true;
+  renderTeamBuilderView();
 }
 
 function updateCatalogButtons() {
@@ -2076,6 +2417,7 @@ function renderTeamBuilderView() {
   renderTeamBuilderLineup();
   renderTeamBuilderBench();
   renderTeamBuilderPitchers();
+  renderTeamBuilderRotation();
   renderTeamBuilderCatalog();
 }
 
@@ -2086,6 +2428,8 @@ function buildTeamPayload() {
     setTeamBuilderFeedback('チーム名を入力してください。', 'danger');
     return null;
   }
+
+  syncRotationWithPitchers(form);
 
   const lineup = [];
   for (let index = 0; index < form.lineup.length; index += 1) {
@@ -2111,11 +2455,37 @@ function buildTeamPayload() {
     return null;
   }
 
+  const pitcherNameSet = new Set(pitchers);
+
   const bench = (form.bench || [])
     .map((entry) => (entry?.playerName ? String(entry.playerName).trim() : ''))
     .filter((nameValue) => nameValue);
 
-  return { name, lineup, pitchers, bench };
+  const rotation = [];
+  const rotationSeen = new Set();
+  const rotationEntries = Array.isArray(form.rotation) ? form.rotation : [];
+  for (let index = 0; index < rotationEntries.length; index += 1) {
+    const slot = rotationEntries[index];
+    const playerName = slot?.playerName ? String(slot.playerName).trim() : '';
+    if (!playerName) {
+      continue;
+    }
+    if (!pitcherNameSet.has(playerName)) {
+      setTeamBuilderFeedback(
+        `ローテーション${index + 1}番手の投手が投手リストに存在しません。`,
+        'danger',
+      );
+      return null;
+    }
+    if (rotationSeen.has(playerName)) {
+      setTeamBuilderFeedback('ローテーションの投手が重複しています。', 'danger');
+      return null;
+    }
+    rotationSeen.add(playerName);
+    rotation.push(playerName);
+  }
+
+  return { name, lineup, pitchers, bench, rotation };
 }
 
 function findLineupEligibilityConflicts() {
@@ -2154,6 +2524,7 @@ function createNewTeamTemplate() {
   resetLineupPositionSelection();
   clearPlayerSwapSelection();
   captureTeamBuilderSnapshot(stateCache.teamBuilder.form);
+  syncRotationWithPitchers(stateCache.teamBuilder.form);
   setTeamBuilderFeedback('テンプレートを読み込みました。', 'info');
   renderTeamBuilderView();
 }
@@ -2167,6 +2538,8 @@ function resetTeamBuilderFormToInitial(showFeedback = true) {
     stateCache.teamBuilder.form = createDefaultTeamForm();
     captureTeamBuilderSnapshot(stateCache.teamBuilder.form);
   }
+  ensureRotationSlots(stateCache.teamBuilder.form);
+  syncRotationWithPitchers(stateCache.teamBuilder.form);
   setSelectionAndCatalog('lineup', 0);
   stateCache.teamBuilder.editorDirty = false;
   resetLineupPositionSelection();
@@ -2288,6 +2661,64 @@ function applyTeamDataToForm(teamData) {
   if (!form.pitchers.length) {
     form.pitchers = Array.from({ length: TEAM_BUILDER_DEFAULT_PITCHER_SLOTS }, () => createEmptyPitcherEntry());
   }
+
+  const rotationRaw = Array.isArray(teamData?.rotation) ? teamData.rotation : [];
+  const rotationNames = rotationRaw
+    .map((entry) => {
+      if (entry && typeof entry === 'object') {
+        return entry.name ? String(entry.name).trim() : '';
+      }
+      return entry ? String(entry).trim() : '';
+    })
+    .filter((value) => value);
+
+  const starterCount = form.pitchers.reduce((total, entry) => {
+    if (!entry || !entry.playerName) {
+      return total;
+    }
+    const type = (entry.player?.pitcher_type || entry.playerRole || '').toString().toUpperCase();
+    return type === 'SP' ? total + 1 : total;
+  }, 0);
+
+  const rotationLength = Math.max(
+    TEAM_BUILDER_DEFAULT_ROTATION_SLOTS,
+    rotationNames.length,
+    starterCount,
+  );
+  form.rotation = Array.from({ length: rotationLength }, (_, index) => createEmptyRotationSlot(index));
+
+  rotationNames.forEach((name, order) => {
+    if (!form.rotation[order]) {
+      form.rotation[order] = createEmptyRotationSlot(order);
+    }
+    const pitcherIndex = form.pitchers.findIndex((entry) => entry?.playerName === name);
+    if (pitcherIndex >= 0) {
+      applyPitcherToRotationSlot(form, order, form.pitchers[pitcherIndex], pitcherIndex);
+    } else {
+      form.rotation[order].playerName = name;
+      form.rotation[order].playerId = null;
+      form.rotation[order].player = null;
+      form.rotation[order].pitcherIndex = null;
+    }
+  });
+
+  if (!rotationNames.length) {
+    const starters = [];
+    form.pitchers.forEach((entry, index) => {
+      if (!entry || !entry.playerName) return;
+      const type = (entry.player?.pitcher_type || entry.playerRole || '').toString().toUpperCase();
+      if (type === 'SP') {
+        starters.push({ entry, index });
+      }
+    });
+    starters.forEach(({ entry, index }, order) => {
+      if (order < form.rotation.length) {
+        applyPitcherToRotationSlot(form, order, entry, index);
+      }
+    });
+  }
+
+  syncRotationWithPitchers(form);
 
   stateCache.teamBuilder.form = form;
   setSelectionAndCatalog('lineup', 0);
@@ -3213,6 +3644,37 @@ export function initEventListeners(actions) {
 
   if (elements.teamBuilderPitchers) {
     elements.teamBuilderPitchers.addEventListener('click', handleTeamBuilderRosterClick);
+  }
+
+  if (elements.teamBuilderRotation) {
+    elements.teamBuilderRotation.addEventListener('change', (event) => {
+      const select = event.target.closest('[data-rotation-index]');
+      if (!select || !elements.teamBuilderRotation.contains(select)) {
+        return;
+      }
+      const indexValue = Number.parseInt(select.dataset.rotationIndex || '', 10);
+      if (Number.isNaN(indexValue)) {
+        return;
+      }
+      updateRotationSlot(indexValue, select.value);
+    });
+    elements.teamBuilderRotation.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-rotation-action]');
+      if (!button || !elements.teamBuilderRotation.contains(button)) {
+        return;
+      }
+      event.preventDefault();
+      const action = button.dataset.rotationAction;
+      const indexValue = Number.parseInt(button.dataset.rotationIndex || '', 10);
+      if (Number.isNaN(indexValue)) {
+        return;
+      }
+      if (action === 'move-up') {
+        reorderRotationSlot(indexValue, indexValue - 1);
+      } else if (action === 'move-down') {
+        reorderRotationSlot(indexValue, indexValue + 1);
+      }
+    });
   }
 
   if (elements.teamBuilderPlayerPanel) {
