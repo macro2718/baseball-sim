@@ -3023,7 +3023,8 @@ export function initEventListeners(actions) {
 
   function getMatchSetupOptions() {
     const setup = ensureMatchSetup();
-    const mode = setup.mode === 'cpu' ? 'cpu' : 'manual';
+    const mode =
+      setup.mode === 'cpu' ? 'cpu' : setup.mode === 'auto' ? 'auto' : 'manual';
     const userTeam = setup.userTeam === 'away' ? 'away' : 'home';
     return { mode, userTeam };
   }
@@ -3301,13 +3302,21 @@ export function initEventListeners(actions) {
   if (elements.matchModeRadios?.length) {
     elements.matchModeRadios.forEach((radio) => {
       radio.addEventListener('change', () => {
-        const value = radio.value === 'cpu' ? 'cpu' : 'manual';
+        const rawValue = typeof radio.value === 'string' ? radio.value : '';
+        let value = 'manual';
+        if (rawValue === 'cpu') {
+          value = 'cpu';
+        } else if (rawValue === 'auto') {
+          value = 'auto';
+        }
         const setup = ensureMatchSetup();
         setup.mode = value;
         if (value === 'cpu' && setup.userTeam !== 'home' && setup.userTeam !== 'away') {
           setup.userTeam = 'home';
+        } else if (value !== 'cpu') {
+          setup.userTeam = 'home';
         }
-        // Reset team selects to placeholder when switching modes (CPU ↔ 全操作)
+        // Reset team selects to placeholder when switching modes (CPU/全自動CPU ↔ 全操作)
         stateCache.resetTeamSelect = true;
         refreshView();
       });

@@ -380,7 +380,9 @@ class SessionStateBuilder:
             except Exception:
                 control_state = {}
 
-        mode_cpu = isinstance(control_state, dict) and control_state.get("mode") == "cpu"
+        mode_value = control_state.get("mode") if isinstance(control_state, dict) else None
+        mode_cpu = mode_value == "cpu"
+        mode_auto = mode_value == "auto"
         user_team_key = control_state.get("user_team") if isinstance(control_state, dict) else None
         cpu_team_key = control_state.get("cpu_team") if isinstance(control_state, dict) else None
 
@@ -512,10 +514,10 @@ class SessionStateBuilder:
                 "stats": self._build_team_stats(team),
                 "traits": self._build_team_traits(team),
                 "controlled_by": (
-                    "cpu" if mode_cpu and key == cpu_team_key else "user"
+                    "cpu" if mode_auto or (mode_cpu and key == cpu_team_key) else "user"
                 ),
                 "control_label": (
-                    "CPU" if mode_cpu and key == cpu_team_key else "あなた"
+                    "CPU" if mode_auto or (mode_cpu and key == cpu_team_key) else "あなた"
                 ),
             }
 

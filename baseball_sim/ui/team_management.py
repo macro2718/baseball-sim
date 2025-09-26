@@ -121,6 +121,15 @@ class TeamManagementMixin:
             summary = f"🎮 CPU対戦モード: あなた={user_team_name} / CPU={cpu_team_name}"
             self._log.append(summary, variant="info")
             self._notifications.publish("info", summary)
+        elif isinstance(control_state, dict) and control_state.get("mode") == "auto":
+            home_name = getattr(self.home_team, "name", "Home")
+            away_name = getattr(self.away_team, "name", "Away")
+            summary = (
+                "🤖 全自動CPUモード: {away} (Away) vs {home} (Home)。"
+                "進行ボタンでCPU同士の対戦を進めます。"
+            ).format(away=away_name, home=home_name)
+            self._log.append(summary, variant="info")
+            self._notifications.publish("info", summary)
 
         self._log.append("=" * 60, variant="highlight")
         banner = half_inning_banner(self.game_state, self.home_team, self.away_team)

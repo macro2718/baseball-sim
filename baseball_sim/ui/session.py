@@ -55,8 +55,8 @@ class WebGameSession(
         self._control_mode: str = "manual"
         self._user_team_key: Optional[str] = None
         self._cpu_team_key: Optional[str] = None
-        self._cpu_defense_context: Optional[tuple] = None
-        self._cpu_offense_context: Optional[tuple] = None
+        self._cpu_defense_context: Optional[Any] = None
+        self._cpu_offense_context: Optional[Any] = None
         self.ensure_teams()
 
     # ------------------------------------------------------------------
@@ -84,19 +84,27 @@ class WebGameSession(
         mode: Optional[str] = None,
         user_team: Optional[str] = None,
     ) -> None:
-        normalized_mode = "cpu" if str(mode or "").lower() == "cpu" else "manual"
-        if normalized_mode != "cpu":
-            self._control_mode = "manual"
-            self._user_team_key = None
-            self._cpu_team_key = None
+        normalized_mode = str(mode or "").lower()
+        if normalized_mode == "cpu":
+            normalized_team = "home" if str(user_team or "home").lower() == "home" else "away"
+            self._control_mode = "cpu"
+            self._user_team_key = normalized_team
+            self._cpu_team_key = "away" if normalized_team == "home" else "home"
             self._cpu_defense_context = None
             self._cpu_offense_context = None
             return
 
-        normalized_team = "home" if str(user_team or "home").lower() == "home" else "away"
-        self._control_mode = "cpu"
-        self._user_team_key = normalized_team
-        self._cpu_team_key = "away" if normalized_team == "home" else "home"
+        if normalized_mode == "auto":
+            self._control_mode = "auto"
+            self._user_team_key = None
+            self._cpu_team_key = None
+            self._cpu_defense_context = {"home": None, "away": None}
+            self._cpu_offense_context = {"home": None, "away": None}
+            return
+
+        self._control_mode = "manual"
+        self._user_team_key = None
+        self._cpu_team_key = None
         self._cpu_defense_context = None
         self._cpu_offense_context = None
 
@@ -128,6 +136,8 @@ class WebGameSession(
             raise GameSessionError("進行操作は現在利用できません。")
 
     def _is_offense_action_allowed(self) -> bool:
+        if self._control_mode == "auto":
+            return False
         if self._control_mode != "cpu":
             return True
         if not self.game_state:
@@ -136,6 +146,8 @@ class WebGameSession(
         return bool(user_team and self.game_state.batting_team is user_team)
 
     def _is_defense_action_allowed(self) -> bool:
+        if self._control_mode == "auto":
+            return False
         if self._control_mode != "cpu":
             return True
         if not self.game_state:
@@ -144,16 +156,27 @@ class WebGameSession(
         return bool(user_team and self.game_state.fielding_team is user_team)
 
     def is_progress_action_available(self) -> bool:
-        if self._control_mode != "cpu" or not self.game_state or self.game_state.game_ended:
+        if not self.game_state or self.game_state.game_ended:
+            return False
+        mode = getattr(self, "_control_mode", "manual")
+        allowed, _ = self.game_state.is_game_action_allowed()
+        if mode == "auto":
+            return bool(allowed)
+        if mode != "cpu":
             return False
         user_team = self._get_team_by_key(self._user_team_key)
         if not user_team or self.game_state.fielding_team is not user_team:
             return False
-        allowed, _ = self.game_state.is_game_action_allowed()
         return bool(allowed)
 
     def get_control_state(self) -> Dict[str, Any]:
-        mode = "cpu" if self._control_mode == "cpu" else "manual"
+        if self._control_mode == "auto":
+            mode = "auto"
+        elif self._control_mode == "cpu":
+            mode = "cpu"
+        else:
+            mode = "manual"
+
         user_team_key = self._user_team_key if mode == "cpu" else None
         cpu_team_key = self._cpu_team_key if mode == "cpu" else None
 
@@ -216,6 +239,26 @@ class WebGameSession(
                 offense_allowed = True
                 defense_allowed = True
                 progress_available = False
+        elif mode == "auto":
+            user_is_offense = False
+            user_is_defense = False
+            offense_allowed = False
+            defense_allowed = False
+            if self.game_state:
+                allowed, reason = self.game_state.is_game_action_allowed()
+                progress_available = bool(allowed and not self.game_state.game_ended)
+                base_instruction = "全自動CPUモード: 進行ボタンで試合を進めてください。"
+                if reason and not allowed:
+                    instruction = f"{reason}"
+                else:
+                    instruction = ""
+                if instruction:
+                    instruction = f"{instruction} {base_instruction}".strip()
+                else:
+                    instruction = base_instruction
+            else:
+                progress_available = False
+                instruction = "全自動CPUモード: 進行ボタンで試合を開始してください。"
 
         return {
             "mode": mode,
