@@ -13,8 +13,10 @@ from .cpu_strategy import (
     PitcherChangePlan,
     PinchRunPlan,
     describe_steal_outcome,
+    DefensiveSubstitutionPlan,
     plan_pinch_run,
     plan_pitcher_change,
+    plan_defensive_substitutions,
     select_offense_play,
 )
 
@@ -804,6 +806,45 @@ class GameplayActionsMixin:
             self.game_state, cpu_team, substitution_manager
         )
         if not plan:
+            # 投手交代がなければ野手守備交代（守備固め）を検討
+            try:
+                def_plans = plan_defensive_substitutions(self.game_state, cpu_team, substitution_manager)
+            except Exception as e:
+                def_plans = []
+                self._log.append(f"守備交代計画生成失敗: {e}", variant="warning")
+
+            if not def_plans:
+                return
+
+            # 計画順に適用（ベンチが変動するので毎回再探索）
+            applied = 0
+            for dplan in def_plans:
+                bench_list = substitution_manager.get_available_bench_players()
+                # ベンチインデックス再解決
+                try:
+                    bench_index = bench_list.index(dplan.bench_player)
+                except ValueError:
+                    continue  # 既に使われた / 状態変化
+                success, message = substitution_manager.execute_defensive_substitution(
+                    bench_index, dplan.lineup_index
+                )
+                if success:
+                    applied += 1
+                    self._log.append(
+                        f"🤖 守備交代: {dplan.reason}。{dplan.incoming_name}が{dplan.outgoing_name}に代わり{dplan.position}を守ります。{message}",
+                        variant="info",
+                    )
+                    self._notifications.publish(
+                        "info",
+                        f"🤖 CPU守備交代 {dplan.outgoing_name}→{dplan.incoming_name} ({dplan.position})",
+                    )
+                else:
+                    self._log.append(
+                        f"🤖 守備交代失敗: {dplan.outgoing_name}→{dplan.incoming_name} ({dplan.position}) {message}",
+                        variant="warning",
+                    )
+            if applied:
+                self._refresh_defense_status()
             return
 
         success, message = substitution_manager.execute_pitcher_change(plan.pitcher_index)

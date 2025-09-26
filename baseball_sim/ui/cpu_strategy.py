@@ -54,6 +54,169 @@ class PinchRunPlan:
     incoming_name: str
 
 
+@dataclass(frozen=True)
+class DefensiveSubstitutionPlan:
+    """Describe a non-pitcher defensive substitution the CPU wants to make.
+
+    Attributes:
+        lineup_index: 置き換え対象のラインナップインデックス
+        position: 対象守備位置
+        outgoing_name: 現在フィールドにいる選手名
+        incoming_name: 交代で投入するベンチ選手名
+        reason: 交代理由（適性欠如 / 守備力強化 など）
+        bench_player: 実際のベンチ選手オブジェクト（ベンチインデックスは実行時に再計算）
+    """
+
+    lineup_index: int
+    position: str
+    outgoing_name: str
+    incoming_name: str
+    reason: str
+    bench_player: object
+
+
+# -----------------------
+# Defensive substitution planning
+# -----------------------
+
+# 閾値（簡易デフォルト）: 必要なら設定モジュール化可能
+DEF_SUB_MIN_INNING = 7  # 終盤定義（守備固め発動条件）
+DEF_SUB_LEAD_MAX = 2  # 僅差リードの最大点差
+DEF_SUB_FIELDING_THRESHOLD = 80  # この値未満なら守備固め検討
+DEF_SUB_BENCH_MIN_FIELDING = 100  # ベンチ投入の最低守備力
+
+
+def plan_defensive_substitutions(game_state, cpu_team, substitution_manager) -> Sequence[DefensiveSubstitutionPlan]:
+    """Return a sequence of planned non-pitcher defensive substitutions.
+
+    要件:
+      1. 適性のない守備配置（そのポジションを守れない選手）がいれば必ず交代計画。
+      2. 全員適性がある場合のみ、CPUが僅差リード時(<=DEF_SUB_LEAD_MAX)かつ終盤(>=DEF_SUB_MIN_INNING)
+         で守備力(fielding_skill)が閾値未満の選手を守備固め候補とする。
+      3. 交代は守備力が低い順に処理。各ポジションについてベンチから
+         ・そのポジションを守れる
+         ・bench_fielding >= max(DEF_SUB_BENCH_MIN_FIELDING, outgoing_fielding + 1)
+         を満たす中で最も守備力の高い選手を選ぶ。
+      4. 要件を満たす全対象に対し可能な限り交代を列挙。
+
+    返却は "計画" のみで実行は呼び出し側。ベンチインデックスは都度変わるため
+    Playerオブジェクト参照を保持し実行時に再解決する。
+    """
+
+    if not (cpu_team and substitution_manager):
+        return []
+
+    # 現在の守備（Pitcher/DHを除いたフィールドポジション対象）
+    defensive_positions = getattr(cpu_team, "defensive_positions", {}) or {}
+    # 置換対象ラインナップの探索用マップ: position -> (index, player)
+    position_to_lineup: Dict[str, Tuple[int, object]] = {}
+    for idx, player in enumerate(getattr(cpu_team, "lineup", [])):
+        pos = getattr(player, "current_position", None)
+        if pos:
+            position_to_lineup[pos] = (idx, player)
+
+    # 対象ポジション (Pitcher, DH 除外)
+    target_positions = [
+        p for p in defensive_positions.keys() if p not in (Positions.DESIGNATED_HITTER, Positions.PITCHER)
+    ]
+
+    # 1. 適性欠如の判定
+    invalid_players = []  # list of tuples (fielding_skill, position, lineup_index, player)
+    for pos in target_positions:
+        player = defensive_positions.get(pos)
+        if not player:
+            continue  # 空ならここでは扱わない（別途修復ロジックは未実装）
+        try:
+            can_play = player.can_play_position(pos)
+        except Exception:
+            can_play = True
+        if not can_play:
+            fs = float(getattr(player, "fielding_skill", 50.0) or 50.0)
+            li = position_to_lineup.get(pos, (None, None))[0]
+            if li is not None:
+                invalid_players.append((fs, pos, li, player))
+
+    bench_players = substitution_manager.get_available_bench_players()
+    plans: list[DefensiveSubstitutionPlan] = []
+    used_bench: set = set()
+
+    def _select_bench_candidate(position: str, outgoing_fielding: float):
+        candidates = []
+        for bp in substitution_manager.get_available_bench_players():
+            if bp in used_bench:
+                continue
+            try:
+                if not bp.can_play_position(position):
+                    continue
+            except Exception:
+                continue
+            bfs = float(getattr(bp, "fielding_skill", 50.0) or 50.0)
+            # 必須最低水準
+            if bfs < max(DEF_SUB_BENCH_MIN_FIELDING, outgoing_fielding + 1):
+                continue
+            candidates.append((bfs, bp))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda x: (-x[0], x[1].name))
+        return candidates[0]
+
+    # 優先1: 適性なし
+    for fs, pos, li, player in sorted(invalid_players, key=lambda x: (x[0], x[1])):
+        sel = _select_bench_candidate(pos, fs)
+        if not sel:
+            continue  # 代替不可能
+        bfs, bench_player = sel
+        used_bench.add(bench_player)
+        plans.append(
+            DefensiveSubstitutionPlan(
+                lineup_index=li,
+                position=pos,
+                outgoing_name=getattr(player, "name", "player"),
+                incoming_name=getattr(bench_player, "name", "bench player"),
+                reason=f"ポジション適性なし({pos})の修正 (field {fs:.0f} -> {bfs:.0f})",
+                bench_player=bench_player,
+            )
+        )
+
+    # 2. 全員適性がある場合のみ守備固め
+    if not plans:  # 適性問題がなかった
+        # スコア差 (CPU守備側視点)
+        margin = (game_state.home_score - game_state.away_score)
+        if cpu_team is game_state.away_team:
+            margin = -margin
+        inning = game_state.inning
+        if 1 <= margin <= DEF_SUB_LEAD_MAX and inning >= DEF_SUB_MIN_INNING:
+            # 閾値未満の弱点を抽出
+            weak_list = []  # (fielding_skill, pos, li, player)
+            for pos in target_positions:
+                player = defensive_positions.get(pos)
+                if not player:
+                    continue
+                fs = float(getattr(player, "fielding_skill", 50.0) or 50.0)
+                if fs < DEF_SUB_FIELDING_THRESHOLD:
+                    li = position_to_lineup.get(pos, (None, None))[0]
+                    if li is not None:
+                        weak_list.append((fs, pos, li, player))
+            for fs, pos, li, player in sorted(weak_list, key=lambda x: (x[0], x[1])):
+                sel = _select_bench_candidate(pos, fs)
+                if not sel:
+                    continue
+                bfs, bench_player = sel
+                used_bench.add(bench_player)
+                plans.append(
+                    DefensiveSubstitutionPlan(
+                        lineup_index=li,
+                        position=pos,
+                        outgoing_name=getattr(player, "name", "player"),
+                        incoming_name=getattr(bench_player, "name", "bench player"),
+                        reason=f"終盤僅差の守備固め({pos}) (field {fs:.0f} -> {bfs:.0f})",
+                        bench_player=bench_player,
+                    )
+                )
+
+    return plans
+
+
 def _score_margin_for_offense(game_state, offense_team) -> int:
     """Return the score differential from the perspective of the batting team."""
 
