@@ -2305,6 +2305,86 @@ function sanitizeSearchTerm(value) {
 }
 
 export function initEventListeners(actions) {
+  // --- Home: Delete dialogs helpers ---
+  function setTeamDeleteFeedback(message, level = 'info') {
+    const el = elements.teamDeleteFeedback;
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.remove('danger', 'success', 'info');
+    if (message) {
+      el.classList.add(level);
+      el.dataset.level = level;
+    } else {
+      el.removeAttribute('data-level');
+    }
+  }
+
+  function setPlayerDeleteFeedback(message, level = 'info') {
+    const el = elements.playerDeleteFeedback;
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.remove('danger', 'success', 'info');
+    if (message) {
+      el.classList.add(level);
+      el.dataset.level = level;
+    } else {
+      el.removeAttribute('data-level');
+    }
+  }
+
+  function populateTeamDeleteOptions() {
+    const select = elements.teamDeleteSelect;
+    if (!select) return [];
+    const teams = (stateCache.data?.team_library?.teams || []).map((t) => ({
+      id: String(t?.id || ''),
+      name: String(t?.name || '') || String(t?.id || ''),
+    }));
+    const prev = select.value;
+    select.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'チームを選択';
+    select.appendChild(placeholder);
+    teams.forEach((team) => {
+      if (!team.id) return;
+      const opt = document.createElement('option');
+      opt.value = team.id;
+      opt.textContent = team.name;
+      select.appendChild(opt);
+    });
+    if (teams.some((t) => t.id === prev)) {
+      select.value = prev;
+    } else {
+      select.value = '';
+    }
+    return teams;
+  }
+
+  async function populatePlayerDeleteOptions(role) {
+    const select = elements.playerDeleteSelect;
+    if (!select) return [];
+    const normalized = role === 'pitcher' ? 'pitcher' : 'batter';
+    const players = await actions.fetchPlayersList(normalized);
+    const prev = select.value;
+    select.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '選手を選択';
+    select.appendChild(placeholder);
+    players.forEach((p) => {
+      if (!p?.id) return;
+      const opt = document.createElement('option');
+      opt.value = String(p.id);
+      opt.textContent = String(p.name || p.id);
+      select.appendChild(opt);
+    });
+    if (players.some((p) => String(p.id) === prev)) {
+      select.value = prev;
+    } else {
+      select.value = '';
+    }
+    return players;
+  }
   async function populatePlayerSelect(role, desiredValue) {
     const select = elements.playerEditorSelect;
     if (!select) return [];
@@ -2656,6 +2736,98 @@ export function initEventListeners(actions) {
   if (elements.openSimulationButton) {
     elements.openSimulationButton.addEventListener('click', () => {
       setUIView('simulation');
+      refreshView();
+    });
+  }
+
+  // --- Home: Team delete modal
+  if (elements.openTeamDelete) {
+    elements.openTeamDelete.addEventListener('click', () => {
+      populateTeamDeleteOptions();
+      setTeamDeleteFeedback('削除するチームを選択してください。', 'info');
+      openModal('team-delete');
+    });
+  }
+  if (elements.teamDeleteConfirm) {
+    elements.teamDeleteConfirm.addEventListener('click', async () => {
+      const select = elements.teamDeleteSelect;
+      const teamId = select?.value || '';
+      if (!teamId) {
+        setTeamDeleteFeedback('削除するチームを選択してください。', 'danger');
+        return;
+      }
+      elements.teamDeleteConfirm.disabled = true;
+      try {
+        await actions.handleTeamDelete(teamId);
+        setTeamDeleteFeedback('チームを削除しました。', 'success');
+        populateTeamDeleteOptions();
+        closeModal('team-delete');
+        // Stay on lobby and refresh view to reflect team list change
+        setUIView('lobby');
+        refreshView();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'チームの削除に失敗しました。';
+        setTeamDeleteFeedback(message, 'danger');
+      } finally {
+        elements.teamDeleteConfirm.disabled = false;
+      }
+    });
+  }
+  if (elements.teamDeleteHome) {
+    elements.teamDeleteHome.addEventListener('click', () => {
+      closeModal('team-delete');
+      setUIView('lobby');
+      refreshView();
+    });
+  }
+
+  // --- Home: Player delete modal
+  if (elements.openPlayerDelete) {
+    elements.openPlayerDelete.addEventListener('click', async () => {
+      if (elements.playerDeleteRole) {
+        elements.playerDeleteRole.value = 'batter';
+      }
+      setPlayerDeleteFeedback('種別と選手を選択してください。', 'info');
+      await populatePlayerDeleteOptions('batter');
+      openModal('player-delete');
+    });
+  }
+  if (elements.playerDeleteRole) {
+    elements.playerDeleteRole.addEventListener('change', async (ev) => {
+      const role = ev?.target?.value === 'pitcher' ? 'pitcher' : 'batter';
+      await populatePlayerDeleteOptions(role);
+      setPlayerDeleteFeedback('削除する選手を選択してください。', 'info');
+    });
+  }
+  if (elements.playerDeleteConfirm) {
+    elements.playerDeleteConfirm.addEventListener('click', async () => {
+      const role = elements.playerDeleteRole?.value === 'pitcher' ? 'pitcher' : 'batter';
+      const select = elements.playerDeleteSelect;
+      const playerId = select?.value || '';
+      if (!playerId) {
+        setPlayerDeleteFeedback('削除する選手を選択してください。', 'danger');
+        return;
+      }
+      elements.playerDeleteConfirm.disabled = true;
+      try {
+        await actions.handlePlayerDelete(playerId, role, null);
+        setPlayerDeleteFeedback('選手を削除しました。', 'success');
+        await populatePlayerDeleteOptions(role);
+        closeModal('player-delete');
+        setUIView('lobby');
+        refreshView();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '選手の削除に失敗しました。';
+        setPlayerDeleteFeedback(message, 'danger');
+      } finally {
+        elements.playerDeleteConfirm.disabled = false;
+      }
+    });
+  }
+  if (elements.playerDeleteHome) {
+    elements.playerDeleteHome.addEventListener('click', () => {
+      closeModal('player-delete');
+      setUIView('lobby');
       refreshView();
     });
   }
