@@ -448,6 +448,21 @@ def plan_pinch_run(game_state, cpu_team, substitution_manager) -> Optional[Pinch
 
     runner_position = getattr(target_runner, "current_position", None)
 
+    # --- 守備固め/適性修正で使用され得るベンチ集合 S を推定し、
+    #     そのポジションを守れるベンチ全員が S に含まれるなら温存のため代走を見送る (代打ロジックと同様) ---
+    S = set()
+    try:
+        defensive_plans = plan_defensive_substitutions(game_state, cpu_team, substitution_manager)
+        S = {p.bench_player for p in defensive_plans if getattr(p, "bench_player", None) is not None}
+    except Exception:
+        pass
+
+    if runner_position:
+        eligible_same_position = [bp for bp in available_bench if getattr(bp, "can_play_position", lambda _x: False)(runner_position)]
+        if eligible_same_position and all(bp in S for bp in eligible_same_position):
+            # 全員守備固め等で確保しておきたい → 代走不実行
+            return None
+
     def eligible_candidates() -> Iterable[Tuple[int, object]]:
         for bench_index, bench_player in enumerate(available_bench):
             bench_speed = getattr(bench_player, "speed", 100.0) or 100.0
@@ -455,6 +470,9 @@ def plan_pinch_run(game_state, cpu_team, substitution_manager) -> Optional[Pinch
             if runner_position and hasattr(bench_player, "can_play_position"):
                 can_play = bench_player.can_play_position(runner_position)
             if not can_play:
+                continue
+            # S に含まれる守備固め候補は可能なら温存する: まず除外（必要になれば後で戦略拡張可）
+            if bench_player in S:
                 continue
             if bench_speed >= slowest_speed + 12:
                 yield bench_index, bench_player
@@ -701,7 +719,7 @@ def select_offense_play(game_state, offense_team) -> CPUOffenseDecision:
         out_penalty = 8.0 if outs == 1 else 0.0
         leverage_bonus = 6.0 if _is_high_leverage() and margin <= 0 else 0.0
         squeeze_score = (third_speed - out_penalty) + leverage_bonus + max(0.0, batter_k_rate - 24.0)
-        if squeeze_score >= 106.0 or random.random() < 0.20:
+        if squeeze_score >= 106.0 or random.random() < 0.10:
             metadata = {
                 "base_state": base_signature,
                 "third_speed": third_speed,
