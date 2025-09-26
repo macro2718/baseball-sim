@@ -393,9 +393,9 @@
   /* Align the bubble's bottom edge directly above the top vertex of the rotated base.
      For a 45deg-rotated square, the vertex sits ~0.207a above the box top. */
   bottom: calc(100% + (var(--base-size) * var(--diamond-scale) * 0.207));
-  left: 50%;
-  /* Counter the parent base's 45deg rotation so the bubble is upright */
-  transform: rotate(-45deg) translate(-50%, 18px);
+  left: -25%;
+  /* Translate in screen coords, then counter-rotate to keep bubble upright */
+  transform: translate(-50%, 18px) rotate(-45deg);
   transform-origin: bottom center;
   padding: 12px 16px;
   border-radius: 14px;
@@ -452,8 +452,8 @@
 .base.occupied:focus-within .runner-chip.active {
   opacity: 1;
   visibility: visible;
-  /* Keep bubble upright when visible */
-  transform: rotate(-45deg) translate(-50%, 0);
+  /* Move along +Y, then keep bubble upright */
+  transform: translate(-50%, 0) rotate(-45deg);
   pointer-events: auto;
 }
 
