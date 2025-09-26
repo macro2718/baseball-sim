@@ -946,3 +946,11 @@
   font-style: italic;
   color: var(--text-muted);
 }
+
+/* Retired marker for players who left the game */
+.stats-table .retired-mark {
+  display: inline-block;
+  margin-left: 6px;
+  color: rgba(248, 113, 113, 0.9); /* red */
+  font-weight: 800;
+}

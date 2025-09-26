@@ -545,7 +545,17 @@ class SessionStateBuilder:
 
         seen_batters = set()
 
-        def add_batter(player) -> None:
+        # Players currently fielding for this team (exclude DH)
+        fielding_ids: set[int] = set()
+        try:
+            for p in getattr(team, "lineup", []) or []:
+                pos = (self._display_position(p) or "-").upper()
+                if pos and pos != "-" and pos != "DH":
+                    fielding_ids.add(id(p))
+        except Exception:
+            fielding_ids = set()
+
+        def add_batter(player, *, role_label: str = '', retired: bool = False) -> None:
             player_id = id(player)
             if player_id in seen_batters:
                 return
@@ -553,15 +563,30 @@ class SessionStateBuilder:
             position = getattr(player, "position", "") or ""
             if position.upper() == "P":
                 return
-            batting.append(self._serialize_batter_stats(player))
+            row = self._serialize_batter_stats(player)
+            # Show current defensive position only if this player is fielding now (exclude DH)
+            try:
+                pos = (self._display_position(player) or "-")
+                if player_id in fielding_ids:
+                    row["position"] = pos
+                else:
+                    row["position"] = "-"
+            except Exception:
+                row["position"] = "-"
+            if role_label:
+                row["role_label"] = role_label
+            else:
+                row["role_label"] = ""
+            row["retired"] = bool(retired)
+            batting.append(row)
 
-        for batter in getattr(team, "lineup", []):
-            add_batter(batter)
-        for batter in getattr(team, "bench", []):
-            add_batter(batter)
+        for index, batter in enumerate(getattr(team, "lineup", []) or []):
+            add_batter(batter, role_label=f"{index + 1}番", retired=False)
+        for bench_index, batter in enumerate(getattr(team, "bench", []) or []):
+            add_batter(batter, role_label=f"ベンチ{bench_index + 1}", retired=False)
         # Also include players who have left the game (e.g., via PH/PR)
         for batter in getattr(team, "ejected_players", []) or []:
-            add_batter(batter)
+            add_batter(batter, role_label="退場", retired=True)
 
         seen_pitchers = set()
 
@@ -604,7 +629,7 @@ class SessionStateBuilder:
             return {"batting": batting, "pitching": pitching}
 
         for index, player in enumerate(getattr(team, "lineup", []) or []):
-            batting.append(self._serialize_batter_traits(player, role_label=f"{index + 1}番"))
+            batting.append(self._serialize_batter_traits(player, role_label=f"{index + 1}番", show_position=True))
 
         available_bench = (
             team.get_available_bench_players()
@@ -638,16 +663,17 @@ class SessionStateBuilder:
             if self._is_pitcher(player):
                 add_pitcher(player, role_label)
             else:
-                batting.append(self._serialize_batter_traits(player, role_label=role_label))
+                batting.append(self._serialize_batter_traits(player, role_label=role_label, show_position=False))
 
         return {"batting": batting, "pitching": pitching}
 
-    def _serialize_batter_traits(self, player, *, role_label: str) -> Dict[str, object]:
+    def _serialize_batter_traits(self, player, *, role_label: str, show_position: bool = True) -> Dict[str, object]:
         if not player:
             return {
                 "name": "-",
                 "role_label": role_label,
                 "position": "-",
+                "eligible": [],
                 "bats": "-",
                 "k_pct": "-",
                 "bb_pct": "-",
@@ -663,7 +689,8 @@ class SessionStateBuilder:
         return {
             "name": getattr(player, "name", "-"),
             "role_label": role_label,
-            "position": self._display_position(player) or "-",
+            "position": (self._display_position(player) or "-") if show_position else "-",
+            "eligible": self._eligible_positions_raw(player),
             "bats": bats_display,
             "k_pct": self._format_percentage(getattr(player, "k_pct", None)),
             "bb_pct": self._format_percentage(getattr(player, "bb_pct", None)),
@@ -725,6 +752,9 @@ class SessionStateBuilder:
 
         return {
             "name": getattr(player, "name", "-"),
+            "position": self._display_position(player) or "-",
+            "eligible": self._eligible_positions_raw(player),
+            "pitcher_type": getattr(player, "pitcher_type", None),
             "pa": plate_appearances,
             "ab": at_bats,
             "single": singles,

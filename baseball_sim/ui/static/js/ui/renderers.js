@@ -4348,8 +4348,26 @@ export function updateStatsPanel(state) {
         const tr = document.createElement('tr');
         columns.forEach((column) => {
           const td = document.createElement('td');
-          const value = row[column.key];
-          td.textContent = value != null && value !== '' ? value : '-';
+          const key = column.key;
+          const value = row[key];
+          if (key === 'name') {
+            const nameText = value != null && value !== '' ? String(value) : '-';
+            if (row.retired) {
+              td.innerHTML = `${escapeHtml(nameText)} <span class="retired-mark" title="退いた">×</span>`;
+            } else {
+              td.textContent = nameText;
+            }
+          } else if (key === 'position') {
+            td.innerHTML = renderPositionToken(value, row.pitcher_type);
+            td.classList.add('player-col');
+          } else if (key === 'eligible') {
+            const list = Array.isArray(value) ? value : [];
+            const filtered = list.filter((pos) => String(pos || '').toUpperCase() !== 'DH');
+            td.innerHTML = renderPositionList(filtered);
+            td.classList.add('player-col', 'position-list');
+          } else {
+            td.textContent = value != null && value !== '' ? value : '-';
+          }
           tr.appendChild(td);
         });
         elements.statsTableBody.appendChild(tr);
@@ -4471,19 +4489,29 @@ export function updateAbilitiesPanel(state) {
         const tr = document.createElement('tr');
         columns.forEach((column) => {
           const td = document.createElement('td');
-          const value = row[column.key];
-          const displayValue =
-            value != null && value !== '' ? String(value) : '-';
-          td.textContent = displayValue;
+          const key = column.key;
+          const value = row[key];
+          const displayValue = value != null && value !== '' ? String(value) : '-';
 
-          if (ABILITY_METRIC_CONFIG[column.key]) {
+          if (viewType === 'batting' && key === 'position') {
+            td.innerHTML = renderPositionToken(displayValue, row.pitcher_type);
+          } else if (viewType === 'batting' && key === 'eligible') {
+            const list = Array.isArray(value) ? value : [];
+            const filtered = list.filter((pos) => String(pos || '').toUpperCase() !== 'DH');
+            td.innerHTML = renderPositionList(filtered);
+            td.classList.add('player-col', 'position-list');
+          } else {
+            td.textContent = displayValue;
+          }
+
+          if (ABILITY_METRIC_CONFIG[key]) {
             const invert = (
               (viewType === 'batting' && (column.key === 'k_pct' || column.key === 'gb_pct')) ||
               (viewType === 'pitching' && (column.key === 'bb_pct' || column.key === 'hard_pct'))
             );
             applyAbilityColor(
               td,
-              column.key,
+              key,
               displayValue,
               { ...ABILITY_COLOR_PRESETS.table, invert },
             );

@@ -61,6 +61,9 @@ export const FIELD_POSITION_KEYS = new Set(FIELD_POSITIONS.map((slot) => slot.ke
 
 export const BATTING_COLUMNS = [
   { label: 'Player', key: 'name' },
+  { label: '区分', key: 'role_label' },
+  { label: 'Pos', key: 'position' },
+  { label: 'Eligible', key: 'eligible' },
   { label: 'PA', key: 'pa' },
   { label: 'AB', key: 'ab' },
   { label: '1B', key: 'single' },
@@ -92,6 +95,7 @@ export const ABILITY_BATTING_COLUMNS = [
   { label: 'Player', key: 'name' },
   { label: '区分', key: 'role_label' },
   { label: 'Pos', key: 'position' },
+  { label: 'Eligible', key: 'eligible' },
   { label: '打席', key: 'bats' },
   { label: 'K%', key: 'k_pct' },
   { label: 'BB%', key: 'bb_pct' },
