@@ -106,9 +106,12 @@ def _iter_team_hitters(team_obj: Optional[object]) -> Iterable[object]:
 
     players: List[object] = []
     seen_ids = set()
+    # Include current lineup, remaining bench, and ejected players
+    # so that batters who left via PH/PR still appear in stats.
     for collection in (
         getattr(team_obj, "lineup", []) or [],
         getattr(team_obj, "bench", []) or [],
+        getattr(team_obj, "ejected_players", []) or [],
     ):
         for player in collection:
             if player is None:

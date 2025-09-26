@@ -557,6 +557,9 @@ class SessionStateBuilder:
             add_batter(batter)
         for batter in getattr(team, "bench", []):
             add_batter(batter)
+        # Also include players who have left the game (e.g., via PH/PR)
+        for batter in getattr(team, "ejected_players", []) or []:
+            add_batter(batter)
 
         seen_pitchers = set()
 
