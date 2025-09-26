@@ -68,8 +68,8 @@ def _standardize_player_event(player_name: str, raw: str, emoji: str = "") -> st
 class GameplayActionsMixin:
     """Encapsulate the command handlers used by the browser UI."""
 
-    _cpu_defense_context: Optional[tuple]
-    _cpu_offense_context: Optional[tuple]
+    _cpu_defense_context: Optional[Any]
+    _cpu_offense_context: Optional[Any]
 
     def execute_normal_play(self) -> Dict[str, Any]:
         """Simulate a standard plate appearance."""
@@ -510,6 +510,12 @@ class GameplayActionsMixin:
         self._action_block_reason = None
 
         offense_key = "home" if self.game_state.batting_team is self.home_team else "away"
+        if getattr(self, "_control_mode", "manual") == "auto":
+            fielding_key = "away" if offense_key == "home" else "home"
+            try:
+                self._cpu_prepare_defense_strategy(fielding_key)
+            except Exception:
+                pass
         self._cpu_prepare_offense_strategy(offense_key)
 
         # ---- CPU Pinch Hit Planning (before offense decision) ----
@@ -736,19 +742,27 @@ class GameplayActionsMixin:
             self._notifications.publish("info", msg)
 
     def _cpu_prepare_offense_strategy(self, offense_key: str) -> None:
-        if getattr(self, "_control_mode", "manual") != "cpu":
+        mode = getattr(self, "_control_mode", "manual")
+        if mode not in {"cpu", "auto"}:
             return
         if not self.game_state:
             return
 
-        cpu_team_key = getattr(self, "_cpu_team_key", None)
-        if offense_key != cpu_team_key:
-            return
+        if mode == "cpu":
+            cpu_team_key = getattr(self, "_cpu_team_key", None)
+            if offense_key != cpu_team_key:
+                return
 
         team_getter = getattr(self, "_get_team_by_key", None)
         offense_team = team_getter(offense_key) if callable(team_getter) else None
         if not offense_team:
             return
+
+        context_store = getattr(self, "_cpu_offense_context", None)
+        if isinstance(context_store, dict):
+            previous_context = context_store.get(offense_key)
+        else:
+            previous_context = context_store
 
         base_signature = tuple(1 if base is not None else 0 for base in self.game_state.bases[:3])
         context = (
@@ -759,10 +773,13 @@ class GameplayActionsMixin:
             base_signature,
         )
 
-        if getattr(self, "_cpu_offense_context", None) == context:
+        if previous_context == context:
             return
 
-        self._cpu_offense_context = context
+        if isinstance(context_store, dict):
+            context_store[offense_key] = context
+        else:
+            self._cpu_offense_context = context
 
         substitution_manager = SubstitutionManager(offense_team)
         plan: Optional[PinchRunPlan] = plan_pinch_run(
@@ -805,22 +822,41 @@ class GameplayActionsMixin:
             except Exception:
                 pass
 
-    def _cpu_prepare_defense_strategy(self) -> None:
-        if getattr(self, "_control_mode", "manual") != "cpu":
+    def _cpu_prepare_defense_strategy(self, fielding_key: Optional[str] = None) -> None:
+        mode = getattr(self, "_control_mode", "manual")
+        if mode not in {"cpu", "auto"}:
             return
         if not self.game_state:
             return
 
         team_getter = getattr(self, "_get_team_by_key", None)
-        user_team_key = getattr(self, "_user_team_key", None)
-        cpu_team_key = getattr(self, "_cpu_team_key", None)
-        user_team = team_getter(user_team_key) if callable(team_getter) else None
-        cpu_team = team_getter(cpu_team_key) if callable(team_getter) else None
+        if mode == "cpu":
+            user_team_key = getattr(self, "_user_team_key", None)
+            cpu_team_key = getattr(self, "_cpu_team_key", None)
+            user_team = team_getter(user_team_key) if callable(team_getter) else None
+            cpu_team = team_getter(cpu_team_key) if callable(team_getter) else None
 
-        if not user_team or not cpu_team:
-            return
-        if self.game_state.batting_team is not user_team:
-            return
+            if not user_team or not cpu_team:
+                return
+            if self.game_state.batting_team is not user_team:
+                return
+            defense_team = cpu_team
+            target_key = cpu_team_key
+        else:  # auto mode
+            if fielding_key not in {"home", "away"}:
+                if self.game_state.fielding_team is self.home_team:
+                    target_key = "home"
+                elif self.game_state.fielding_team is self.away_team:
+                    target_key = "away"
+                else:
+                    return
+            else:
+                target_key = fielding_key
+            defense_team = team_getter(target_key) if callable(team_getter) else None
+            if not defense_team:
+                return
+
+        team_name = getattr(defense_team, "name", None)
 
         base_signature = tuple(1 if base is not None else 0 for base in self.game_state.bases[:3])
         context = (
@@ -831,19 +867,30 @@ class GameplayActionsMixin:
             base_signature,
         )
 
-        if getattr(self, "_cpu_defense_context", None) == context:
+        context_store = getattr(self, "_cpu_defense_context", None)
+        if isinstance(context_store, dict):
+            previous_context = context_store.get(target_key)
+        else:
+            previous_context = context_store
+
+        if previous_context == context:
             return
 
-        self._cpu_defense_context = context
+        if isinstance(context_store, dict):
+            context_store[target_key] = context
+        else:
+            self._cpu_defense_context = context
 
-        substitution_manager = SubstitutionManager(cpu_team)
+        substitution_manager = SubstitutionManager(defense_team)
         plan: Optional[PitcherChangePlan] = plan_pitcher_change(
-            self.game_state, cpu_team, substitution_manager
+            self.game_state, defense_team, substitution_manager
         )
         if not plan:
             # 投手交代がなければ野手守備交代（守備固め）を検討
             try:
-                def_plans = plan_defensive_substitutions(self.game_state, cpu_team, substitution_manager)
+                def_plans = plan_defensive_substitutions(
+                    self.game_state, defense_team, substitution_manager
+                )
             except Exception as e:
                 def_plans = []
                 self._log.append(f"守備交代計画生成失敗: {e}", variant="warning")
@@ -865,14 +912,19 @@ class GameplayActionsMixin:
                 )
                 if success:
                     applied += 1
+                    label_prefix = (
+                        f"🤖 守備交代 ({team_name})" if team_name and mode == "auto" else "🤖 守備交代"
+                    )
                     self._log.append(
-                        f"🤖 守備交代: {dplan.reason}。{dplan.incoming_name}が{dplan.outgoing_name}に代わり{dplan.position}を守ります。{message}",
+                        f"{label_prefix}: {dplan.reason}。{dplan.incoming_name}が{dplan.outgoing_name}に代わり{dplan.position}を守ります。{message}",
                         variant="info",
                     )
-                    self._notifications.publish(
-                        "info",
-                        f"🤖 CPU守備交代 {dplan.outgoing_name}→{dplan.incoming_name} ({dplan.position})",
+                    notif_label = (
+                        f"🤖 {team_name}守備交代 {dplan.outgoing_name}→{dplan.incoming_name} ({dplan.position})"
+                        if team_name and mode == "auto"
+                        else f"🤖 CPU守備交代 {dplan.outgoing_name}→{dplan.incoming_name} ({dplan.position})"
                     )
+                    self._notifications.publish("info", notif_label)
                 else:
                     self._log.append(
                         f"🤖 守備交代失敗: {dplan.outgoing_name}→{dplan.incoming_name} ({dplan.position}) {message}",
@@ -884,15 +936,18 @@ class GameplayActionsMixin:
 
         success, message = substitution_manager.execute_pitcher_change(plan.pitcher_index)
         if success:
+            log_prefix = f"🤖 守備采配 ({team_name})" if team_name and mode == "auto" else "🤖 CPU守備采配"
             log_message = (
-                f"🤖 CPU守備采配: {plan.reason}。"
+                f"{log_prefix}: {plan.reason}。"
                 f"{plan.replacement_name}が{plan.current_name}に代わって登板します。{message}"
             )
             self._log.append(log_message, variant="highlight")
-            self._notifications.publish(
-                "info",
-                f"🤖 CPUが投手交代: {plan.current_name}→{plan.replacement_name}",
+            notif_label = (
+                f"🤖 {team_name}が投手交代: {plan.current_name}→{plan.replacement_name}"
+                if team_name and mode == "auto"
+                else f"🤖 CPUが投手交代: {plan.current_name}→{plan.replacement_name}"
             )
+            self._notifications.publish("info", notif_label)
             self._refresh_defense_status()
             # Independent overlay event
             if hasattr(self, "_overlays"):

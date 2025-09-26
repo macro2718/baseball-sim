@@ -115,7 +115,8 @@ function normalizeControlState(rawControl) {
     return control;
   }
 
-  const mode = rawControl.mode === 'cpu' ? 'cpu' : 'manual';
+  const rawMode = typeof rawControl.mode === 'string' ? rawControl.mode.toLowerCase() : '';
+  const mode = rawMode === 'cpu' ? 'cpu' : rawMode === 'auto' ? 'auto' : 'manual';
   control.mode = mode;
 
   const userTeamKey = normalizeTeamKey(rawControl.user_team ?? rawControl.userTeam);
@@ -2441,9 +2442,15 @@ function updateStrategyControls(gameState, teams) {
   const isActive = Boolean(gameState.active);
   const isGameOver = Boolean(gameState.game_over);
   const controlState = stateCache.gameControl || createDefaultControlState();
-  const isCpuMode = controlState.mode === 'cpu';
-  const offenseControlsAllowed = !isCpuMode || Boolean(controlState.offenseAllowed);
-  const defenseControlsAllowed = !isCpuMode || Boolean(controlState.defenseAllowed);
+  const controlMode = controlState.mode || 'manual';
+  const isCpuMode = controlMode === 'cpu';
+  const isAutoMode = controlMode === 'auto';
+  const offenseControlsAllowed = isAutoMode
+    ? false
+    : !isCpuMode || Boolean(controlState.offenseAllowed);
+  const defenseControlsAllowed = isAutoMode
+    ? false
+    : !isCpuMode || Boolean(controlState.defenseAllowed);
   const offenseControlsEnabled = isActive && !isGameOver && offenseControlsAllowed;
   const defenseControlsEnabled = isActive && !isGameOver && defenseControlsAllowed;
 
@@ -2957,7 +2964,9 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
       elements.progressButton.classList.toggle('hidden', !progressAllowed);
       elements.progressButton.disabled = !progressAllowed;
     }
-    const hideOffenseActions = progressAllowed && controlInfo.mode === 'cpu';
+    const controlMode = controlInfo.mode;
+    const hideOffenseActions =
+      controlMode === 'auto' || (progressAllowed && controlMode === 'cpu');
     elements.swingButton.classList.toggle('hidden', hideOffenseActions);
     const buntVisible = showBunt && !hideOffenseActions;
     elements.buntButton.classList.toggle('hidden', !buntVisible);
@@ -3372,20 +3381,32 @@ export function renderTitle(titleState) {
     let hintCpuTeam = stateCache.gameControl?.cpuTeam || null;
     let hintUserName = stateCache.gameControl?.userTeamName || null;
     let hintCpuName = stateCache.gameControl?.cpuTeamName || null;
+    let hintHomeName = null;
+    let hintAwayName = null;
 
     const upcomingSetup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
     const gameActive = Boolean(stateCache.data?.game?.active);
-    if (!gameActive && upcomingSetup.mode === 'cpu') {
-      hintMode = 'cpu';
-      hintUserTeam = upcomingSetup.userTeam === 'away' ? 'away' : 'home';
-      hintCpuTeam = hintUserTeam === 'home' ? 'away' : 'home';
-      const teamLookup = new Map(
-        (stateCache.teamLibrary?.teams || []).map((team) => [team.id, team]),
-      );
-      const homeTeam = teamLookup.get(stateCache.teamLibrary?.selection?.home);
-      const awayTeam = teamLookup.get(stateCache.teamLibrary?.selection?.away);
-      hintUserName = hintUserTeam === 'home' ? homeTeam?.name : awayTeam?.name;
-      hintCpuName = hintCpuTeam === 'home' ? homeTeam?.name : awayTeam?.name;
+    const teamLibraryTeams = Array.isArray(stateCache.teamLibrary?.teams)
+      ? stateCache.teamLibrary.teams
+      : [];
+    const teamLookup = new Map(teamLibraryTeams.map((team) => [team.id, team]));
+
+    if (!gameActive) {
+      if (upcomingSetup.mode === 'cpu') {
+        hintMode = 'cpu';
+        hintUserTeam = upcomingSetup.userTeam === 'away' ? 'away' : 'home';
+        hintCpuTeam = hintUserTeam === 'home' ? 'away' : 'home';
+        const homeTeam = teamLookup.get(stateCache.teamLibrary?.selection?.home);
+        const awayTeam = teamLookup.get(stateCache.teamLibrary?.selection?.away);
+        hintUserName = hintUserTeam === 'home' ? homeTeam?.name : awayTeam?.name;
+        hintCpuName = hintCpuTeam === 'home' ? homeTeam?.name : awayTeam?.name;
+      } else if (upcomingSetup.mode === 'auto') {
+        hintMode = 'auto';
+        const homeTeam = teamLookup.get(stateCache.teamLibrary?.selection?.home);
+        const awayTeam = teamLookup.get(stateCache.teamLibrary?.selection?.away);
+        hintHomeName = homeTeam?.name || null;
+        hintAwayName = awayTeam?.name || null;
+      }
     }
 
     if (hintMode === 'cpu') {
@@ -3398,6 +3419,10 @@ export function renderTitle(titleState) {
           || (hintCpuTeam === 'away' ? 'アウェイチーム' : 'ホームチーム');
         elements.titleControlHint.textContent = `${userLabel} を操作します。${cpuLabel} はCPUが操作します。`;
       }
+    } else if (hintMode === 'auto') {
+      const homeName = hintHomeName || teamsData.home?.name || 'ホームチーム';
+      const awayName = hintAwayName || teamsData.away?.name || 'アウェイチーム';
+      elements.titleControlHint.textContent = `${awayName} と ${homeName} の試合は全自動CPUモードです。進行ボタンで試合を進めてください。`;
     } else {
       elements.titleControlHint.textContent = '全操作対戦: 両チームを自分で操作します。';
     }
@@ -3442,12 +3467,14 @@ function renderLobby(teamLibraryState) {
   const teams = Array.isArray(teamLibraryState.teams) ? teamLibraryState.teams : [];
   const selection = teamLibraryState.selection || {};
   const setup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
-  const matchMode = setup.mode === 'cpu' ? 'cpu' : 'manual';
+  const matchMode =
+    setup.mode === 'cpu' ? 'cpu' : setup.mode === 'auto' ? 'auto' : 'manual';
   const selectedControlTeam = matchMode === 'cpu' && setup.userTeam === 'away' ? 'away' : 'home';
 
   (elements.matchModeRadios || []).forEach((radio) => {
     if (!radio) return;
-    const value = radio.value === 'cpu' ? 'cpu' : 'manual';
+    const rawValue = typeof radio.value === 'string' ? radio.value : '';
+    const value = rawValue === 'cpu' ? 'cpu' : rawValue === 'auto' ? 'auto' : 'manual';
     radio.checked = value === matchMode;
   });
 
@@ -4549,16 +4576,28 @@ export function render(data) {
   stateCache.gameControl = controlState;
 
   const existingSetup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
-  let normalizedMode = existingSetup.mode === 'cpu' ? 'cpu' : 'manual';
+  const existingMode = typeof existingSetup.mode === 'string' ? existingSetup.mode : 'manual';
+  let normalizedMode = ['manual', 'cpu', 'auto'].includes(existingMode) ? existingMode : 'manual';
   let normalizedUserTeam = existingSetup.userTeam === 'away' ? 'away' : 'home';
 
   if (normalizedMode === 'cpu' && !CONTROL_TEAM_KEYS.has(normalizedUserTeam)) {
     normalizedUserTeam = 'home';
   }
+  if (normalizedMode !== 'cpu') {
+    normalizedUserTeam = 'home';
+  }
 
-  if (data?.game?.active && controlState.mode === 'cpu') {
-    normalizedMode = 'cpu';
-    normalizedUserTeam = controlState.userTeam || 'home';
+  if (data?.game?.active) {
+    if (controlState.mode === 'cpu') {
+      normalizedMode = 'cpu';
+      normalizedUserTeam = controlState.userTeam || 'home';
+    } else if (controlState.mode === 'auto') {
+      normalizedMode = 'auto';
+      normalizedUserTeam = 'home';
+    } else {
+      normalizedMode = 'manual';
+      normalizedUserTeam = 'home';
+    }
   }
 
   stateCache.matchSetup = {
