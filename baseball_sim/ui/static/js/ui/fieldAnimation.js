@@ -6,6 +6,8 @@ const RESULT_CATEGORY_MAP = {
   sacrifice_bunt: 'groundout',
   bunt_out: 'groundout',
   bunt_failed: 'groundout',
+  squeeze_success: 'groundout',
+  squeeze_fail: 'groundout',
   infield_flyout: 'infieldFly',
   fly_out: 'outfieldFly',
   outfield_flyout: 'outfieldFly',

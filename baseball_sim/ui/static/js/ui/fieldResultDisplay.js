@@ -15,6 +15,8 @@ const OUT_RESULTS = new Set([
   'sacrifice_bunt',
   'bunt_out',
   'bunt_failed',
+  'squeeze_success',
+  'squeeze_fail',
   'caught_stealing',
 ]);
 
@@ -34,6 +36,8 @@ const LABEL_OVERRIDES = Object.freeze({
   sacrifice_bunt: 'Sacrifice Bunt',
   bunt_out: 'Bunt Out',
   bunt_failed: 'Bunt Failed',
+  squeeze_success: 'Squeeze Success',
+  squeeze_fail: 'Squeeze Failed',
   bunt_single: 'Bunt Single',
   stolen_base: 'Stolen Base',
   caught_stealing: 'Caught Stealing',

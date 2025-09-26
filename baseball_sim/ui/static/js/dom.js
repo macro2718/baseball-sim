@@ -27,6 +27,7 @@ export const elements = {
   clearLog: document.getElementById('clear-log'),
   swingButton: document.getElementById('swing-button'),
   buntButton: document.getElementById('bunt-button'),
+  squeezeButton: document.getElementById('squeeze-button'),
   stealButton: document.getElementById('steal-button'),
   progressButton: document.getElementById('progress-button'),
   openOffenseButton: document.getElementById('open-offense-strategy'),

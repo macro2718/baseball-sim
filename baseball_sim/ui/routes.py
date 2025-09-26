@@ -95,6 +95,14 @@ def create_routes(session: WebGameSession) -> Blueprint:
             return create_error_response(str(exc), session)
         return jsonify(state)
 
+    @api_bp.post("/game/squeeze")
+    def squeeze() -> Dict[str, Any]:
+        try:
+            state = session.execute_squeeze()
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     @api_bp.post("/game/progress")
     def progress() -> Dict[str, Any]:
         try:

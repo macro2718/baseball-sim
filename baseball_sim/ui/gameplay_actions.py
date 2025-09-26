@@ -160,6 +160,78 @@ class GameplayActionsMixin:
 
         return self.build_state()
 
+    def execute_squeeze(self) -> Dict[str, Any]:
+        """Attempt a squeeze bunt for the current batter."""
+
+        if not self.game_state:
+            raise GameSessionError("Game has not started yet.")
+
+        if self.game_state.game_ended:
+            self._action_block_reason = "The game has already ended."
+            self._log.append(self._action_block_reason, variant="warning")
+            return self.build_state()
+
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
+
+        allowed, reason = self.game_state.is_game_action_allowed()
+        if not allowed:
+            self._action_block_reason = reason
+            self._log.append(f"❌ {reason}", variant="danger")
+            return self.build_state()
+
+        if not self.game_state.can_squeeze():
+            message = "Squeeze not allowed (need a runner on 3rd and fewer than 2 outs)."
+            self._action_block_reason = message
+            self._log.append(message, variant="warning")
+            return self.build_state()
+
+        self._action_block_reason = None
+
+        batter = self.game_state.batting_team.current_batter
+        pitcher = self.game_state.fielding_team.current_pitcher
+        prev_inning = self.game_state.inning
+        prev_half = self.game_state.is_top_inning
+
+        result_message = self.game_state.execute_squeeze(batter, pitcher)
+
+        self._log.append(
+            f"{batter.name} attempts a squeeze bunt against {pitcher.name}",
+            variant="header",
+        )
+
+        if "successful" in result_message:
+            self._log.append(result_message, variant="success")
+            self._notifications.publish(
+                "success", f"🎯 {batter.name} lays down a perfect squeeze!"
+            )
+        else:
+            self._log.append(result_message, variant="warning")
+            self._notifications.publish("warning", f"❌ {batter.name}'s squeeze attempt fails")
+
+        pitcher.decrease_stamina()
+        self.game_state.batting_team.next_batter()
+
+        inning_changed = (
+            prev_inning != self.game_state.inning
+            or prev_half != self.game_state.is_top_inning
+        )
+        if inning_changed:
+            banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
+            self._log.extend_banner(banner)
+
+        if self.game_state.game_ended:
+            self._record_game_over()
+        elif (
+            self.game_state.inning >= 9
+            and not self.game_state.is_top_inning
+            and self.game_state.home_score > self.game_state.away_score
+        ):
+            self._record_game_over()
+
+        return self.build_state()
+
     def execute_steal(self) -> Dict[str, Any]:
         """Attempt a steal with the current base runners."""
 
@@ -413,6 +485,39 @@ class GameplayActionsMixin:
 
         if decision.label:
             self._log.append(f"🤖 CPU判断: {decision.label}", variant="info")
+
+        if decision.play is CPUPlayType.SQUEEZE:
+            if not self.game_state.can_squeeze():
+                self._log.append("⚠️ CPUはスクイズを選択しましたが条件を満たしません。", variant="warning")
+                decision = CPUOffenseDecision(play=CPUPlayType.SWING)
+            else:
+                self._log.append(
+                    f"🤖 CPU: {batter.name}が{pitcher.name}に対してスクイズを試みます", variant="header"
+                )
+                result_message = self.game_state.execute_squeeze(batter, pitcher)
+                if "successful" in result_message:
+                    self._log.append(result_message, variant="success")
+                    self._notifications.publish("info", f"🤖 CPUのスクイズ: {result_message}")
+                else:
+                    self._log.append(result_message, variant="warning")
+                    self._notifications.publish("warning", f"🤖 CPUスクイズ失敗: {result_message}")
+                pitcher.decrease_stamina()
+                self.game_state.batting_team.next_batter()
+
+                inning_changed = (
+                    prev_inning != self.game_state.inning
+                    or prev_half != self.game_state.is_top_inning
+                )
+                if inning_changed:
+                    banner = half_inning_banner(
+                        self.game_state, self.home_team, self.away_team
+                    )
+                    self._log.extend_banner(banner)
+
+                if self.game_state.game_ended:
+                    self._record_game_over()
+
+                return self.build_state()
 
         if decision.play is CPUPlayType.BUNT:
             if not self.game_state.can_bunt():

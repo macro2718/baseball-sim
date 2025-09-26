@@ -316,19 +316,9 @@ class BuntProcessor:
         """送りバント時のランナー進塁処理"""
         runs_scored = 0
         
-        # スクイズプレーの可能性を判定
-        if self._should_attempt_squeeze_play():
-            runs_scored += self._execute_squeeze_play(new_bases)
-        else:
-            runs_scored += self._execute_normal_sacrifice_bunt(new_bases)
-        
+        runs_scored += self._execute_normal_sacrifice_bunt(new_bases)
+
         return runs_scored
-    
-    def _should_attempt_squeeze_play(self):
-        """スクイズプレーを実行すべきかを判定"""
-        return (self.game_state.bases[2] and 
-                self.game_state.outs < 2 and 
-                random.random() < BuntConstants.SQUEEZE_PROBABILITY)
     
     def _execute_squeeze_play(self, new_bases):
         """スクイズプレー実行"""
@@ -579,6 +569,58 @@ class BuntProcessor:
             return "(No advancement)"
         else:
             return "(No base runners)"
+
+
+class SqueezeProcessor(BuntProcessor):
+    """スクイズプレーを処理する専用クラス。"""
+
+    def execute(self, batter, pitcher):
+        """スクイズプレーを実行する。"""
+
+        if not self.game_state.can_squeeze():
+            return "Cannot squeeze (Need runner on 3rd base and fewer than 2 outs)"
+
+        batter.stats["PA"] += 1
+        batter.stats["AB"] += 1
+        batter.stats["SAC"] = batter.stats.get("SAC", 0) + 1
+
+        runners_before = [base is not None for base in self.game_state.bases]
+        new_bases = [None] * 3
+        outs_before_attempt = self.game_state.outs
+
+        runs_scored = self._execute_squeeze_play(new_bases)
+
+        runners_after = [base is not None for base in new_bases]
+        outs_after_attempt = self.game_state.outs
+
+        self.game_state.bases = new_bases
+
+        self.game_state.add_out()
+
+        advance_message = self._create_advance_message(runners_before, runners_after)
+        runner_outs = outs_after_attempt - outs_before_attempt
+
+        message_bits = []
+
+        if runs_scored > 0:
+            self.game_state._add_runs(runs_scored, batter)
+            run_phrase = f"{runs_scored} run scored" if runs_scored == 1 else f"{runs_scored} runs scored"
+            message_bits.append(f"Squeeze bunt successful! {run_phrase}!")
+            result_key = GameResults.SQUEEZE_SUCCESS
+        else:
+            if runner_outs > 0:
+                message_bits.append("Squeeze attempt fails! Runner out at home!")
+            else:
+                message_bits.append("Squeeze attempt fails! Runner holds at third.")
+            result_key = GameResults.SQUEEZE_FAIL
+
+        if advance_message:
+            message_bits.append(advance_message)
+
+        message = " ".join(bit for bit in message_bits if bit).strip()
+
+        self.game_state.record_play(result_key, message)
+        return message
 
 
 class RunnerEngine:

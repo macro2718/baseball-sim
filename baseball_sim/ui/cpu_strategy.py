@@ -16,6 +16,7 @@ class CPUPlayType(str, Enum):
     SWING = "swing"
     BUNT = "bunt"
     STEAL = "steal"
+    SQUEEZE = "squeeze"
 
 
 @dataclass(frozen=True)
@@ -238,6 +239,25 @@ def select_offense_play(game_state, offense_team) -> CPUOffenseDecision:
             }
             label = "好走者を活かして盗塁を狙います。"
             return CPUOffenseDecision(CPUPlayType.STEAL, label=label, metadata=metadata)
+
+    if (
+        game_state.can_squeeze()
+        and has_runner_on(2)
+        and outs <= 1
+        and (inning >= 6 or margin <= 0)
+    ):
+        third_speed = getattr(bases[2], "speed", 100.0) or 100.0
+        batter_k_rate = getattr(batter, "k_pct", 25.0) or 25.0
+        leverage_factor = 0.35 if inning >= 7 and abs(margin) <= 1 else 0.0
+        risk_factor = random.random()
+        if third_speed + leverage_factor >= 100.0 or batter_k_rate >= 26.0 or risk_factor < 0.3:
+            metadata = {
+                "base_state": base_signature,
+                "third_speed": third_speed,
+                "k_pct": batter_k_rate,
+            }
+            label = "スクイズで三塁走者をホームに突入させます。"
+            return CPUOffenseDecision(CPUPlayType.SQUEEZE, label=label, metadata=metadata)
 
     if (
         game_state.can_bunt()
