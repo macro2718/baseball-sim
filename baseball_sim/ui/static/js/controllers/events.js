@@ -3256,6 +3256,15 @@ export function initEventListeners(actions) {
     elements.openTeamBuilder.addEventListener('click', async () => {
       setUIView('team-builder');
       ensureTeamBuilderState();
+      // Always start with a new team template when entering from Home
+      try {
+        if (elements.teamEditorSelect) {
+          elements.teamEditorSelect.value = '__new__';
+        }
+        createNewTeamTemplate();
+      } catch (_) {
+        // non-fatal; fallback to normal flow
+      }
       const players = stateCache.teamBuilder.players || {};
       if (!players.loaded) {
         stateCache.teamBuilder.players.loading = true;
@@ -3279,6 +3288,8 @@ export function initEventListeners(actions) {
 
   if (elements.openMatchButton) {
     elements.openMatchButton.addEventListener('click', () => {
+      // Reset team selection UI to placeholders
+      stateCache.resetTeamSelect = true;
       setUIView('team-select');
       refreshView();
     });
@@ -3309,6 +3320,8 @@ export function initEventListeners(actions) {
 
   if (elements.openSimulationButton) {
     elements.openSimulationButton.addEventListener('click', () => {
+      // Reset simulation team selection UI to placeholders
+      stateCache.resetSimulationSelect = true;
       setUIView('simulation');
       refreshView();
     });

@@ -377,23 +377,6 @@
   ],
   "batters": [
     {
-      "name": "Hiroshi Matsumoto",
-      "eligible_positions": [
-        "DH",
-        "C",
-        "1B",
-        "SS"
-      ],
-      "k_pct": 24.611852449300375,
-      "bb_pct": 6.678255997946085,
-      "hard_pct": 40.609592231106205,
-      "gb_pct": 51.317809042479425,
-      "speed": 105.571,
-      "fielding_skill": 84.53045153381623,
-      "bats": "L",
-      "id": "9db52565-3e31-41e6-a3ce-74be0e49a1b2"
-    },
-    {
       "name": "Ryo Kimura",
       "eligible_positions": [
         "DH",
@@ -1081,6 +1064,23 @@
       "speed": 100,
       "fielding_skill": 100,
       "id": "4cd514ae-abf2-43e7-b792-e81eecef9c8f"
+    },
+    {
+      "name": "Hiroshi Matsumoto",
+      "k_pct": 24.611852449300375,
+      "bb_pct": 6.678255997946085,
+      "hard_pct": 40.609592231106205,
+      "gb_pct": 51.317809042479425,
+      "eligible_positions": [
+        "C",
+        "1B",
+        "SS",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 105.571,
+      "fielding_skill": 84.53045153381623,
+      "id": "9db52565-3e31-41e6-a3ce-74be0e49a1b2"
     }
   ]
 }

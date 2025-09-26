@@ -285,8 +285,9 @@ class TeamLibrary:
         if not isinstance(raw, dict):
             raise TeamLibraryError("チームデータの形式が不正です。")
 
-        name = str(raw.get("name", "")).strip()
-        if not name:
+        # Keep team name isolated from rotation item variables to avoid shadowing
+        team_name = str(raw.get("name", "")).strip()
+        if not team_name:
             raise TeamLibraryError("チーム名を入力してください。")
 
         lineup_raw = raw.get("lineup")
@@ -326,25 +327,25 @@ class TeamLibrary:
             seen_rotation: set[str] = set()
             for entry in rotation_raw:
                 if isinstance(entry, dict):
-                    name_value = entry.get("name")
+                    rotation_name_value = entry.get("name")
                 else:
-                    name_value = entry
-                name = str(name_value or "").strip()
-                if not name:
+                    rotation_name_value = entry
+                rotation_name = str(rotation_name_value or "").strip()
+                if not rotation_name:
                     continue
-                if name not in pitchers:
+                if rotation_name not in pitchers:
                     raise TeamLibraryError(
-                        f"ローテーション投手 '{name}' が投手リストに含まれていません。"
+                        f"ローテーション投手 '{rotation_name}' が投手リストに含まれていません。"
                     )
-                if name in seen_rotation:
+                if rotation_name in seen_rotation:
                     raise TeamLibraryError(
-                        f"ローテーション投手 '{name}' が重複しています。"
+                        f"ローテーション投手 '{rotation_name}' が重複しています。"
                     )
-                seen_rotation.add(name)
-                rotation.append(name)
+                seen_rotation.add(rotation_name)
+                rotation.append(rotation_name)
 
         payload = dict(raw)
-        payload["name"] = name
+        payload["name"] = team_name
         payload["lineup"] = lineup
         payload["pitchers"] = pitchers
         payload["bench"] = bench

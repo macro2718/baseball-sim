@@ -3444,6 +3444,10 @@ function renderLobby(teamLibraryState) {
       selected: selection.home,
       fallback: fallbackHome,
     });
+    // If reset is requested for this view, force placeholder selection
+    if (stateCache.resetTeamSelect === true) {
+      homeSelect.value = '';
+    }
   }
 
   if (awaySelect) {
@@ -3452,6 +3456,14 @@ function renderLobby(teamLibraryState) {
       selected: selection.away,
       fallback: optionList.length > 1 ? optionList[1].value : fallbackHome,
     });
+    if (stateCache.resetTeamSelect === true) {
+      awaySelect.value = '';
+    }
+  }
+
+  // Clear the one-shot reset flag after applying
+  if (stateCache.resetTeamSelect === true) {
+    stateCache.resetTeamSelect = false;
   }
 
   if (elements.lobbyHint) {
@@ -3607,6 +3619,9 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
       fallback: fallbackAway,
     });
     simulationSetupAway.disabled = Boolean(simulationState?.running);
+    if (stateCache.resetSimulationSelect === true) {
+      simulationSetupAway.value = '';
+    }
   }
 
   if (simulationSetupHome) {
@@ -3616,6 +3631,9 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
       fallback: fallbackHome,
     });
     simulationSetupHome.disabled = Boolean(simulationState?.running);
+    if (stateCache.resetSimulationSelect === true) {
+      simulationSetupHome.value = '';
+    }
   }
 
   const limits = simulationState?.limits || {};
@@ -3647,6 +3665,11 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
 
   if (simulationStartButton) {
     simulationStartButton.disabled = !canStart;
+  }
+
+  // Clear the one-shot reset flag after applying
+  if (stateCache.resetSimulationSelect === true) {
+    stateCache.resetSimulationSelect = false;
   }
 
   if (simulationSetupFeedback) {
