@@ -3458,6 +3458,28 @@ export function initEventListeners(actions) {
     });
   }
 
+  // シミュレーション設定: チーム選択変更時にボタン活性状態などを更新
+  function updateSimulationStartEnabled() {
+    const homeId = elements.simulationSetupHome?.value ?? '';
+    const awayId = elements.simulationSetupAway?.value ?? '';
+    const running = Boolean(stateCache.simulation?.running);
+    const canStart = Boolean(homeId && awayId) && !running && homeId !== '' && awayId !== '';
+    if (elements.simulationStartButton) {
+      elements.simulationStartButton.disabled = !canStart;
+    }
+  }
+
+  if (elements.simulationSetupAway) {
+    elements.simulationSetupAway.addEventListener('change', () => {
+      updateSimulationStartEnabled();
+    });
+  }
+  if (elements.simulationSetupHome) {
+    elements.simulationSetupHome.addEventListener('change', () => {
+      updateSimulationStartEnabled();
+    });
+  }
+
   if (elements.simulationResultsHome) {
     elements.simulationResultsHome.addEventListener('click', () => {
       setUIView('lobby');
