@@ -412,6 +412,8 @@ class SessionStateBuilder:
                         "pitcher_type": getattr(player, "pitcher_type", None),
                         "bats": bats_display,
                         "is_current_batter": is_offense and index == current_batter_index,
+                        # When this team is defending, this index will bat first next half
+                        "is_next_batter": (not is_offense) and index == current_batter_index,
                         "fielding_rating": self._format_rating(fielding_raw),
                         "fielding_value": fielding_value,
                         "avg": summary["avg"],

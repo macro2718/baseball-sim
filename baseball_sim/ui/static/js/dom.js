@@ -34,6 +34,9 @@ export const elements = {
   openDefenseButton: document.getElementById('open-defense-strategy'),
   openStatsButton: document.getElementById('open-stats'),
   openAbilitiesButton: document.getElementById('open-abilities'),
+  // Roster headings team labels
+  offenseTeamName: document.getElementById('offense-team-name'),
+  defenseTeamName: document.getElementById('defense-team-name'),
   offenseMenu: document.getElementById('offense-strategy-menu'),
   offensePinchMenuButton: document.getElementById('open-offense-pinch-menu'),
   offensePinchRunMenuButton: document.getElementById('open-offense-pinch-run-menu'),

@@ -1193,6 +1193,9 @@ function updateRosters(tbody, players) {
     if (player.is_current_batter) {
       tr.classList.add('active');
     }
+    if (player.is_next_batter) {
+      tr.classList.add('next');
+    }
     const orderLabel = escapeHtml(player.order ?? '');
     const positionHtml = renderPositionToken(player.position, player.pitcher_type);
     const nameHtml = escapeHtml(player.name ?? '-');
@@ -2843,6 +2846,8 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     }
     updateRosters(elements.offenseRoster, []);
     updateRosters(elements.defenseRoster, []);
+    if (elements.offenseTeamName) elements.offenseTeamName.textContent = '';
+    if (elements.defenseTeamName) elements.defenseTeamName.textContent = '';
     updateBench(elements.offenseBench, []);
     updateBench(elements.defenseBenchList, []);
     updatePitchers(elements.offensePitchers, []);
@@ -2892,6 +2897,14 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const defenseTeam = gameState.defense ? teams[gameState.defense] : null;
+
+  // Update roster section headings with team names
+  if (elements.offenseTeamName) {
+    elements.offenseTeamName.textContent = offenseTeam?.name ? String(offenseTeam.name) : '';
+  }
+  if (elements.defenseTeamName) {
+    elements.defenseTeamName.textContent = defenseTeam?.name ? String(defenseTeam.name) : '';
+  }
 
   updateRosters(elements.offenseRoster, offenseTeam?.lineup || []);
   updateBench(elements.offenseBench, offenseTeam?.bench || []);

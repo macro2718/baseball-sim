@@ -638,6 +638,21 @@
   gap: clamp(4px, 0.8vw, 8px);
 }
 
+/* Roster section headings with inline team name on the right */
+.roster > h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.roster > h3 .team-name-inline {
+  font-weight: 700;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
 .field-extra-banner {
   display: inline-flex;
   align-items: center;
@@ -1326,6 +1341,11 @@
 
 .roster tbody tr.active {
   background: rgba(96, 165, 250, 0.16);
+}
+
+/* Next-half leadoff (defense team) */
+.roster tbody tr.next {
+  background: rgba(192, 132, 252, 0.16);
 }
 
 .pitcher-section {
