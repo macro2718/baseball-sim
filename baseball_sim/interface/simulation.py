@@ -7,6 +7,30 @@ from baseball_sim.gameplay.statistics import StatsCalculator
 
 setup_project_environment()
 
+
+def get_pitcher_rotation(pitchers):
+    """登録順に先発投手のローテーションリストを作成する"""
+    if not pitchers:
+        return []
+
+    starters = [
+        pitcher
+        for pitcher in pitchers
+        if getattr(pitcher, "pitcher_type", "").upper() == "SP"
+    ]
+
+    return list(starters)
+
+
+def select_starting_pitcher(rotation, index):
+    """ローテーションと現在のインデックスから先発投手を取得する"""
+    if not rotation:
+        return None
+
+    safe_index = index % len(rotation)
+    return rotation[safe_index]
+
+
 def simulate_games(
     num_games=10,
     output_file=None,
@@ -66,6 +90,16 @@ def simulate_games(
         for pitcher in team.pitchers:
             results["pitchers"][pitcher.name] = pitcher
     
+    # 先発ローテーションの準備（登録順）
+    home_pitcher_pool = list(home_team.pitchers)
+    away_pitcher_pool = list(away_team.pitchers)
+
+    home_rotation = get_pitcher_rotation(home_pitcher_pool)
+    away_rotation = get_pitcher_rotation(away_pitcher_pool)
+
+    home_rotation_index = 0
+    away_rotation_index = 0
+
     for game_num in range(1, num_games + 1):
         if message_callback:
             message_callback(f"In Simulation... Game {game_num}/{num_games}")
@@ -73,7 +107,23 @@ def simulate_games(
             print(f"In Simulation... Game {game_num}/{num_games}")
 
         # 試合前にチームと選手の状態をリセット
-        reset_team_and_players(home_team, away_team)
+        home_starter = select_starting_pitcher(home_rotation, home_rotation_index)
+        away_starter = select_starting_pitcher(away_rotation, away_rotation_index)
+
+        # ローテーションを進める（リストが空でなければ登録順に巡回）
+        if home_rotation:
+            home_rotation_index = (home_rotation_index + 1) % len(home_rotation)
+        if away_rotation:
+            away_rotation_index = (away_rotation_index + 1) % len(away_rotation)
+
+        reset_team_and_players(
+            home_team,
+            away_team,
+            home_pitcher_pool=home_pitcher_pool,
+            away_pitcher_pool=away_pitcher_pool,
+            home_starting_pitcher=home_starter,
+            away_starting_pitcher=away_starter,
+        )
         
         # 試合状態を初期化
         game = GameState(home_team, away_team)
@@ -110,22 +160,43 @@ def simulate_games(
 
     return results
 
-def reset_team_and_players(home_team, away_team):
+def reset_team_and_players(
+    home_team,
+    away_team,
+    *,
+    home_pitcher_pool=None,
+    away_pitcher_pool=None,
+    home_starting_pitcher=None,
+    away_starting_pitcher=None,
+):
     """チームと選手の状態をリセットする（投手のスタミナなど）"""
+    if home_pitcher_pool is not None:
+        home_team.pitchers = list(home_pitcher_pool)
+    if away_pitcher_pool is not None:
+        away_team.pitchers = list(away_pitcher_pool)
+
     # 各チームの投手のスタミナをリセット
     for pitcher in home_team.pitchers:
         pitcher.current_stamina = pitcher.stamina
-    
+
     for pitcher in away_team.pitchers:
         pitcher.current_stamina = pitcher.stamina
-    
+
     # 打順をリセット
     home_team.current_batter_index = 0
     away_team.current_batter_index = 0
     
     # 先発投手をリセット（必要に応じて）
-    home_team.current_pitcher = home_team.pitchers[0]
-    away_team.current_pitcher = away_team.pitchers[0]
+    home_team.current_pitcher = (
+        home_starting_pitcher
+        if home_starting_pitcher is not None
+        else (home_team.pitchers[0] if home_team.pitchers else None)
+    )
+    away_team.current_pitcher = (
+        away_starting_pitcher
+        if away_starting_pitcher is not None
+        else (away_team.pitchers[0] if away_team.pitchers else None)
+    )
 
 def simulate_single_game(game):
     """1試合をシミュレーション実行し、結果を返す"""
