@@ -2519,6 +2519,71 @@ export function initEventListeners(actions) {
     return stateCache.matchSetup;
   }
 
+  function ensureTeamLibrarySelectionState() {
+    if (!stateCache.teamLibrary || typeof stateCache.teamLibrary !== 'object') {
+      stateCache.teamLibrary = {
+        teams: [],
+        selection: { home: null, away: null },
+        ready: false,
+        hint: '',
+        active: { home: null, away: null },
+      };
+    }
+    if (!stateCache.teamLibrary.selection || typeof stateCache.teamLibrary.selection !== 'object') {
+      stateCache.teamLibrary.selection = { home: null, away: null };
+    }
+    if (!stateCache.teamLibrary.active || typeof stateCache.teamLibrary.active !== 'object') {
+      stateCache.teamLibrary.active = { home: null, away: null };
+    }
+
+    if (stateCache.data) {
+      if (!stateCache.data.team_library || typeof stateCache.data.team_library !== 'object') {
+        stateCache.data.team_library = {};
+      }
+      if (!stateCache.data.team_library.selection || typeof stateCache.data.team_library.selection !== 'object') {
+        stateCache.data.team_library.selection = { home: null, away: null };
+      }
+    }
+  }
+
+  function updateTeamLibrarySelection(updates) {
+    ensureTeamLibrarySelectionState();
+
+    const selection = stateCache.teamLibrary.selection;
+    const dataSelection = stateCache.data?.team_library?.selection;
+    let changed = false;
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'home')) {
+      const rawHome = updates.home;
+      const normalizedHome =
+        rawHome === null || rawHome === undefined ? '' : String(rawHome).trim();
+      const nextHome = normalizedHome ? normalizedHome : null;
+      if ((selection.home ?? null) !== nextHome) {
+        selection.home = nextHome;
+        changed = true;
+      }
+      if (dataSelection) {
+        dataSelection.home = nextHome;
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'away')) {
+      const rawAway = updates.away;
+      const normalizedAway =
+        rawAway === null || rawAway === undefined ? '' : String(rawAway).trim();
+      const nextAway = normalizedAway ? normalizedAway : null;
+      if ((selection.away ?? null) !== nextAway) {
+        selection.away = nextAway;
+        changed = true;
+      }
+      if (dataSelection) {
+        dataSelection.away = nextAway;
+      }
+    }
+
+    return changed;
+  }
+
   function getMatchSetupOptions() {
     const setup = ensureMatchSetup();
     const mode = setup.mode === 'cpu' ? 'cpu' : 'manual';
@@ -2613,6 +2678,32 @@ export function initEventListeners(actions) {
         // エラーハンドリングはhandleTeamSelection内で行われる
       } finally {
         elements.enterTitleButton.disabled = false;
+      }
+    });
+  }
+
+  if (elements.lobbyHomeSelect) {
+    elements.lobbyHomeSelect.addEventListener('change', (event) => {
+      const value = typeof event?.target?.value === 'string' ? event.target.value : '';
+      const changed = updateTeamLibrarySelection({ home: value });
+      if (changed) {
+        refreshView();
+      } else if (elements.enterTitleButton) {
+        const canStart = Boolean(elements.lobbyHomeSelect.value && elements.lobbyAwaySelect?.value);
+        elements.enterTitleButton.disabled = !canStart;
+      }
+    });
+  }
+
+  if (elements.lobbyAwaySelect) {
+    elements.lobbyAwaySelect.addEventListener('change', (event) => {
+      const value = typeof event?.target?.value === 'string' ? event.target.value : '';
+      const changed = updateTeamLibrarySelection({ away: value });
+      if (changed) {
+        refreshView();
+      } else if (elements.enterTitleButton) {
+        const canStart = Boolean(elements.lobbyHomeSelect?.value && elements.lobbyAwaySelect.value);
+        elements.enterTitleButton.disabled = !canStart;
       }
     });
   }
