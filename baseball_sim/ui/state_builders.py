@@ -590,34 +590,57 @@ class SessionStateBuilder:
 
         seen_pitchers = set()
 
-        def add_pitcher(player) -> None:
+        # Determine order of pitchers who have left the game (for 降板-n)
+        ejected_pitchers = [p for p in getattr(team, "ejected_players", []) or [] if self._is_pitcher(p)]
+        ejected_order: Dict[int, int] = {id(p): (idx + 1) for idx, p in enumerate(ejected_pitchers)}
+
+        def add_pitcher(player, role_label: str = "") -> None:
             player_id = id(player)
             if player_id in seen_pitchers:
                 return
             seen_pitchers.add(player_id)
-            pitching.append(self._serialize_pitcher_stats(player))
+            row = self._serialize_pitcher_stats(player)
+            # Attach role label and type for display
+            if not role_label:
+                # If pitcher has left the game, tag with 降板-n
+                order = ejected_order.get(player_id)
+                if order:
+                    role_label = f"降板-{order}"
+            row["role_label"] = role_label
+            pitcher_type = getattr(player, "pitcher_type", None)
+            row["pitcher_type"] = (str(pitcher_type).upper() if pitcher_type else "-")
+            pitching.append(row)
 
         # Ensure active pitcher is included (relievers after a change)
         current_pitcher = getattr(team, "current_pitcher", None)
         if current_pitcher is not None:
-            add_pitcher(current_pitcher)
+            add_pitcher(current_pitcher, "登板中")
 
         # Registered pitchers on the staff
-        for pitcher in getattr(team, "pitchers", []):
-            add_pitcher(pitcher)
+        for idx, pitcher in enumerate(getattr(team, "pitchers", []) or []):
+            # Remaining staff not currently pitching
+            if pitcher is current_pitcher:
+                add_pitcher(pitcher, "登板中")
+            else:
+                pid = id(pitcher)
+                order = ejected_order.get(pid)
+                if order:
+                    add_pitcher(pitcher, f"降板-{order}")
+                else:
+                    add_pitcher(pitcher, f"控え{idx + 1}")
 
         # Some data sources may tag pitchers in lineup/bench with position
-        for pitcher in getattr(team, "lineup", []):
+        for pitcher in getattr(team, "lineup", []) or []:
             if getattr(pitcher, "position", "").upper() == "P":
                 add_pitcher(pitcher)
-        for pitcher in getattr(team, "bench", []):
+        for pitcher in getattr(team, "bench", []) or []:
             if getattr(pitcher, "position", "").upper() == "P":
                 add_pitcher(pitcher)
 
         # Previously used pitchers may be moved to ejected list; include them
         for player in getattr(team, "ejected_players", []) or []:
             if self._is_pitcher(player):
-                add_pitcher(player)
+                add_pitcher(player)  # role_label will be set to 降板-n inside add_pitcher
 
         return {"batting": batting, "pitching": pitching}
 

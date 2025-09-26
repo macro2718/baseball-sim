@@ -4365,6 +4365,8 @@ export function updateStatsPanel(state) {
             const filtered = list.filter((pos) => String(pos || '').toUpperCase() !== 'DH');
             td.innerHTML = renderPositionList(filtered);
             td.classList.add('player-col', 'position-list');
+          } else if (viewType === 'pitching' && key === 'pitcher_type') {
+            td.innerHTML = renderPositionToken(value, value);
           } else {
             td.textContent = value != null && value !== '' ? value : '-';
           }
@@ -4500,6 +4502,8 @@ export function updateAbilitiesPanel(state) {
             const filtered = list.filter((pos) => String(pos || '').toUpperCase() !== 'DH');
             td.innerHTML = renderPositionList(filtered);
             td.classList.add('player-col', 'position-list');
+          } else if (viewType === 'pitching' && key === 'pitcher_type') {
+            td.innerHTML = renderPositionToken(displayValue, displayValue);
           } else {
             td.textContent = displayValue;
           }

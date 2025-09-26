@@ -81,6 +81,8 @@ export const BATTING_COLUMNS = [
 
 export const PITCHING_COLUMNS = [
   { label: 'Player', key: 'name' },
+  { label: '区分', key: 'role_label' },
+  { label: 'Type', key: 'pitcher_type' },
   { label: 'IP', key: 'ip' },
   { label: 'H', key: 'h' },
   { label: 'R', key: 'r' },
