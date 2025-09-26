@@ -85,11 +85,6 @@ class Player:
     def get_ops(self):
         """OPS を計算（統一メソッドを使用）"""
         return StatsCalculator.calculate_ops(self.get_obp(), self.get_slg())
-    
-    def get_babip(self):
-        """BABIP（本塁打を除く打球の安打率）を計算（統一メソッドを使用）"""
-        total_hits = self.stats["1B"] + self.stats.get("2B", 0) + self.stats.get("3B", 0) + self.stats.get("HR", 0)
-        return StatsCalculator.calculate_babip(total_hits, self.stats.get("HR", 0), self.stats["AB"], self.stats["SO"])
 
 
 class Pitcher(Player):
@@ -113,10 +108,6 @@ class Pitcher(Player):
     def get_display_eligible_positions(self):
         """表示用には投手タイプ（SP/RP）を返す。"""
         return [self.pitcher_type]
-    
-    def get_effectiveness(self):
-        """現在の投球効果を返す（スタミナ影響下）"""
-        return self.current_stamina / self.stamina * 100
     
     def decrease_stamina(self):
         """各打者後にスタミナを減少させる"""

@@ -86,11 +86,7 @@ class StatsCalculator:
         return obp + slg
     
     @staticmethod
-    def calculate_babip(hits, home_runs, at_bats, strikeouts):
-        """BABIP計算（統一処理）"""
-        infield_hits = hits - home_runs
-        balls_in_play = at_bats - strikeouts - home_runs
-        return infield_hits / balls_in_play if balls_in_play > 0 else 0.000
+    # Removed unused calculate_babip
     
     @staticmethod
     def calculate_k_per_9(strikeouts, innings_pitched):
@@ -118,29 +114,6 @@ class StatsCalculator:
         stats["K"] = current
         return current
 
-    @staticmethod
-    def update_player_stats(player, outcome, runs_scored=0, rbis=0):
-        """プレイヤー統計更新（統一処理）"""
-        stats = player.stats
-        stats['AB'] = stats.get('AB', 0) + 1
-
-        if outcome in ['single', 'double', 'triple', 'home_run']:
-            outcome_key = {'single': '1B', 'double': '2B', 'triple': '3B', 'home_run': 'HR'}[outcome]
-            stats[outcome_key] = stats.get(outcome_key, 0) + 1
-        elif outcome == 'strikeout':
-            StatsCalculator.record_strikeout(stats)
-        elif outcome == 'walk':
-            stats['BB'] = stats.get('BB', 0) + 1
-            stats['AB'] = stats.get('AB') - 1  # 四球は打数に含まれない
-        
-        stats['R'] = stats.get('R', 0) + runs_scored
-        stats['RBI'] = stats.get('RBI', 0) + rbis
-        
-        # 打率を自動更新（Playerクラスのget_avgメソッドを使用）
-        if hasattr(player, 'get_avg'):
-            # メソッドがある場合は何もしない（動的計算）
-            pass
-    
     @staticmethod
     def format_inning_display(innings_pitched):
         """投球イニングの表示形式を統一"""

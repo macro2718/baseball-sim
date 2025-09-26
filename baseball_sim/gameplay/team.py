@@ -61,16 +61,6 @@ class Team:
             # 後方互換性のため
             return True
     
-    def is_lineup_complete(self):
-        """ラインナップが完成しているかチェック（9人すべてのポジションが埋まっているか）"""
-        if len(self.lineup) != 9:
-            return False
-        
-        for position in self.required_positions:
-            if self.defensive_positions[position] is None:
-                return False
-        
-        return True
     
     def get_missing_positions(self):
         """未配置のポジションリストを取得"""
@@ -237,13 +227,6 @@ class Team:
         
         return True, f"{player.name} moved to {new_position}"
     
-    def get_defensive_formation(self):
-        """現在の守備陣形を取得"""
-        formation = {}
-        for position, player in self.defensive_positions.items():
-            if player is not None:
-                formation[position] = player
-        return formation
     
     def validate_lineup(self):
         """ラインナップの妥当性をチェック"""
@@ -272,19 +255,6 @@ class Team:
         
         return errors
     
-    def clear_lineup(self):
-        """ラインナップをリセット"""
-        # 全選手をベンチに移動
-        for player in self.lineup:
-            player.current_position = None
-            self.bench.append(player)
-
-        self.lineup.clear()
-        self.defensive_positions = {pos: None for pos in self.required_positions}
-        self.current_batter_index = 0
-
-        # 退場リストもリセット（新しい試合の場合）
-        self.ejected_players.clear()
     
     def substitute_player(self, lineup_index, substitute_player, allow_illegal=False):
         """守備交代（代走・守備固めなど）- 選手オブジェクト版"""
@@ -321,13 +291,8 @@ class Team:
         
         return True, f"{substitute_player.name} substitutes for {original_player.name} at {position}"
     
-    def substitute_player_by_index(self, bench_player_index, lineup_index, allow_illegal=False):
-        """守備交代（代走・守備固めなど）- インデックス版"""
-        if not (0 <= bench_player_index < len(self.bench) and 0 <= lineup_index < len(self.lineup)):
-            return False, "Invalid player index"
-
-        substitute_player = self.bench[bench_player_index]
-        return self.substitute_player(lineup_index, substitute_player, allow_illegal=allow_illegal)
+    # Removed unused helpers: is_lineup_complete, get_defensive_formation,
+    # clear_lineup, substitute_player_by_index
     
     def is_player_eligible(self, player):
         """選手が出場可能かチェック（退場していないか）"""

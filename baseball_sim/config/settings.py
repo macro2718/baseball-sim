@@ -92,17 +92,9 @@ class ConfigManager:
         
         config[keys[-1]] = value
     
-    def save_user_config(self, config_path: str = None):
-        """ユーザー設定をファイルに保存"""
-        if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), "config.json")
-        try:
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(self._config, f, indent=2, ensure_ascii=False)
-        except IOError as e:
-            print(f"Error saving config: {e}")
+    # Removed unused save_user_config; configuration is loaded on startup and
+    # persisted elsewhere if needed.
 
 
 # シングルトンインスタンス
 config = ConfigManager()
-

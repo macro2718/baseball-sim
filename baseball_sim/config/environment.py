@@ -18,10 +18,6 @@ class ProjectPaths:
         return self._project_root
 
     @property
-    def package_dir(self) -> Path:
-        return self._package_dir
-
-    @property
     def player_data_dir(self) -> Path:
         return self._project_root / "player_data"
 

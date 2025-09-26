@@ -118,10 +118,6 @@ class GameState:
         return self._scoreboard.inning_scores
 
     @property
-    def defensive_position_error(self) -> bool:
-        return self._defense_status.frozen
-
-    @property
     def defensive_error_messages(self):
         return list(self._defense_status.messages)
 

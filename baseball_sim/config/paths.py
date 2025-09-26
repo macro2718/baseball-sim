@@ -93,15 +93,6 @@ class PathManager:
     def file_exists(self, path: str) -> bool:
         """ファイルが存在するかチェック"""
         return Path(path).is_file()
-    
-    @staticmethod
-    def ensure_directory_exists_static(path: str) -> bool:
-        """ディレクトリが存在することを確認し、なければ作成（静的メソッド）"""
-        try:
-            Path(path).mkdir(parents=True, exist_ok=True)
-            return True
-        except OSError:
-            return False
 
 
 # シングルトンインスタンス
