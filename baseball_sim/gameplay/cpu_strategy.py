@@ -1,4 +1,8 @@
-"""Heuristic helpers that drive CPU decision making in CPU-vs-player games."""
+"""CPU strategy and decision helpers for in-game AI.
+
+Moved from `baseball_sim.ui.cpu_strategy` to keep UI concerns separate
+from core gameplay logic.
+"""
 
 from __future__ import annotations
 
@@ -782,3 +786,4 @@ def describe_steal_outcome(result_info: dict) -> str:
     if result_key == GameResults.CAUGHT_STEALING:
         return "盗塁失敗"
     return "盗塁判定"
+

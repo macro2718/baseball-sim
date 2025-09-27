@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from baseball_sim.config import GameResults
 from baseball_sim.gameplay.substitutions import SubstitutionManager
 
-from .cpu_strategy import (
+from baseball_sim.gameplay.cpu_strategy import (
     CPUOffenseDecision,
     CPUPlayType,
     PitcherChangePlan,

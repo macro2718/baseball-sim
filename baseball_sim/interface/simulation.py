@@ -5,7 +5,7 @@ from baseball_sim.config import get_project_paths, setup_project_environment
 from baseball_sim.gameplay.game import GameState
 from baseball_sim.gameplay.statistics import StatsCalculator
 from baseball_sim.gameplay.substitutions import SubstitutionManager
-from baseball_sim.ui.cpu_strategy import (
+from baseball_sim.gameplay.cpu_strategy import (
     CPUPlayType,
     plan_pitcher_change,
     plan_defensive_substitutions,
