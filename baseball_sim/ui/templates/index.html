@@ -236,30 +236,48 @@
             <h2>シミュレーション設定</h2>
             <p class="lobby-description">シミュレーションするチームと試合数を選択してください。</p>
             <form id="simulation-setup-form" class="simulation-setup-form">
-              <div class="form-grid two-col">
-                <div class="form-field">
-                  <label for="simulation-away-team">アウェイチーム</label>
-                  <select id="simulation-away-team" class="team-select"></select>
+              <div class="form-grid">
+                <div class="form-field full">
+                  <label for="simulation-league-team">リーグにチームを追加</label>
+                  <div class="league-picker">
+                    <select id="simulation-league-team" class="team-select"></select>
+                    <button type="button" id="simulation-league-add" class="primary">追加</button>
+                    <button type="button" id="simulation-league-clear" class="ghost">リセット</button>
+                  </div>
+                  <p class="form-hint">リーグに参加させるチームを順番に追加してください。</p>
+                </div>
+                <div class="form-field full">
+                  <label for="simulation-league-list">リーグ構成</label>
+                  <ul id="simulation-league-list" class="league-team-list" aria-live="polite"></ul>
+                  <p class="form-hint">各チームの削除ボタンでリストから除外できます。</p>
                 </div>
                 <div class="form-field">
-                  <label for="simulation-home-team">ホームチーム</label>
-                  <select id="simulation-home-team" class="team-select"></select>
-                </div>
-                <div class="form-field">
-                  <label for="simulation-game-count">試合数</label>
+                  <label for="simulation-games-per-card">1カードあたりの試合数</label>
                   <input
                     type="number"
-                    id="simulation-game-count"
-                    name="simulation-game-count"
+                    id="simulation-games-per-card"
+                    name="simulation-games-per-card"
                     min="1"
-                    max="200"
-                    value="20"
+                    max="20"
+                    value="3"
+                    inputmode="numeric"
+                  />
+                </div>
+                <div class="form-field">
+                  <label for="simulation-cards-per-opponent">対戦カード数</label>
+                  <input
+                    type="number"
+                    id="simulation-cards-per-opponent"
+                    name="simulation-cards-per-opponent"
+                    min="1"
+                    max="10"
+                    value="1"
                     inputmode="numeric"
                   />
                 </div>
               </div>
               <p class="form-feedback info" id="simulation-setup-feedback">
-                ホームとアウェイのチーム、試合数を指定してください。
+                2チーム以上を追加し、カード設定を入力してください。
               </p>
               <div class="title-actions">
                 <button type="submit" id="simulation-start" class="primary">シミュレーション開始</button>
