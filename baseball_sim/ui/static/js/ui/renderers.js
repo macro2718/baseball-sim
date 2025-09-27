@@ -4183,6 +4183,202 @@ function renderSimulationLeaders(lastRun) {
   }
 }
 
+function renderSimulationTeamStatsTable(tbody, teams) {
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const rows = Array.isArray(teams) ? teams : [];
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 10;
+    td.textContent = 'チーム別統計はまだありません。';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach((team) => {
+    const record = team.record || {};
+    const batting = team.batting || {};
+    const pitching = team.pitching || {};
+    const games = Number.isFinite(Number(record.games)) ? Number(record.games) : 0;
+    const runsPerGame = games > 0 ? Number(record.runsScored || 0) / games : 0;
+
+    const tr = document.createElement('tr');
+    const cells = [
+      team.name || '-',
+      formatAverageDisplay(batting.avg),
+      formatAverageDisplay(batting.obp),
+      formatAverageDisplay(batting.slg),
+      formatAverageDisplay(batting.ops),
+      formatNumberDisplay(runsPerGame, 2),
+      formatNumberDisplay(pitching.era, 2),
+      formatNumberDisplay(pitching.whip, 2),
+      formatNumberDisplay(pitching.kPer9, 2),
+      formatNumberDisplay(pitching.bbPer9, 2),
+    ];
+
+    cells.forEach((value, index) => {
+      const isNameCell = index === 0;
+      const cell = document.createElement(isNameCell ? 'th' : 'td');
+      cell.textContent = typeof value === 'number' ? String(value) : value;
+      if (isNameCell) {
+        cell.scope = 'row';
+        cell.style.fontWeight = '600';
+      }
+      tr.appendChild(cell);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderSimulationMatchupsTable(tbody, games, aliases) {
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  const schedule = Array.isArray(games) ? games : [];
+  if (!schedule.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 4;
+    td.textContent = '対戦成績はまだありません。';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  const aliasMap = aliases && typeof aliases === 'object' ? aliases : {};
+  const normalizeName = (name) => {
+    if (!name || typeof name !== 'string') return '';
+    const trimmed = name.trim();
+    return aliasMap[trimmed] || trimmed;
+  };
+
+  const matchupMap = new Map();
+  schedule.forEach((game) => {
+    const homeName = normalizeName(game.homeTeam ?? game.home_team);
+    const awayName = normalizeName(game.awayTeam ?? game.away_team);
+    if (!homeName || !awayName) return;
+    const keyTeams = [homeName, awayName].sort((a, b) => a.localeCompare(b));
+    const key = `${keyTeams[0]}@@${keyTeams[1]}`;
+    let entry = matchupMap.get(key);
+    if (!entry) {
+      entry = {
+        teams: keyTeams,
+        totalGames: 0,
+        stats: {},
+      };
+      matchupMap.set(key, entry);
+    }
+
+    const ensureStats = (teamName) => {
+      if (!entry.stats[teamName]) {
+        entry.stats[teamName] = {
+          wins: 0,
+          losses: 0,
+          draws: 0,
+          runsFor: 0,
+          runsAgainst: 0,
+        };
+      }
+      return entry.stats[teamName];
+    };
+
+    const homeStats = ensureStats(homeName);
+    const awayStats = ensureStats(awayName);
+    const homeScore = Number.isFinite(Number(game.homeScore ?? game.home_score))
+      ? Number(game.homeScore ?? game.home_score)
+      : 0;
+    const awayScore = Number.isFinite(Number(game.awayScore ?? game.away_score))
+      ? Number(game.awayScore ?? game.away_score)
+      : 0;
+
+    homeStats.runsFor += homeScore;
+    homeStats.runsAgainst += awayScore;
+    awayStats.runsFor += awayScore;
+    awayStats.runsAgainst += homeScore;
+
+    if (game.winner === 'home') {
+      homeStats.wins += 1;
+      awayStats.losses += 1;
+    } else if (game.winner === 'away') {
+      awayStats.wins += 1;
+      homeStats.losses += 1;
+    } else {
+      homeStats.draws += 1;
+      awayStats.draws += 1;
+    }
+
+    entry.totalGames += 1;
+  });
+
+  const entries = Array.from(matchupMap.values());
+  entries.sort((a, b) => {
+    if (b.totalGames !== a.totalGames) {
+      return b.totalGames - a.totalGames;
+    }
+    const [a1, a2] = a.teams;
+    const [b1, b2] = b.teams;
+    const primary = a1.localeCompare(b1);
+    if (primary !== 0) return primary;
+    return a2.localeCompare(b2);
+  });
+
+  entries.forEach((entry) => {
+    const [teamA, teamB] = entry.teams;
+    const statsA = entry.stats[teamA] || {
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      runsFor: 0,
+      runsAgainst: 0,
+    };
+    const statsB = entry.stats[teamB] || {
+      wins: 0,
+      losses: 0,
+      draws: 0,
+      runsFor: 0,
+      runsAgainst: 0,
+    };
+
+    const recordParts = [`${statsA.wins}勝`, `${statsA.losses}敗`];
+    if (statsA.draws) {
+      recordParts.push(`${statsA.draws}分`);
+    }
+    const recordLabel = recordParts.join(' ');
+    const runsLabel = `${statsA.runsFor}-${statsB.runsFor}`;
+
+    const tr = document.createElement('tr');
+    const cells = [
+      `${teamA} vs ${teamB}`,
+      entry.totalGames,
+      recordLabel,
+      runsLabel,
+    ];
+
+    cells.forEach((value, index) => {
+      const isLabelCell = index === 0;
+      const cell = document.createElement(isLabelCell ? 'th' : 'td');
+      cell.textContent = typeof value === 'number' ? String(value) : value;
+      if (isLabelCell) {
+        cell.scope = 'row';
+        cell.style.fontWeight = '600';
+      }
+      tr.appendChild(cell);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  if (!entries.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 4;
+    td.textContent = '対戦成績はまだありません。';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+}
+
 function renderSimulationResults(simulationState) {
   const {
     simulationResultsSummary,
@@ -4198,6 +4394,8 @@ function renderSimulationResults(simulationState) {
     simulationHomeBattingBody,
     simulationAwayPitchingBody,
     simulationHomePitchingBody,
+    simulationTeamStatsBody,
+    simulationMatchupsBody,
   } = elements;
 
   const lastRun = simulationState?.lastRun || null;
@@ -4234,6 +4432,8 @@ function renderSimulationResults(simulationState) {
     if (simulationHomeBattingBody) simulationHomeBattingBody.innerHTML = '';
     if (simulationAwayPitchingBody) simulationAwayPitchingBody.innerHTML = '';
     if (simulationHomePitchingBody) simulationHomePitchingBody.innerHTML = '';
+    renderSimulationTeamStatsTable(simulationTeamStatsBody, []);
+    renderSimulationMatchupsTable(simulationMatchupsBody, [], {});
     updateSimulationResultsViewUI();
     return;
   }
@@ -4242,6 +4442,7 @@ function renderSimulationResults(simulationState) {
   const leagueInfo = lastRun.league || {};
   const mode = typeof lastRun.mode === 'string' ? lastRun.mode.toLowerCase() : '';
   const isLeague = mode === 'league' || teams.length > 2;
+  const games = Array.isArray(lastRun.games) ? lastRun.games : [];
 
   const rolesMap = new Map();
   teams.forEach((team) => {
@@ -4360,7 +4561,6 @@ function renderSimulationResults(simulationState) {
 
   if (simulationGamesTableBody) {
     simulationGamesTableBody.innerHTML = '';
-    const games = Array.isArray(lastRun.games) ? lastRun.games : [];
     if (!games.length) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
@@ -4393,7 +4593,6 @@ function renderSimulationResults(simulationState) {
   }
 
   if (simulationGamesStats) {
-    const games = Array.isArray(lastRun.games) ? lastRun.games : [];
     const total = games.length;
     let homeWins = 0;
     let awayWins = 0;
@@ -4449,6 +4648,8 @@ function renderSimulationResults(simulationState) {
 
   // 要約用の個人タイトル表示
   renderSimulationLeaders(lastRun);
+  renderSimulationTeamStatsTable(simulationTeamStatsBody, teams);
+  renderSimulationMatchupsTable(simulationMatchupsBody, games, lastRun.aliases || {});
   // タブ/セクション表示更新
   updateSimulationResultsViewUI();
 }
