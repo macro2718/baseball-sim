@@ -156,8 +156,8 @@ function normalizeControlState(rawControl) {
 const ABILITY_METRIC_CONFIG = {
   k_pct: { mean: 22.8, variation: 0.15, min: 9 },
   bb_pct: { mean: 8.5, variation: 0.15, min: 2.5 },
-  hard_pct: { mean: 38.6, variation: 0.15, min: 18 },
-  gb_pct: { mean: 44.6, variation: 0.15, min: 20 },
+  hard_pct: { mean: 38.6, variation: 0.05, min: 18 },
+  gb_pct: { mean: 44.6, variation: 0.01, min: 20, max: 60 },
   speed: { mean: 100, variation: 0.05, min: 74, max: 130 },
   fielding: { mean: 100, variation: 0.15, min: 40, max: 160 },
   stamina: { mean: 80, variation: 0.15, min: 30, max: 150 },
@@ -3793,7 +3793,7 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
 
   if (simulationCardsPerOpponentInput) {
     simulationCardsPerOpponentInput.min = '1';
-    simulationCardsPerOpponentInput.max = '10';
+    simulationCardsPerOpponentInput.max = '100';
     const focused = document.activeElement === simulationCardsPerOpponentInput;
     const value = schedule.cardsPerOpponent || scheduleDefaults.cardsPerOpponent || 1;
     if (!focused) {

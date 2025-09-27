@@ -440,12 +440,12 @@ def reset_team_and_players(
 
     # 各チームの投手のスタミナを調整
     # - SP: 毎試合フルにリセット（従来通り）
-    # - RP: 試合間でスタミナを引き継ぎ、試合前に+15回復（上限は基礎スタミナ）
+    # - RP: 試合間でスタミナを引き継ぎ、試合前に+10回復（上限は基礎スタミナ）
     for pitcher in home_team.pitchers:
         ptype = getattr(pitcher, "pitcher_type", "").upper()
         if ptype == "RP":
             current = getattr(pitcher, "current_stamina", pitcher.stamina)
-            pitcher.current_stamina = min(pitcher.stamina, current + 15)
+            pitcher.current_stamina = min(pitcher.stamina, current + 10)
         else:
             pitcher.current_stamina = pitcher.stamina
 
@@ -453,7 +453,7 @@ def reset_team_and_players(
         ptype = getattr(pitcher, "pitcher_type", "").upper()
         if ptype == "RP":
             current = getattr(pitcher, "current_stamina", pitcher.stamina)
-            pitcher.current_stamina = min(pitcher.stamina, current + 15)
+            pitcher.current_stamina = min(pitcher.stamina, current + 10)
         else:
             pitcher.current_stamina = pitcher.stamina
 

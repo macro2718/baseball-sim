@@ -1,0 +1,72 @@
+{
+  "name": "LAD('24)",
+  "lineup": [
+    {
+      "name": "Mookie Betts('24)",
+      "position": "SS"
+    },
+    {
+      "name": "Shohei Ohtani('24)",
+      "position": "DH"
+    },
+    {
+      "name": "Freddie Freeman('24)",
+      "position": "1B"
+    },
+    {
+      "name": "Will Smith('24)",
+      "position": "C"
+    },
+    {
+      "name": "Max Muncy('24)",
+      "position": "3B"
+    },
+    {
+      "name": "Teoscar Hernandez('24)",
+      "position": "RF"
+    },
+    {
+      "name": "Chris Taylor('24)",
+      "position": "LF"
+    },
+    {
+      "name": "Andy Pages('24)",
+      "position": "CF"
+    },
+    {
+      "name": "Gavin Lux('24)",
+      "position": "2B"
+    }
+  ],
+  "pitchers": [
+    "Tyler Glasnow('24)",
+    "Yoshinobu Yamamoto('24)",
+    "Gavin Stone('24)",
+    "Bobby Miller('24)",
+    "Walker Buehler('24)",
+    "Landon Knack('24)",
+    "Blake Treinen('24)",
+    "Anthony Banda('24)",
+    "Alex Vesia('24)",
+    "Evan Phillips('24)",
+    "River Ryan('24)",
+    "Joe Kelly('24)",
+    "Daniel Hudson('24)",
+    "Ryan Brasier('24)",
+    "Michael Grove('24)"
+  ],
+  "bench": [
+    "Miguel Rojas('24)",
+    "Tommy Edman('24)",
+    "James Outman('24)",
+    "Enrique Hernandez('24)",
+    "Austin Barnes('24)"
+  ],
+  "rotation": [
+    "Tyler Glasnow('24)",
+    "Yoshinobu Yamamoto('24)",
+    "Gavin Stone('24)",
+    "Bobby Miller('24)",
+    "Walker Buehler('24)"
+  ]
+}

@@ -121,7 +121,7 @@ class Pitcher(Player):
     
     def decrease_stamina(self):
         """各打者後にスタミナを減少させる"""
-        self.current_stamina = max(0, self.current_stamina - random.uniform(3, 4.5))
+        self.current_stamina = max(0, self.current_stamina - random.uniform(3.3, 4.95))
     
     def get_era(self):
         """防御率を計算（統一メソッドを使用）"""
