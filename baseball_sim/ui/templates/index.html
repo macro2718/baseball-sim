@@ -526,8 +526,20 @@
                       <div id="team-builder-pitchers" class="team-builder-pitchers"></div>
                     </section>
                     <section class="builder-section rotation-section">
-                      <div class="section-heading">
+                      <div class="section-heading section-heading-inline">
                         <h3>シミュレーション先発ローテーション</h3>
+                        <div class="section-actions">
+                          <label for="team-builder-rotation-size" style="margin-right:8px;">人数</label>
+                          <input
+                            id="team-builder-rotation-size"
+                            type="number"
+                            min="1"
+                            step="1"
+                            value="5"
+                            style="width:72px;"
+                            aria-label="ローテーション人数"
+                          />
+                        </div>
                         <p>シミュレーションモードで自動的に登板する順番を設定してください。</p>
                       </div>
                       <div id="team-builder-rotation" class="team-builder-rotation"></div>

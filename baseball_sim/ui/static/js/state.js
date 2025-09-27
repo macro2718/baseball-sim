@@ -51,6 +51,7 @@ export const stateCache = {
     playerSwap: { source: null },
     catalog: 'batters',
     searchTerm: '',
+    rotationSize: 5,
   },
 };
 

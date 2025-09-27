@@ -59,6 +59,7 @@ export const elements = {
   teamBuilderBench: document.getElementById('team-builder-bench'),
   teamBuilderPitchers: document.getElementById('team-builder-pitchers'),
   teamBuilderRotation: document.getElementById('team-builder-rotation'),
+  teamBuilderRotationSize: document.getElementById('team-builder-rotation-size'),
   teamBuilderRosterPanels: Array.from(document.querySelectorAll('[data-roster-panel]')),
   teamBuilderAddBench: document.getElementById('team-builder-add-bench'),
   teamBuilderAddPitcher: document.getElementById('team-builder-add-pitcher'),

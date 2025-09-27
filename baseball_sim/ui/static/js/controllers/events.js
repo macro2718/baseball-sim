@@ -509,6 +509,9 @@ function ensureTeamBuilderState() {
   if (!stateCache.teamBuilder.initialForm) {
     stateCache.teamBuilder.initialForm = cloneTeamForm(stateCache.teamBuilder.form);
   }
+  if (!Number.isInteger(stateCache.teamBuilder.rotationSize)) {
+    stateCache.teamBuilder.rotationSize = TEAM_BUILDER_DEFAULT_ROTATION_SLOTS;
+  }
   ensureRotationSlots(stateCache.teamBuilder.form);
 }
 
@@ -621,12 +624,23 @@ function cloneTeamForm(form) {
   return { name: form.name || '', lineup, bench, pitchers, rotation };
 }
 
-function ensureRotationSlots(form, desiredLength = TEAM_BUILDER_DEFAULT_ROTATION_SLOTS) {
+function ensureRotationSlots(form, desiredLength = TEAM_BUILDER_DEFAULT_ROTATION_SLOTS, allowShrink = false) {
   if (!form) return;
   if (!Array.isArray(form.rotation)) {
     form.rotation = [];
   }
-  const minimumLength = Math.max(desiredLength, form.rotation.length);
+  // Use user-selected size if available when caller passes default
+  const baseDesired = (desiredLength === TEAM_BUILDER_DEFAULT_ROTATION_SLOTS &&
+    Number.isInteger(stateCache.teamBuilder?.rotationSize))
+    ? stateCache.teamBuilder.rotationSize
+    : desiredLength;
+  // Cap by count of assigned pitchers (with a name)
+  const assignedPitcherCount = Array.isArray(form.pitchers)
+    ? form.pitchers.filter((p) => p && p.playerName).length
+    : 0;
+  const cap = Math.max(0, assignedPitcherCount);
+  const effectiveLength = Math.min(Math.max(0, baseDesired), cap || baseDesired);
+  const minimumLength = allowShrink ? effectiveLength : Math.max(effectiveLength, form.rotation.length);
   for (let index = 0; index < minimumLength; index += 1) {
     if (!form.rotation[index]) {
       form.rotation[index] = createEmptyRotationSlot(index);
@@ -2116,6 +2130,23 @@ function renderTeamBuilderRotation() {
   const hasDuplicates = Array.from(nameCounts.values()).some((count) => count > 1);
   const totalSlots = Array.isArray(form.rotation) ? form.rotation.length : 0;
 
+  // Reflect rotation size control state
+  if (elements.teamBuilderRotationSize) {
+    const available = options.length;
+    const min = available > 0 ? 1 : 0;
+    const max = available;
+    const desired = Number.isInteger(stateCache.teamBuilder?.rotationSize)
+      ? stateCache.teamBuilder.rotationSize
+      : TEAM_BUILDER_DEFAULT_ROTATION_SLOTS;
+    const bounded = Math.max(min, Math.min(desired, max || desired));
+    elements.teamBuilderRotationSize.min = String(min);
+    elements.teamBuilderRotationSize.max = String(max);
+    if (document.activeElement !== elements.teamBuilderRotationSize) {
+      elements.teamBuilderRotationSize.value = String(bounded || 0);
+    }
+    elements.teamBuilderRotationSize.disabled = max === 0;
+  }
+
   if (!options.length) {
     const empty = document.createElement('p');
     empty.className = 'rotation-message';
@@ -2207,6 +2238,24 @@ function renderTeamBuilderRotation() {
     warning.textContent = 'ローテーションに投手リスト外の投手が含まれています。リストから再選択してください。';
     container.appendChild(warning);
   }
+}
+
+function setRotationSize(sizeValue) {
+  const form = getTeamBuilderForm();
+  if (!form) return;
+  const available = Array.isArray(form.pitchers)
+    ? form.pitchers.filter((p) => p && p.playerName).length
+    : 0;
+  let next = Number.parseInt(sizeValue, 10);
+  if (!Number.isFinite(next)) {
+    next = stateCache.teamBuilder?.rotationSize ?? TEAM_BUILDER_DEFAULT_ROTATION_SLOTS;
+  }
+  next = Math.max(available > 0 ? 1 : 0, Math.min(next, available));
+  stateCache.teamBuilder.rotationSize = next;
+  ensureRotationSlots(form, next, true);
+  syncRotationWithPitchers(form);
+  stateCache.teamBuilder.editorDirty = true;
+  renderTeamBuilderView();
 }
 
 function updateRotationSlot(slotIndex, value) {
@@ -2523,6 +2572,7 @@ function findLineupEligibilityConflicts() {
 function createNewTeamTemplate() {
   ensureTeamBuilderState();
   stateCache.teamBuilder.form = createDefaultTeamForm();
+  stateCache.teamBuilder.rotationSize = TEAM_BUILDER_DEFAULT_ROTATION_SLOTS;
   stateCache.teamBuilder.currentTeamId = null;
   stateCache.teamBuilder.lastSavedId = '__new__';
   stateCache.teamBuilder.editorDirty = false;
@@ -2540,8 +2590,14 @@ function resetTeamBuilderFormToInitial(showFeedback = true) {
   const snapshot = stateCache.teamBuilder.initialForm;
   if (snapshot) {
     stateCache.teamBuilder.form = cloneTeamForm(snapshot);
+    // Reset rotationSize to match the snapshot's rotation length if available
+    const snapLen = Array.isArray(snapshot.rotation) ? snapshot.rotation.length : null;
+    if (Number.isInteger(snapLen)) {
+      stateCache.teamBuilder.rotationSize = snapLen;
+    }
   } else {
     stateCache.teamBuilder.form = createDefaultTeamForm();
+    stateCache.teamBuilder.rotationSize = TEAM_BUILDER_DEFAULT_ROTATION_SLOTS;
     captureTeamBuilderSnapshot(stateCache.teamBuilder.form);
   }
   ensureRotationSlots(stateCache.teamBuilder.form);
@@ -2678,20 +2734,27 @@ function applyTeamDataToForm(teamData) {
     })
     .filter((value) => value);
 
+  const assignedPitcherCount = form.pitchers.reduce((total, entry) => (entry && entry.playerName ? total + 1 : total), 0);
   const starterCount = form.pitchers.reduce((total, entry) => {
-    if (!entry || !entry.playerName) {
-      return total;
-    }
+    if (!entry || !entry.playerName) return total;
     const type = (entry.player?.pitcher_type || entry.playerRole || '').toString().toUpperCase();
     return type === 'SP' ? total + 1 : total;
   }, 0);
 
-  const rotationLength = Math.max(
-    TEAM_BUILDER_DEFAULT_ROTATION_SLOTS,
-    rotationNames.length,
-    starterCount,
-  );
-  form.rotation = Array.from({ length: rotationLength }, (_, index) => createEmptyRotationSlot(index));
+  // Determine initial rotation size preference
+  let initialSize = 0;
+  if (rotationNames.length) {
+    initialSize = rotationNames.length;
+  } else if (starterCount > 0) {
+    initialSize = starterCount;
+  } else {
+    initialSize = Math.min(TEAM_BUILDER_DEFAULT_ROTATION_SLOTS, assignedPitcherCount || TEAM_BUILDER_DEFAULT_ROTATION_SLOTS);
+  }
+  // Cap by assigned pitchers
+  const rotationLength = Math.max(0, Math.min(initialSize, assignedPitcherCount));
+  // Persist preference for user control
+  stateCache.teamBuilder.rotationSize = rotationLength || (assignedPitcherCount > 0 ? 1 : 0);
+  form.rotation = Array.from({ length: stateCache.teamBuilder.rotationSize }, (_, index) => createEmptyRotationSlot(index));
 
   rotationNames.forEach((name, order) => {
     if (!form.rotation[order]) {
@@ -3730,6 +3793,15 @@ export function initEventListeners(actions) {
         reorderRotationSlot(indexValue, indexValue + 1);
       }
     });
+  }
+
+  if (elements.teamBuilderRotationSize) {
+    const onSizeChange = (event) => {
+      const raw = typeof event?.target?.value === 'string' ? event.target.value : String(event?.target?.value || '');
+      setRotationSize(raw);
+    };
+    elements.teamBuilderRotationSize.addEventListener('change', onSizeChange);
+    elements.teamBuilderRotationSize.addEventListener('input', onSizeChange);
   }
 
   if (elements.teamBuilderPlayerPanel) {
