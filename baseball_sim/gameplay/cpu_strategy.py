@@ -379,24 +379,110 @@ def plan_pitcher_change(game_state, cpu_team, substitution_manager) -> Optional[
         # リリーフは原則短い: 継続条件を厳しく
         threshold = 45
 
-    # イニング途中でのリリーフ交代は少し閾値を上げて無駄な継投を減らす
+    # --- リリーフのイニング途中交代抑制ロジック強化 ---
+    # 目的: 「中継ぎが1イニングを投げ切らない」頻度をさらに下げる。
+    # 方針:
+    #   1) イニング途中 (outs>0) は従来 +5 → より強く抑制 (段階的に +12 以上)。
+    #   2) ただし明確な炎上 (複数走者 + 疲労/ビハインド/高レバレッジ) は閾値を緩和し早期交代を許容。
+    #   3) 炎上判定は「走者2人以上」かつ (fatigue高 or ビハインド or leverage) を条件に簡易化。
     if pitcher_type != "SP" and outs > 0:
-        threshold += 5
+        runners_on = 0
+        try:
+            runners_on = sum(1 for b in game_state.bases[:3] if b is not None)
+        except Exception:
+            pass
+        # 基本上乗せ (アウト数に応じ追加): 0アウト継続は従来通り、1アウトで +12, 2アウトで +15
+        mid_inning_add = 12 if outs == 1 else 15  # outs==2 の時はほぼ投げ切り目前なので更に上げる
+
+        threshold += mid_inning_add
+
+        # --- 炎上(メルトダウン)簡易判定 ---
+        # 疲労: fatigue_component は (100-stamina)*0.4 → 25 以上 ≒ スタミナ 37.5 以下
+        high_fatigue = fatigue_component >=35.0
+        high_leverage_flag = (inning >= 7 and abs(score_margin) <= 2)
+        behind_flag = score_margin < 0
+        meltdown = (runners_on >= 2) and (high_fatigue or high_leverage_flag or behind_flag)
+
+        # 炎上なら 閾値を一部戻して交代を許容 (過剰継続回避)
+        if meltdown:
+            threshold -= 8  # 実質 mid_inning_add を弱める
+            # さらに強い炎上 (満塁 もしくは runners>=2 かつ score_margin<=-2) ならもう少し下げる
+            if runners_on == 3 or (runners_on >= 2 and score_margin <= -2):
+                threshold -= 4
+            # ただし SP より低すぎない安全網
+            threshold = max(threshold, 40)
 
     # 閾値未達なら交代しない
     if change_index < threshold:
         return None
 
     # --- 交代候補選定 ---
+    # --- ブルペン起用優先順位 (状況別) ---
+    # 目的: どんな状況でも常に一番良いリリーフから投入してしまうのを避け、
+    #       接戦/終盤で高品質、ビハインド大差や大量リード時は低品質投手を起用して資源温存。
+    # 基本指標 quality_metric:  (K% - BB%) + (current_stamina*0.15)
+    #   * スタミナ少しだけ加味 (投げられる見込み) / 必要なら他指標を後で追加可能。
+    # シチュエーション分類:
+    #   leverage_high: 7回以降 かつ |score_margin|<=2
+    #   blowout_win: score_margin >= 5
+    #   blowout_loss: score_margin <= -5
+    #   neutral: 上記以外
+    # 起用ポリシー:
+    #   high leverage   -> 最も quality の高い RP を優先 (従来通り)
+    #   neutral / small deficit -> 上位～中位をバランス投入 (若干ランダム性)
+    #   blowout (win/loss) -> 下位品質を優先して高品質を温存
+    # 具体実装: candidate_priority はソート用タプルを返す。
+    #   まず状況カテゴリ毎に weight を決め quality を昇順/降順変換。
+    #   さらに微小ランダム (tie-break) で単調展開を防ぐ。
+    leverage_high = (inning >= 7 and abs(score_margin) <= 2)
+    blowout_win = score_margin >= 5
+    blowout_loss = score_margin <= -5
+
+    # neutral かつ 序中盤ビハインド軽微 ( -4 < score_margin < -2 ) ならテコ入れ目的でやや強めを使う
+    mild_deficit_push = (-4 < score_margin < -2 and inning >= 6)
+
+    # 乱数は 0..1 を用いて後段 tie-break に小さく組込み
     def candidate_priority(p):
         p_type = str(getattr(p, "pitcher_type", "RP") or "RP").upper()
-        is_rp = 0 if p_type != "SP" else 1  # RP優先
-        p_stam = getattr(p, "current_stamina", getattr(p, "stamina", 0)) or 0
-        high_stam_flag = 0 if p_stam >= 20 else 1  # 20以上を優先
+        is_sp = (p_type == "SP")
         k_pct = float(getattr(p, "k_pct", 0.0) or 0.0)
         bb_pct = float(getattr(p, "bb_pct", 0.0) or 0.0)
-        kbb = k_pct - bb_pct
-        return (is_rp, high_stam_flag, -kbb, -p_stam)
+        stamina_now = float(getattr(p, "current_stamina", getattr(p, "stamina", 0)) or 0.0)
+
+        # K-BB% を中心、スタミナを軽く加味
+        quality_metric = (k_pct - bb_pct) + stamina_now * 0.15
+
+        # グローバル要件: スタミナ >=20 の投手を常に優先階層へ (high_stam_flag=0)
+        # これによりどの状況でも first filter 的に "今投げられる" 投手を先に考慮。
+        high_stam_flag = 0 if stamina_now >= 20 else 1  # 0=十分,1=不足
+
+        # SP はリリーフより後回し (極力温存)
+        sp_flag = 1 if is_sp else 0
+
+        # 状況に応じた品質並び方向
+        if leverage_high:
+            # 接戦終盤: best -> worst
+            situ_quality_key = -quality_metric
+        elif blowout_win or blowout_loss:
+            # 大差: worst -> best を先に (敗戦処理/消化登板)
+            situ_quality_key = quality_metric
+        elif mild_deficit_push:
+            # 巻き返し狙い: より強い投手をやや過重
+            situ_quality_key = -quality_metric * 1.05
+        else:
+            # neutral: 中位寄せ (median 目標)。値 15 を仮中央値想定
+            median_guess = 15.0
+            situ_quality_key = abs(quality_metric - median_guess)
+
+        # jitter で完全固定順を回避
+        jitter = random.random() * 0.01
+
+        # ソート key 優先順位:
+        # 1) sp_flag (RP優先)
+        # 2) high_stam_flag (高スタミナ優先)
+        # 3) situ_quality_key (状況目的の品質方向)
+        # 4) jitter (安定化用の微小ランダム)
+        return (sp_flag, high_stam_flag, situ_quality_key, jitter)
 
     replacement_pool = list(available_pitchers)
     replacement_pool.sort(key=candidate_priority)
