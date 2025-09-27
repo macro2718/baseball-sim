@@ -1490,6 +1490,24 @@
   z-index: 1;
 }
 
+/* scrollable team stats table with sticky header */
+.simulation-team-stats-wrapper {
+  max-height: 320px;
+  overflow: auto; /* both x and y */
+  border-radius: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.simulation-team-stats-wrapper .simulation-table {
+  min-width: 900px; /* enable horizontal scroll when needed */
+}
+
+.simulation-team-stats-wrapper .simulation-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .simulation-table tbody td,
 .simulation-table tbody th {
   padding: 10px 12px;

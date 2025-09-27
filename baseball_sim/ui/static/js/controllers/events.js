@@ -5,7 +5,7 @@ import {
   setPinchRunSelectedBase,
   getPinchRunSelectedBase,
   setSimulationResultsView,
-  setPlayersTeamView,
+  setPlayersSelectedTeamIndex,
   setPlayersTypeView,
   addSimulationLeagueTeam,
   removeSimulationLeagueTeamAt,
@@ -279,6 +279,7 @@ function clearPlayerForm(role = 'batter') {
   if (elements.playerEditorBBPct) elements.playerEditorBBPct.value = '';
   if (elements.playerEditorHardPct) elements.playerEditorHardPct.value = '';
   if (elements.playerEditorGBPct) elements.playerEditorGBPct.value = '';
+  if (elements.playerEditorFoldersList) elements.playerEditorFoldersList.innerHTML = '';
   setSelectedPositions([]);
   const normalized = role === 'pitcher' ? 'pitcher' : 'batter';
   if (normalized === 'batter') {
@@ -340,6 +341,44 @@ function applyPlayerFormData(player, role = 'batter') {
     const type = typeof player.pitcher_type === 'string' ? player.pitcher_type.toUpperCase() : 'SP';
     setSelectedPitcherType(PITCHER_TYPES.includes(type) ? type : 'SP');
   }
+  // Apply folder selections
+  try {
+    const assigned = Array.isArray(player.folders)
+      ? player.folders.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim())
+      : [];
+    renderPlayerFolderChoices(assigned);
+  } catch (_) {
+    renderPlayerFolderChoices([]);
+  }
+}
+
+function renderPlayerFolderChoices(selected = []) {
+  const container = elements.playerEditorFoldersList;
+  if (!container) return;
+  const folders = Array.isArray(stateCache.teamBuilder?.folders) ? stateCache.teamBuilder.folders : [];
+  const selectedSet = new Set((selected || []).filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim()));
+  container.innerHTML = '';
+  if (!folders.length) {
+    const empty = document.createElement('p');
+    empty.className = 'builder-empty';
+    empty.textContent = 'タグがありません。新規作成してください。';
+    container.appendChild(empty);
+    return;
+  }
+  folders.forEach((name) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip-toggle';
+    btn.dataset.folderName = name;
+    const active = selectedSet.has(name);
+    updateChipToggleState(btn, active);
+    btn.textContent = name;
+    btn.addEventListener('click', () => {
+      const isActive = btn.classList.contains('active');
+      updateChipToggleState(btn, !isActive);
+    });
+    container.appendChild(btn);
+  });
 }
 
 function readNumberField(input, label, { allowEmpty = false } = {}) {
@@ -393,6 +432,11 @@ function getPlayerFormData(role = 'batter') {
     bb_pct: bbPct.value,
     hard_pct: hardPct.value,
     gb_pct: gbPct.value,
+    folders: Array.from(
+      (elements.playerEditorFoldersList?.querySelectorAll('.chip-toggle.active') || []),
+    )
+      .map((el) => String(el?.dataset?.folderName || '').trim())
+      .filter((v) => v),
   };
 
   if (normalized === 'batter') {
@@ -511,6 +555,12 @@ function ensureTeamBuilderState() {
   }
   if (stateCache.teamBuilder.searchTerm == null) {
     stateCache.teamBuilder.searchTerm = '';
+  }
+  if (!Array.isArray(stateCache.teamBuilder.folders)) {
+    stateCache.teamBuilder.folders = [];
+  }
+  if (typeof stateCache.teamBuilder.selectedFolder !== 'string') {
+    stateCache.teamBuilder.selectedFolder = '';
   }
   if (!stateCache.teamBuilder.initialForm) {
     stateCache.teamBuilder.initialForm = cloneTeamForm(stateCache.teamBuilder.form);
@@ -914,6 +964,9 @@ function applyPlayersCatalogData(catalog) {
       role: 'batter',
       bats: raw.bats ? String(raw.bats).toUpperCase() : null,
       eligible,
+      folders: Array.isArray(raw.folders)
+        ? raw.folders.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim())
+        : [],
       stats: {
         k_pct: Number(raw.k_pct),
         bb_pct: Number(raw.bb_pct),
@@ -940,6 +993,9 @@ function applyPlayersCatalogData(catalog) {
       pitcher_type: raw.pitcher_type ? String(raw.pitcher_type).toUpperCase() : null,
       throws: raw.throws ? String(raw.throws).toUpperCase() : null,
       eligible: ['P'],
+      folders: Array.isArray(raw.folders)
+        ? raw.folders.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim())
+        : [],
       stats: {
         k_pct: Number(raw.k_pct),
         bb_pct: Number(raw.bb_pct),
@@ -2370,9 +2426,16 @@ function renderTeamBuilderCatalog() {
     // noop – fall back to unfiltered list if anything goes wrong
   }
   const term = (stateCache.teamBuilder.searchTerm || '').trim().toLowerCase();
-  const filtered = term
-    ? list.filter((record) => record.name && record.name.toLowerCase().includes(term))
-    : list;
+  const folderFilter = (stateCache.teamBuilder.selectedFolder || '').trim();
+  let filtered = list;
+  if (folderFilter === '__none__') {
+    filtered = filtered.filter((rec) => !Array.isArray(rec.folders) || rec.folders.length === 0);
+  } else if (folderFilter) {
+    filtered = filtered.filter((rec) => Array.isArray(rec.folders) && rec.folders.includes(folderFilter));
+  }
+  if (term) {
+    filtered = filtered.filter((record) => record.name && record.name.toLowerCase().includes(term));
+  }
   if (!filtered.length) {
     const empty = document.createElement('p');
     empty.className = 'builder-empty';
@@ -2480,6 +2543,83 @@ function renderTeamBuilderView() {
   renderTeamBuilderPitchers();
   renderTeamBuilderRotation();
   renderTeamBuilderCatalog();
+}
+
+// ---------------- Player Editor: list rendering ----------------
+function getPlayerEditorFilteredList() {
+  ensureTeamBuilderState();
+  const players = stateCache.teamBuilder.players || {};
+  const role = elements.playerEditorRole?.value === 'pitcher' ? 'pitchers' : 'batters';
+  const list = Array.isArray(players[role]) ? players[role] : [];
+  const term = (stateCache.playerEditor?.searchTerm || '').trim().toLowerCase();
+  const folderFilter = (stateCache.playerEditor?.folder || '').trim();
+  let filtered = list;
+  if (folderFilter === '__none__') {
+    filtered = filtered.filter((rec) => !Array.isArray(rec.folders) || rec.folders.length === 0);
+  } else if (folderFilter) {
+    filtered = filtered.filter((rec) => Array.isArray(rec.folders) && rec.folders.includes(folderFilter));
+  }
+  if (term) {
+    filtered = filtered.filter((rec) => rec.name && rec.name.toLowerCase().includes(term));
+  }
+  return filtered;
+}
+
+function renderPlayerEditorList() {
+  const panel = elements.playerEditorList;
+  if (!panel) return;
+  const records = getPlayerEditorFilteredList();
+  panel.innerHTML = '';
+  if (!records.length) {
+    const empty = document.createElement('p');
+    empty.className = 'builder-empty';
+    empty.textContent = '該当する選手が見つかりません。';
+    panel.appendChild(empty);
+    return;
+  }
+  const selectedId = elements.playerEditorSelect?.value || '';
+  records.forEach((record) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'builder-player-card';
+    card.dataset.playerId = record.id;
+    card.dataset.playerRole = record.role;
+    if (selectedId && String(selectedId) === String(record.id)) {
+      card.classList.add('active');
+    }
+    const name = document.createElement('span');
+    name.className = 'player-name';
+    name.textContent = record.name;
+    card.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'player-meta';
+    if (record.role === 'batter') {
+      const positions = document.createElement('div');
+      positions.className = 'player-positions';
+      positions.innerHTML = renderPositionList(record.eligible || [], null);
+      meta.appendChild(positions);
+      const abilityRow = document.createElement('div');
+      abilityRow.className = 'chip-row';
+      abilityRow.innerHTML = getBatterAbilityChips(record).join('');
+      meta.appendChild(abilityRow);
+      colorizeAbilityChips(abilityRow, 'batter');
+    } else {
+      const roleInfo = document.createElement('div');
+      roleInfo.className = 'player-positions';
+      roleInfo.textContent = `Type: ${record.pitcher_type || '-'} / Throws: ${record.throws || '-'}`;
+      meta.appendChild(roleInfo);
+      const abilityRow = document.createElement('div');
+      abilityRow.className = 'chip-row';
+      abilityRow.innerHTML = getPitcherAbilityChips(record).join('');
+      meta.appendChild(abilityRow);
+      colorizeAbilityChips(abilityRow, 'pitcher');
+    }
+
+    card.appendChild(meta);
+
+    panel.appendChild(card);
+  });
 }
 
 function buildTeamPayload() {
@@ -2638,6 +2778,37 @@ async function ensureTeamBuilderPlayersLoaded(actions, forceReload = false) {
     try {
       const catalog = await actions.fetchPlayersCatalog();
       applyPlayersCatalogData(catalog);
+      // Load folders for filters
+      const folders = await actions.fetchPlayerFolders();
+      stateCache.teamBuilder.folders = folders;
+      // Populate folder filter select if present
+      if (elements.teamBuilderFolderFilter) {
+        const prev = elements.teamBuilderFolderFilter.value;
+        const desired = (stateCache.teamBuilder.selectedFolder || '').trim();
+        elements.teamBuilderFolderFilter.innerHTML = '';
+        const optAll = document.createElement('option');
+        optAll.value = '';
+        optAll.textContent = '全選手';
+        elements.teamBuilderFolderFilter.appendChild(optAll);
+        const optNone = document.createElement('option');
+        optNone.value = '__none__';
+        optNone.textContent = 'タグなし';
+        elements.teamBuilderFolderFilter.appendChild(optNone);
+        folders.forEach((f) => {
+          const opt = document.createElement('option');
+          opt.value = f;
+          opt.textContent = f;
+          elements.teamBuilderFolderFilter.appendChild(opt);
+        });
+        const next = desired || prev;
+        if (next && (folders.includes(next) || next === '__none__')) {
+          elements.teamBuilderFolderFilter.value = next;
+          stateCache.teamBuilder.selectedFolder = next;
+        } else {
+          elements.teamBuilderFolderFilter.value = '';
+          stateCache.teamBuilder.selectedFolder = '';
+        }
+      }
       stateCache.teamBuilder.players.loaded = true;
       return stateCache.teamBuilder.players;
     } catch (error) {
@@ -2894,7 +3065,9 @@ export function initEventListeners(actions) {
   async function populatePlayerSelect(role, desiredValue) {
     const select = elements.playerEditorSelect;
     if (!select) return [];
-    const players = await actions.fetchPlayersList(role);
+    const folder = (stateCache.playerEditor?.folder || '').trim();
+    const search = (stateCache.playerEditor?.searchTerm || '').trim().toLowerCase();
+    const players = await actions.fetchPlayersList(role, { folder });
     const prevValue = desiredValue ?? select.value;
     select.innerHTML = '';
     const placeholder = document.createElement('option');
@@ -2905,7 +3078,9 @@ export function initEventListeners(actions) {
     newOpt.value = '__new__';
     newOpt.textContent = '新規選手を作成';
     select.appendChild(newOpt);
-    players.forEach((p) => {
+    players
+      .filter((p) => (!search ? true : (p?.name || '').toLowerCase().includes(search)))
+      .forEach((p) => {
       const opt = document.createElement('option');
       opt.value = p.id; // use stable id
       opt.textContent = p.name;
@@ -3363,6 +3538,12 @@ export function initEventListeners(actions) {
     elements.openMatchButton.addEventListener('click', () => {
       // Reset team selection UI to placeholders
       stateCache.resetTeamSelect = true;
+      // Also clear current selection so a later re-render doesn't repopulate
+      try {
+        updateTeamLibrarySelection({ home: null, away: null });
+      } catch (_) {
+        // noop
+      }
       setUIView('team-select');
       refreshView();
     });
@@ -3380,17 +3561,23 @@ export function initEventListeners(actions) {
         }
         const setup = ensureMatchSetup();
         setup.mode = value;
-        if (value === 'cpu' && setup.userTeam !== 'home' && setup.userTeam !== 'away') {
-          setup.userTeam = 'home';
-        } else if (value !== 'cpu') {
-          setup.userTeam = 'home';
-        }
-        // Reset team selects to placeholder when switching modes (CPU/全自動CPU ↔ 全操作)
-        stateCache.resetTeamSelect = true;
-        refreshView();
-      });
+      if (value === 'cpu' && setup.userTeam !== 'home' && setup.userTeam !== 'away') {
+        setup.userTeam = 'home';
+      } else if (value !== 'cpu') {
+        setup.userTeam = 'home';
+      }
+      // Reset team selects to placeholder when switching modes (CPU/全自動CPU ↔ 全操作)
+      stateCache.resetTeamSelect = true;
+      // Clear any previous selection so it won't auto-fill on next render
+      try {
+        updateTeamLibrarySelection({ home: null, away: null });
+      } catch (_) {
+        // noop
+      }
+      refreshView();
     });
-  }
+  });
+}
 
   if (elements.controlTeamSelect) {
     elements.controlTeamSelect.addEventListener('change', (event) => {
@@ -3661,7 +3848,7 @@ export function initEventListeners(actions) {
         });
         // 実行直後は要約ビューをデフォルト表示
         setSimulationResultsView('summary');
-        setPlayersTeamView('away');
+        setPlayersSelectedTeamIndex(0);
         setPlayersTypeView('batting');
       } finally {
         if (button) {
@@ -3674,16 +3861,11 @@ export function initEventListeners(actions) {
 
   updateSimulationStartEnabled();
 
-  // 個人成績用サブタブ（Away/Home）
-  if (elements.simulationPlayersTabAway) {
-    elements.simulationPlayersTabAway.addEventListener('click', () => {
-      setPlayersTeamView('away');
-      refreshView();
-    });
-  }
-  if (elements.simulationPlayersTabHome) {
-    elements.simulationPlayersTabHome.addEventListener('click', () => {
-      setPlayersTeamView('home');
+  // 個人成績: チーム選択
+  if (elements.simulationPlayersTeamSelect) {
+    elements.simulationPlayersTeamSelect.addEventListener('change', (event) => {
+      const value = Number.parseInt(event.target?.value || '', 10);
+      setPlayersSelectedTeamIndex(Number.isFinite(value) ? value : 0);
       refreshView();
     });
   }
@@ -3713,7 +3895,56 @@ export function initEventListeners(actions) {
         elements.playerEditorSelect.value = '';
       }
       (async () => {
-        await populatePlayerSelect(role);
+        // Ensure folders are available
+        try {
+          const folders = await actions.fetchPlayerFolders();
+          if (Array.isArray(folders)) {
+            stateCache.teamBuilder.folders = folders;
+            renderPlayerFolderChoices([]);
+            // Populate player editor folder filter options
+            if (elements.playerEditorFolder) {
+              const prev = elements.playerEditorFolder.value;
+              elements.playerEditorFolder.innerHTML = '';
+              const optAll = document.createElement('option');
+              optAll.value = '';
+              optAll.textContent = '全選手';
+              elements.playerEditorFolder.appendChild(optAll);
+              const optNone = document.createElement('option');
+              optNone.value = '__none__';
+              optNone.textContent = 'タグなし';
+              elements.playerEditorFolder.appendChild(optNone);
+              folders.forEach((f) => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                elements.playerEditorFolder.appendChild(opt);
+              });
+              if (!stateCache.playerEditor) stateCache.playerEditor = { searchTerm: '', folder: '' };
+              const target = stateCache.playerEditor.folder || prev || '';
+              elements.playerEditorFolder.value = folders.includes(target) || target === '__none__' ? target : '';
+            }
+            // Populate folder management target select
+            if (elements.playerFolderManageSelect) {
+              elements.playerFolderManageSelect.innerHTML = '';
+              const placeholder = document.createElement('option');
+              placeholder.value = '';
+              placeholder.textContent = 'タグを選択';
+              elements.playerFolderManageSelect.appendChild(placeholder);
+              folders.forEach((f) => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                elements.playerFolderManageSelect.appendChild(opt);
+              });
+            }
+            if (elements.playerEditorSearch) {
+              elements.playerEditorSearch.value = stateCache.playerEditor?.searchTerm || '';
+            }
+          }
+        } catch (_) {}
+        // Load players catalogue and render list
+        await ensureTeamBuilderPlayersLoaded(actions);
+        renderPlayerEditorList();
       })();
     });
   }
@@ -3919,6 +4150,14 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.teamBuilderFolderFilter) {
+    elements.teamBuilderFolderFilter.addEventListener('change', () => {
+      const value = elements.teamBuilderFolderFilter.value || '';
+      stateCache.teamBuilder.selectedFolder = String(value);
+      renderTeamBuilderCatalog();
+    });
+  }
+
   if (elements.teamBuilderNew) {
     elements.teamBuilderNew.addEventListener('click', () => {
       if (elements.teamEditorSelect) {
@@ -3932,6 +4171,291 @@ export function initEventListeners(actions) {
     elements.playerBuilderNew.addEventListener('click', () => {
       const role = elements.playerEditorRole?.value || 'batter';
       loadPlayerTemplate(role);
+      // Clear selection highlight in list
+      if (elements.playerEditorList) {
+        Array.from(elements.playerEditorList.querySelectorAll('.builder-player-card.active')).forEach((el) => el.classList.remove('active'));
+      }
+    });
+  }
+
+  if (elements.playerEditorAddFolder) {
+    elements.playerEditorAddFolder.addEventListener('click', async () => {
+      const input = elements.playerEditorNewFolder;
+      const name = (input?.value || '').trim();
+      if (!name) return;
+      elements.playerEditorAddFolder.disabled = true;
+      try {
+        const folders = await actions.createPlayerFolder(name);
+        // Update state and UI
+        if (Array.isArray(folders)) {
+          if (!Array.isArray(stateCache.teamBuilder.folders)) stateCache.teamBuilder.folders = [];
+          stateCache.teamBuilder.folders = folders;
+          input.value = '';
+          // Preserve current selections
+          const selected = Array.from(
+            elements.playerEditorFoldersList?.querySelectorAll('.chip-toggle.active') || [],
+          )
+            .map((el) => String(el?.dataset?.folderName || '').trim())
+            .filter((v) => v);
+          renderPlayerFolderChoices(selected);
+          // Also refresh team builder folder filter options
+          if (elements.teamBuilderFolderFilter) {
+            const prev = elements.teamBuilderFolderFilter.value;
+            elements.teamBuilderFolderFilter.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = '全選手';
+            elements.teamBuilderFolderFilter.appendChild(optAll);
+            const optNone = document.createElement('option');
+            optNone.value = '__none__';
+            optNone.textContent = 'タグなし';
+            elements.teamBuilderFolderFilter.appendChild(optNone);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.teamBuilderFolderFilter.appendChild(opt);
+            });
+            elements.teamBuilderFolderFilter.value = prev && (folders.includes(prev) || prev === '__none__') ? prev : '';
+          }
+          // Refresh player editor folder filter options
+          if (elements.playerEditorFolder) {
+            const prev = elements.playerEditorFolder.value;
+            elements.playerEditorFolder.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = '全選手';
+            elements.playerEditorFolder.appendChild(optAll);
+            const optNone = document.createElement('option');
+            optNone.value = '__none__';
+            optNone.textContent = 'タグなし';
+            elements.playerEditorFolder.appendChild(optNone);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.playerEditorFolder.appendChild(opt);
+            });
+            elements.playerEditorFolder.value = prev && folders.includes(prev) ? prev : '';
+          }
+          // Refresh folder management select
+          if (elements.playerFolderManageSelect) {
+            const prev = elements.playerFolderManageSelect.value;
+            elements.playerFolderManageSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'タグを選択';
+            elements.playerFolderManageSelect.appendChild(placeholder);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.playerFolderManageSelect.appendChild(opt);
+            });
+            if (folders.includes(prev)) {
+              elements.playerFolderManageSelect.value = prev;
+            }
+          }
+        }
+      } catch (_) {
+        // Error shown via status already
+      } finally {
+        elements.playerEditorAddFolder.disabled = false;
+      }
+    });
+  }
+
+  // Folder rename
+  if (elements.playerFolderRenameButton) {
+    elements.playerFolderRenameButton.addEventListener('click', async () => {
+      const select = elements.playerFolderManageSelect;
+      const input = elements.playerFolderRenameInput;
+      const oldName = select?.value || '';
+      const newName = input?.value || '';
+      if (!oldName) {
+        setPlayerBuilderFeedback('名称変更するタグを選択してください。', 'danger');
+        return;
+      }
+      if (!newName.trim()) {
+        setPlayerBuilderFeedback('新しいタグ名を入力してください。', 'danger');
+        return;
+      }
+      try {
+        const folders = await actions.renamePlayerFolder(oldName, newName);
+        if (Array.isArray(folders)) {
+          stateCache.teamBuilder.folders = folders;
+          // Update UI lists/selects
+          renderPlayerFolderChoices(
+            Array.from(
+              elements.playerEditorFoldersList?.querySelectorAll('.chip-toggle.active') || [],
+            )
+              .map((el) => String(el?.dataset?.folderName || '').trim())
+              .filter((v) => v)
+          );
+          // Rebuild folder selects (team builder + editor filter + manage)
+          if (elements.teamBuilderFolderFilter) {
+            const prev = elements.teamBuilderFolderFilter.value;
+            elements.teamBuilderFolderFilter.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = '全選手';
+            elements.teamBuilderFolderFilter.appendChild(optAll);
+            const optNone = document.createElement('option');
+            optNone.value = '__none__';
+            optNone.textContent = 'タグなし';
+            elements.teamBuilderFolderFilter.appendChild(optNone);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.teamBuilderFolderFilter.appendChild(opt);
+            });
+            elements.teamBuilderFolderFilter.value = folders.includes(prev) || prev === '__none__' ? prev : '';
+          }
+          if (elements.playerEditorFolder) {
+            const prev = elements.playerEditorFolder.value;
+            elements.playerEditorFolder.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = '全選手';
+            elements.playerEditorFolder.appendChild(optAll);
+            const optNone = document.createElement('option');
+            optNone.value = '__none__';
+            optNone.textContent = 'タグなし';
+            elements.playerEditorFolder.appendChild(optNone);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.playerEditorFolder.appendChild(opt);
+            });
+            elements.playerEditorFolder.value = folders.includes(prev) || prev === '__none__' ? prev : '';
+          }
+          if (elements.playerFolderManageSelect) {
+            const prev = elements.playerFolderManageSelect.value === oldName ? newName : elements.playerFolderManageSelect.value;
+            elements.playerFolderManageSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'タグを選択';
+            elements.playerFolderManageSelect.appendChild(placeholder);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.playerFolderManageSelect.appendChild(opt);
+            });
+            if (folders.includes(prev)) {
+              elements.playerFolderManageSelect.value = prev;
+            }
+          }
+          // If filters selected the old name, move them to the new name
+          if (stateCache.teamBuilder.selectedFolder === oldName) {
+            stateCache.teamBuilder.selectedFolder = newName;
+          }
+          if (stateCache.playerEditor.folder === oldName) {
+            stateCache.playerEditor.folder = newName;
+          }
+          input.value = '';
+          renderPlayerEditorList();
+          renderTeamBuilderCatalog();
+          setPlayerBuilderFeedback('タグ名を変更しました。', 'success');
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'タグの名称変更に失敗しました。';
+        setPlayerBuilderFeedback(message, 'danger');
+      }
+    });
+  }
+
+  // Folder delete
+  if (elements.playerFolderDeleteButton) {
+    elements.playerFolderDeleteButton.addEventListener('click', async () => {
+      const select = elements.playerFolderManageSelect;
+      const name = select?.value || '';
+      if (!name) {
+        setPlayerBuilderFeedback('削除するタグを選択してください。', 'danger');
+        return;
+      }
+      const confirmed = window.confirm(`タグ '${name}' を削除します。よろしいですか？`);
+      if (!confirmed) return;
+      try {
+        const folders = await actions.deletePlayerFolder(name);
+        if (Array.isArray(folders)) {
+          stateCache.teamBuilder.folders = folders;
+          // Update chips and selects
+          renderPlayerFolderChoices(
+            Array.from(
+              elements.playerEditorFoldersList?.querySelectorAll('.chip-toggle.active') || [],
+            )
+              .map((el) => String(el?.dataset?.folderName || '').trim())
+              .filter((v) => v && v !== name)
+          );
+          if (elements.teamBuilderFolderFilter) {
+            const prev = elements.teamBuilderFolderFilter.value === name ? '' : elements.teamBuilderFolderFilter.value;
+            elements.teamBuilderFolderFilter.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = '全選手';
+            elements.teamBuilderFolderFilter.appendChild(optAll);
+            const optNone = document.createElement('option');
+            optNone.value = '__none__';
+            optNone.textContent = 'タグなし';
+            elements.teamBuilderFolderFilter.appendChild(optNone);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.teamBuilderFolderFilter.appendChild(opt);
+            });
+            elements.teamBuilderFolderFilter.value = folders.includes(prev) || prev === '__none__' ? prev : '';
+          }
+          if (elements.playerEditorFolder) {
+            const prev = elements.playerEditorFolder.value === name ? '' : elements.playerEditorFolder.value;
+            elements.playerEditorFolder.innerHTML = '';
+            const optAll = document.createElement('option');
+            optAll.value = '';
+            optAll.textContent = '全選手';
+            elements.playerEditorFolder.appendChild(optAll);
+            const optNone = document.createElement('option');
+            optNone.value = '__none__';
+            optNone.textContent = 'タグなし';
+            elements.playerEditorFolder.appendChild(optNone);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.playerEditorFolder.appendChild(opt);
+            });
+            elements.playerEditorFolder.value = folders.includes(prev) || prev === '__none__' ? prev : '';
+          }
+          if (elements.playerFolderManageSelect) {
+            elements.playerFolderManageSelect.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'タグを選択';
+            elements.playerFolderManageSelect.appendChild(placeholder);
+            folders.forEach((f) => {
+              const opt = document.createElement('option');
+              opt.value = f;
+              opt.textContent = f;
+              elements.playerFolderManageSelect.appendChild(opt);
+            });
+          }
+          // Clear filters if they were targeting the deleted folder
+          if (stateCache.teamBuilder.selectedFolder === name) {
+            stateCache.teamBuilder.selectedFolder = '';
+          }
+          if (stateCache.playerEditor.folder === name) {
+            stateCache.playerEditor.folder = '';
+          }
+          renderPlayerEditorList();
+          renderTeamBuilderCatalog();
+          setPlayerBuilderFeedback('タグを削除しました。', 'success');
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'タグの削除に失敗しました。';
+        setPlayerBuilderFeedback(message, 'danger');
+      }
     });
   }
 
@@ -3992,9 +4516,16 @@ export function initEventListeners(actions) {
         if (elements.playerEditorSelect) {
           elements.playerEditorSelect.value = '';
         }
+        // Reset player editor filters
+        if (!stateCache.playerEditor) stateCache.playerEditor = { searchTerm: '', folder: '' };
+        stateCache.playerEditor.searchTerm = '';
+        stateCache.playerEditor.folder = '';
+        if (elements.playerEditorSearch) elements.playerEditorSearch.value = '';
+        if (elements.playerEditorFolder) elements.playerEditorFolder.value = '';
         setPlayerBuilderFeedback('区分が変更されました。選手を選ぶかテンプレートを作成してください。', 'info');
         (async () => {
-          await populatePlayerSelect(normalized);
+          await ensureTeamBuilderPlayersLoaded(actions);
+          renderPlayerEditorList();
         })();
       });
     });
@@ -4072,6 +4603,51 @@ export function initEventListeners(actions) {
     });
   }
 
+  if (elements.playerEditorList) {
+    elements.playerEditorList.addEventListener('click', async (event) => {
+      const card = event.target.closest('[data-player-id]');
+      if (!card || !elements.playerEditorList.contains(card)) return;
+      const id = card.dataset.playerId || '';
+      if (!id) return;
+      if (elements.playerEditorSelect) {
+        // Ensure the hidden select has an option for this id so change handler receives the value
+        const select = elements.playerEditorSelect;
+        const hasOption = Array.from(select.options).some((opt) => String(opt.value) === String(id));
+        if (!hasOption) {
+          const record = getPlayerRecordById(id);
+          const opt = document.createElement('option');
+          opt.value = id;
+          opt.textContent = record?.name || id;
+          select.appendChild(opt);
+        }
+        select.value = id;
+        const change = new Event('change', { bubbles: true });
+        select.dispatchEvent(change);
+      }
+      // Highlight active card
+      Array.from(elements.playerEditorList.querySelectorAll('.builder-player-card.active')).forEach((el) => el.classList.remove('active'));
+      card.classList.add('active');
+    });
+  }
+
+  // Player editor: search and folder filters
+  if (elements.playerEditorSearch) {
+    elements.playerEditorSearch.addEventListener('input', async (event) => {
+      const value = typeof event?.target?.value === 'string' ? event.target.value : '';
+      if (!stateCache.playerEditor) stateCache.playerEditor = { searchTerm: '', folder: '' };
+      stateCache.playerEditor.searchTerm = value.trim();
+      renderPlayerEditorList();
+    });
+  }
+  if (elements.playerEditorFolder) {
+    elements.playerEditorFolder.addEventListener('change', async () => {
+      const value = elements.playerEditorFolder.value || '';
+      if (!stateCache.playerEditor) stateCache.playerEditor = { searchTerm: '', folder: '' };
+      stateCache.playerEditor.folder = value;
+      renderPlayerEditorList();
+    });
+  }
+
   if (elements.playerBuilderSave) {
     elements.playerBuilderSave.addEventListener('click', async () => {
       const role = elements.playerEditorRole?.value || 'batter';
@@ -4090,9 +4666,11 @@ export function initEventListeners(actions) {
       try {
         const saved = await actions.handlePlayerSave(formData, role, originalName, playerId);
         if (saved?.id) {
+          // Keep hidden select in sync and refresh catalog/list
           await populatePlayerSelect(role, saved.id);
           await ensureTeamBuilderPlayersLoaded(actions, true);
           renderTeamBuilderView();
+          renderPlayerEditorList();
           setPlayerBuilderFeedback('選手を保存しました。', 'success');
         }
       } catch (error) {
@@ -4125,6 +4703,8 @@ export function initEventListeners(actions) {
       try {
         await actions.handlePlayerDelete(idValue, role, nameText);
         await populatePlayerSelect(role);
+        await ensureTeamBuilderPlayersLoaded(actions, true);
+        renderPlayerEditorList();
         clearPlayerForm(role);
         setPlayerBuilderFeedback('選手を削除しました。', 'success');
       } catch (error) {

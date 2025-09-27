@@ -54,17 +54,23 @@ class PlayerLibraryService:
     # Loading helpers
     # ------------------------------------------------------------------
     def load_dataset(self) -> PlayerDataset:
-        """Load ``players.json`` and ensure each entry has a stable id."""
+        """Load ``players.json`` and ensure each entry has a stable id.
+
+        Also migrates structure to support optional folder assignments:
+        - Adds a top-level "folders" list if missing
+        - Ensures each player has an optional "folders" list (if present and valid)
+        """
 
         players_path = path_manager.get_players_data_path()
         raw = self._file_utils.safe_json_load(
-            players_path, default={"batters": [], "pitchers": []}
+            players_path, default={"batters": [], "pitchers": [], "folders": []}
         )
         if not isinstance(raw, dict):
-            raw = {"batters": [], "pitchers": []}
+            raw = {"batters": [], "pitchers": [], "folders": []}
 
         raw.setdefault("batters", [])
         raw.setdefault("pitchers", [])
+        raw.setdefault("folders", [])
 
         mutated = False
         for role_key in ("batters", "pitchers"):
@@ -73,6 +79,42 @@ class PlayerLibraryService:
                 if isinstance(record, dict) and not record.get("id"):
                     record["id"] = str(uuid.uuid4())
                     mutated = True
+                # Normalise folders to a list of non-empty strings
+                if isinstance(record, dict):
+                    folders = record.get("folders")
+                    if folders is None:
+                        continue
+                    if isinstance(folders, list):
+                        cleaned = []
+                        for f in folders:
+                            if isinstance(f, str):
+                                name = f.strip()
+                                if name:
+                                    cleaned.append(name)
+                        record["folders"] = cleaned
+                    else:
+                        # Drop invalid folder format
+                        record.pop("folders", None)
+                        mutated = True
+
+        # Normalise top-level folders list
+        if not isinstance(raw.get("folders"), list):
+            raw["folders"] = []
+            mutated = True
+        else:
+            cleaned = []
+            seen = set()
+            for f in raw["folders"]:
+                if not isinstance(f, str):
+                    continue
+                name = f.strip()
+                if not name or name in seen:
+                    continue
+                cleaned.append(name)
+                seen.add(name)
+            if cleaned != raw["folders"]:
+                raw["folders"] = cleaned
+                mutated = True
 
         return PlayerDataset(data=raw, path=players_path, mutated=mutated)
 
@@ -153,6 +195,9 @@ class PlayerLibraryService:
                     "gb_pct": self._safe_float(record.get("gb_pct")),
                     "speed": self._safe_float(record.get("speed")),
                     "fielding_skill": self._safe_float(record.get("fielding_skill")),
+                    "folders": [
+                        f for f in (record.get("folders") or []) if isinstance(f, str) and f.strip()
+                    ],
                 }
             )
 
@@ -178,12 +223,15 @@ class PlayerLibraryService:
                     "hard_pct": self._safe_float(record.get("hard_pct")),
                     "gb_pct": self._safe_float(record.get("gb_pct")),
                     "stamina": self._safe_float(record.get("stamina")),
+                    "folders": [
+                        f for f in (record.get("folders") or []) if isinstance(f, str) and f.strip()
+                    ],
                 }
             )
 
         return {"batters": batters, "pitchers": pitchers}
 
-    def build_list(self, dataset: PlayerDataset, role: str) -> Dict[str, List[dict]]:
+    def build_list(self, dataset: PlayerDataset, role: str, *, folder: str | None = None) -> Dict[str, List[dict]]:
         def pack(items: Iterable[dict]) -> List[dict]:
             output: List[dict] = []
             for record in items:
@@ -191,12 +239,94 @@ class PlayerLibraryService:
                     continue
                 name = record.get("name")
                 pid = record.get("id")
-                if name and pid:
-                    output.append({"id": str(pid), "name": str(name)})
+                if not name or not pid:
+                    continue
+                if folder and isinstance(record.get("folders"), list):
+                    # record folders are strings
+                    folders = [
+                        f for f in record.get("folders") if isinstance(f, str) and f.strip()
+                    ]
+                    if folder not in folders:
+                        continue
+                output.append({"id": str(pid), "name": str(name)})
             return output
 
         key = "pitchers" if role == "pitcher" else "batters"
         return {"players": pack(list(dataset.data.get(key, [])))}
+
+    # ------------------------------------------------------------------
+    # Folder helpers
+    # ------------------------------------------------------------------
+    def list_folders(self, dataset: PlayerDataset) -> List[str]:
+        folders = dataset.data.get("folders")
+        if not isinstance(folders, list):
+            return []
+        return [str(f).strip() for f in folders if isinstance(f, str) and str(f).strip()]
+
+    def add_folder(self, dataset: PlayerDataset, name: str) -> List[str]:
+        cleaned = str(name or "").strip()
+        if not cleaned:
+            raise PlayerLibraryError("タグ名を入力してください。")
+        folders = dataset.data.setdefault("folders", [])
+        if not isinstance(folders, list):
+            folders = []
+        if cleaned not in folders:
+            folders.append(cleaned)
+            dataset.data["folders"] = folders
+            dataset.mutated = True
+        return self.list_folders(dataset)
+
+    def delete_folder(self, dataset: PlayerDataset, name: str) -> List[str]:
+        target = str(name or "").strip()
+        if not target:
+            raise PlayerLibraryError("削除するタグ名を指定してください。")
+        folders = dataset.data.get("folders")
+        if not isinstance(folders, list) or target not in folders:
+            raise PlayerLibraryError("指定したタグは存在しません。")
+        # Remove from master folder list
+        dataset.data["folders"] = [f for f in folders if f != target]
+        # Remove from all players
+        for role_key in ("batters", "pitchers"):
+            for record in dataset.data.get(role_key, []) or []:
+                if isinstance(record, dict) and isinstance(record.get("folders"), list):
+                    record["folders"] = [f for f in record["folders"] if isinstance(f, str) and f.strip() and f.strip() != target]
+        dataset.mutated = True
+        return self.list_folders(dataset)
+
+    def rename_folder(self, dataset: PlayerDataset, old_name: str, new_name: str) -> List[str]:
+        old_clean = str(old_name or "").strip()
+        new_clean = str(new_name or "").strip()
+        if not old_clean or not new_clean:
+            raise PlayerLibraryError("タグ名を正しく入力してください。")
+        if old_clean == new_clean:
+            return self.list_folders(dataset)
+        folders = dataset.data.get("folders")
+        if not isinstance(folders, list) or old_clean not in folders:
+            raise PlayerLibraryError("指定したタグは存在しません。")
+        if new_clean in folders:
+            raise PlayerLibraryError("同名のタグが既に存在します。")
+        # Replace in master folder list
+        dataset.data["folders"] = [new_clean if f == old_clean else f for f in folders]
+        # Replace in all players
+        for role_key in ("batters", "pitchers"):
+            for record in dataset.data.get(role_key, []) or []:
+                if isinstance(record, dict) and isinstance(record.get("folders"), list):
+                    new_list: List[str] = []
+                    for f in record["folders"]:
+                        if not isinstance(f, str):
+                            continue
+                        name = f.strip()
+                        if not name:
+                            continue
+                        if name == old_clean:
+                            if new_clean not in new_list:
+                                new_list.append(new_clean)
+                        else:
+                            if name not in new_list:
+                                new_list.append(name)
+                    record["folders"] = new_list
+        dataset.mutated = True
+        return self.list_folders(dataset)
 
     # ------------------------------------------------------------------
     # Reference helpers
@@ -387,6 +517,27 @@ class PlayerLibraryService:
         else:
             player.setdefault("id", str(uuid.uuid4()))
 
+        # Normalise folders field if provided
+        if isinstance(player.get("folders"), list):
+            cleaned: List[str] = []
+            for f in player.get("folders"):
+                if isinstance(f, str):
+                    name = f.strip()
+                    if name:
+                        cleaned.append(name)
+            player["folders"] = cleaned
+            # merge into global folder list
+            global_folders = dataset.data.setdefault("folders", [])
+            if not isinstance(global_folders, list):
+                global_folders = []
+            added = False
+            for f in cleaned:
+                if f not in global_folders:
+                    global_folders.append(f)
+                    added = True
+            if added:
+                dataset.data["folders"] = global_folders
+
         target_key = "pitchers" if role == "pitcher" else "batters"
 
         if (
@@ -508,4 +659,3 @@ class PlayerLibraryService:
 
         dataset.mutated = True
         return player_id or name
-

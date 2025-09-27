@@ -276,8 +276,9 @@ def create_routes(session: WebGameSession) -> Blueprint:
     @api_bp.get("/players/list")
     def list_players() -> Dict[str, Any]:
         role = (request.args.get('role') or 'batter').strip().lower()
+        folder = (request.args.get('folder') or '').strip()
         dataset = load_players_dataset()
-        player_list = player_service.build_list(dataset, role)
+        player_list = player_service.build_list(dataset, role, folder=folder or None)
         return jsonify(player_list)
 
     @api_bp.get("/players/detail")
@@ -341,6 +342,54 @@ def create_routes(session: WebGameSession) -> Blueprint:
                 "state": state,
             }
         )
+
+    # ------------------------- Player Folders API -------------------------
+
+    @api_bp.get("/players/folders")
+    def players_folders() -> Dict[str, Any]:
+        dataset = load_players_dataset()
+        folders = player_service.list_folders(dataset)
+        return jsonify({"folders": folders})
+
+    @api_bp.post("/players/folders/create")
+    def players_folders_create() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        name = (payload.get('name') or '').strip()
+        dataset = load_players_dataset(auto_save=False)
+        try:
+            folders = player_service.add_folder(dataset, name)
+        except PlayerLibraryError as exc:
+            return create_error_response(exc.message, session)
+        if not player_service.save_dataset(dataset):
+            return create_error_response("タグの保存に失敗しました。", session)
+        return jsonify({"folders": folders})
+
+    @api_bp.post("/players/folders/delete")
+    def players_folders_delete() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        name = (payload.get('name') or '').strip()
+        dataset = load_players_dataset(auto_save=False)
+        try:
+            folders = player_service.delete_folder(dataset, name)
+        except PlayerLibraryError as exc:
+            return create_error_response(exc.message, session)
+        if not player_service.save_dataset(dataset):
+            return create_error_response("タグの削除に失敗しました。", session)
+        return jsonify({"folders": folders})
+
+    @api_bp.post("/players/folders/rename")
+    def players_folders_rename() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        old = (payload.get('old') or '').strip()
+        new = (payload.get('new') or '').strip()
+        dataset = load_players_dataset(auto_save=False)
+        try:
+            folders = player_service.rename_folder(dataset, old, new)
+        except PlayerLibraryError as exc:
+            return create_error_response(exc.message, session)
+        if not player_service.save_dataset(dataset):
+            return create_error_response("タグの名称変更に失敗しました。", session)
+        return jsonify({"folders": folders})
 
     @api_bp.post("/players/delete")
     def player_delete() -> Dict[str, Any]:

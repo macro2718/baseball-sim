@@ -331,8 +331,30 @@
                 <ul id="simulation-leaders-list" class="simulation-leaders-list leaders-cards"></ul>
               </article>
 
+              
+            </div>
+
+            <!-- 試合一覧ビュー -->
+            <div id="simulation-games-section" class="simulation-results-grid simulation-view-section hidden" aria-hidden="true">
+              <article class="simulation-results-block">
+                <h3>対戦成績</h3>
+                <table class="simulation-table" id="simulation-matchups-table">
+                  <thead>
+                    <tr>
+                      <th scope="col"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="simulation-matchups-body">
+                    <tr>
+                      <td>対戦成績はまだありません。</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </article>
+
               <article class="simulation-results-block">
                 <h3>チーム別統計</h3>
+                <div class="simulation-team-stats-wrapper">
                 <table class="simulation-table" id="simulation-team-stats-table">
                   <thead>
                     <tr>
@@ -354,30 +376,9 @@
                     </tr>
                   </tbody>
                 </table>
+                </div>
               </article>
 
-              <article class="simulation-results-block">
-                <h3>対戦成績</h3>
-                <table class="simulation-table" id="simulation-matchups-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">対戦カード</th>
-                      <th scope="col">試合数</th>
-                      <th scope="col">勝敗</th>
-                      <th scope="col">得点</th>
-                    </tr>
-                  </thead>
-                  <tbody id="simulation-matchups-body">
-                    <tr>
-                      <td colspan="4">対戦成績はまだありません。</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </article>
-            </div>
-
-            <!-- 試合一覧ビュー -->
-            <div id="simulation-games-section" class="simulation-results-grid simulation-view-section hidden" aria-hidden="true">
               <article class="simulation-results-block">
                 <h3>試合一覧</h3>
                 <div class="simulation-game-table-wrapper">
@@ -396,19 +397,14 @@
                 </table>
                 </div>
               </article>
-
-              <article class="simulation-results-block">
-                <h3>統計情報</h3>
-                <div id="simulation-game-stats" class="simulation-stats-cards"></div>
-              </article>
             </div>
 
             <!-- 個人成績ビュー -->
             <div id="simulation-players-section" class="simulation-view-section hidden" aria-hidden="true">
               <div class="simulation-tabs-row" id="simulation-players-tabs-row">
-                <div class="tab-group" role="tablist" aria-label="チーム切替">
-                  <button id="simulation-players-tab-away" type="button" class="tab active" aria-pressed="true">アウェイ</button>
-                  <button id="simulation-players-tab-home" type="button" class="tab" aria-pressed="false">ホーム</button>
+                <div class="tab-group" aria-label="チーム選択">
+                  <label for="simulation-players-team-select" class="visually-hidden">チーム</label>
+                  <select id="simulation-players-team-select"></select>
                 </div>
                 <div class="tab-group" role="tablist" aria-label="種別切替">
                   <button id="simulation-players-type-batting" type="button" class="tab active" aria-pressed="true">打者成績</button>
@@ -416,13 +412,13 @@
                 </div>
               </div>
               <div class="simulation-team-panels">
-              <section id="simulation-players-away-panel" class="simulation-team-panel">
+              <section id="simulation-players-team-panel" class="simulation-team-panel">
                 <header class="simulation-team-header">
-                  <h3 id="simulation-away-name">アウェイチーム</h3>
-                  <p id="simulation-away-summary" class="simulation-team-summary"></p>
+                  <h3 id="simulation-selected-team-name">チーム</h3>
+                  <p id="simulation-selected-team-summary" class="simulation-team-summary"></p>
                 </header>
                 <div class="simulation-team-tables">
-                  <div class="simulation-player-table" id="simulation-away-batting-table">
+                  <div class="simulation-player-table" id="simulation-selected-batting-table">
                     <h4>打者成績</h4>
                     <table class="simulation-player-stats">
                       <thead>
@@ -444,10 +440,10 @@
                           <th>OPS</th>
                         </tr>
                       </thead>
-                      <tbody id="simulation-away-batting-body"></tbody>
+                      <tbody id="simulation-selected-batting-body"></tbody>
                     </table>
                   </div>
-                  <div class="simulation-player-table" id="simulation-away-pitching-table">
+                  <div class="simulation-player-table hidden" id="simulation-selected-pitching-table">
                     <h4>投手成績</h4>
                     <table class="simulation-player-stats">
                       <thead>
@@ -467,64 +463,7 @@
                           <th>BB/9</th>
                         </tr>
                       </thead>
-                      <tbody id="simulation-away-pitching-body"></tbody>
-                    </table>
-                  </div>
-                </div>
-              </section>
-
-              <section id="simulation-players-home-panel" class="simulation-team-panel">
-                <header class="simulation-team-header">
-                  <h3 id="simulation-home-name">ホームチーム</h3>
-                  <p id="simulation-home-summary" class="simulation-team-summary"></p>
-                </header>
-                <div class="simulation-team-tables">
-                  <div class="simulation-player-table" id="simulation-home-batting-table">
-                    <h4>打者成績</h4>
-                    <table class="simulation-player-stats">
-                      <thead>
-                        <tr>
-                          <th>選手</th>
-                          <th>PA</th>
-                          <th>AB</th>
-                          <th>H</th>
-                          <th>2B</th>
-                          <th>3B</th>
-                          <th>HR</th>
-                          <th>R</th>
-                          <th>RBI</th>
-                          <th>BB</th>
-                          <th>SO</th>
-                          <th>AVG</th>
-                          <th>OBP</th>
-                          <th>SLG</th>
-                          <th>OPS</th>
-                        </tr>
-                      </thead>
-                      <tbody id="simulation-home-batting-body"></tbody>
-                    </table>
-                  </div>
-                  <div class="simulation-player-table" id="simulation-home-pitching-table">
-                    <h4>投手成績</h4>
-                    <table class="simulation-player-stats">
-                      <thead>
-                        <tr>
-                          <th>選手</th>
-                          <th>G</th>
-                          <th>IP</th>
-                          <th>H</th>
-                          <th>R</th>
-                          <th>ER</th>
-                          <th>BB</th>
-                          <th>SO</th>
-                          <th>HR</th>
-                          <th>ERA</th>
-                          <th>WHIP</th>
-                          <th>K/9</th>
-                          <th>BB/9</th>
-                        </tr>
-                      </thead>
-                      <tbody id="simulation-home-pitching-body"></tbody>
+                      <tbody id="simulation-selected-pitching-body"></tbody>
                     </table>
                   </div>
                 </div>
@@ -653,6 +592,9 @@
                       <button type="button" class="tab active" data-builder-catalog="batters" aria-pressed="true">野手</button>
                       <button type="button" class="tab" data-builder-catalog="pitchers" aria-pressed="false">投手</button>
                     </div>
+                    <select id="team-builder-folder" aria-label="タグで絞り込み">
+                      <option value="">全選手</option>
+                    </select>
                     <input id="team-builder-search" type="search" placeholder="名前で検索" autocomplete="off" />
                   </div>
                 </div>
@@ -708,12 +650,17 @@
                 </div>
                 <div class="selector-group">
                   <label class="selector-label" for="player-editor-select">選手</label>
-                  <select id="player-editor-select"></select>
+                  <select id="player-editor-folder" aria-label="タグで絞り込み">
+                    <option value="">全選手</option>
+                  </select>
+                  <input id="player-editor-search" type="search" placeholder="名前で検索" autocomplete="off" />
+                  <select id="player-editor-select" style="display:none"></select>
                   <p class="selector-hint">既存の選手を読み込むか、新規作成を選んでください。</p>
                 </div>
                 <div class="selector-actions">
                   <button id="player-builder-new" type="button">新規テンプレート</button>
                 </div>
+                <div id="player-editor-list" class="team-builder-player-list" style="margin-top:8px;"></div>
               </aside>
 
               <form id="player-editor-form" class="player-editor-form" autocomplete="off">
@@ -820,6 +767,33 @@
                     <div class="form-field" data-role-section="pitcher">
                       <label for="player-editor-stamina">Stamina</label>
                       <input id="player-editor-stamina" type="number" step="1" inputmode="decimal" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="player-form-section">
+                  <div class="section-header">
+                    <h3>タグ</h3>
+                    <p>この選手にタグを割り当てて管理できます。</p>
+                  </div>
+                  <div class="form-grid two-col">
+                    <div class="form-field" style="grid-column: 1 / -1;">
+                      <div id="player-editor-folders-list" class="chip-toggle-group" role="group" aria-label="タグ選択"></div>
+                    </div>
+                    <div class="form-field" style="grid-column: 1 / -1; display: flex; gap: 8px; align-items: center;">
+                      <label for="player-editor-new-folder" class="visually-hidden">新規タグ</label>
+                      <input id="player-editor-new-folder" type="text" placeholder="新しいタグ名" autocomplete="off" />
+                      <button id="player-editor-add-folder" type="button">タグを追加</button>
+                    </div>
+                    <div class="form-field" style="grid-column: 1 / -1; display: flex; gap: 8px; align-items: center;">
+                      <label for="player-folder-manage-select" class="visually-hidden">対象タグ</label>
+                      <select id="player-folder-manage-select" style="flex:1 1 auto;"></select>
+                    </div>
+                    <div class="form-field" style="grid-column: 1 / -1; display: flex; gap: 8px; align-items: center;">
+                      <label for="player-folder-rename-input" class="visually-hidden">新しい名称</label>
+                      <input id="player-folder-rename-input" type="text" placeholder="新しい名称" autocomplete="off" style="flex:1 1 auto;"/>
+                      <button id="player-folder-rename" type="button">名称変更</button>
+                      <button id="player-folder-delete" type="button" class="danger">削除</button>
                     </div>
                   </div>
                 </div>

@@ -54,7 +54,6 @@
     "Soichiro Sakamoto"
   ],
   "bench": [
-    "Average Batter",
     "Shigeru Yamazaki",
     "Kenji Hasegawa",
     "Takumi Sakamoto",
@@ -62,5 +61,11 @@
     "Akira Yamamoto",
     "Takuya Watanabe",
     "Naoki Takeuchi"
+  ],
+  "rotation": [
+    "Yosuke Fukuda",
+    "Akira Murakami",
+    "Yuki Ota",
+    "Ryota Yamazaki"
   ]
 }

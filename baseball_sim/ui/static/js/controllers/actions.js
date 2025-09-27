@@ -527,8 +527,13 @@ export function createGameActions(render) {
     }
   }
 
-  async function fetchPlayersList(role) {
-    const endpoint = `${CONFIG.api.endpoints.playersList}?role=${encodeURIComponent(role || 'batter')}`;
+  async function fetchPlayersList(role, { folder = '' } = {}) {
+    const params = new URLSearchParams();
+    params.set('role', String(role || 'batter'));
+    if (folder && typeof folder === 'string' && folder.trim()) {
+      params.set('folder', folder.trim());
+    }
+    const endpoint = `${CONFIG.api.endpoints.playersList}?${params.toString()}`;
     try {
       const payload = await apiRequest(endpoint);
       const list = Array.isArray(payload?.players) ? payload.players : [];
@@ -539,6 +544,65 @@ export function createGameActions(render) {
     } catch (error) {
       handleApiError(error, render);
       return [];
+    }
+  }
+
+  async function fetchPlayerFolders() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playerFolders);
+      return Array.isArray(payload?.folders) ? payload.folders.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim()) : [];
+    } catch (error) {
+      handleApiError(error, render);
+      return [];
+    }
+  }
+
+  async function createPlayerFolder(name) {
+    const cleaned = String(name || '').trim();
+    if (!cleaned) return null;
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playerFolderCreate, {
+        method: 'POST',
+        body: JSON.stringify({ name: cleaned }),
+      });
+      const folders = Array.isArray(payload?.folders) ? payload.folders : [];
+      return folders;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
+  async function deletePlayerFolder(name) {
+    const cleaned = String(name || '').trim();
+    if (!cleaned) return null;
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playerFolderDelete, {
+        method: 'POST',
+        body: JSON.stringify({ name: cleaned }),
+      });
+      const folders = Array.isArray(payload?.folders) ? payload.folders : [];
+      return folders;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
+  async function renamePlayerFolder(oldName, newName) {
+    const oldClean = String(oldName || '').trim();
+    const newClean = String(newName || '').trim();
+    if (!oldClean || !newClean) return null;
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.playerFolderRename, {
+        method: 'POST',
+        body: JSON.stringify({ old: oldClean, new: newClean }),
+      });
+      const folders = Array.isArray(payload?.folders) ? payload.folders : [];
+      return folders;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
     }
   }
 
@@ -633,5 +697,9 @@ export function createGameActions(render) {
     handlePlayerSave,
     handleTeamDelete,
     handlePlayerDelete,
+    fetchPlayerFolders,
+    createPlayerFolder,
+    deletePlayerFolder,
+    renamePlayerFolder,
   };
 }

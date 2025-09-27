@@ -356,7 +356,8 @@
 .team-builder-layout {
   display: grid;
   gap: 24px;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  /* Slightly widen the player list column */
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
   align-items: start;
 }
 
@@ -443,7 +444,8 @@
   backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 160px);
+  /* 3x vertical height of previous setting */
+  height: calc(1.5 * (100vh - 96px));
 }
 
 .player-panel-header {
@@ -843,6 +845,11 @@
   gap: 32px;
 }
 
+/* Ensure the team-builder list uses the available vertical space */
+.team-builder-player-panel .team-builder-player-list {
+  flex: 1 1 auto;
+}
+
 .team-builder-player-list .builder-empty {
   grid-column: 1 / -1;
   color: var(--text-muted);
@@ -1191,7 +1198,8 @@
 
 .player-builder-layout {
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  /* Slightly widen the selector (list) panel */
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   gap: 22px;
   align-items: start;
 }
@@ -1250,7 +1258,8 @@
 
 /* Make the player editor selector panel vertically scrollable */
 .player-selector-panel {
-  max-height: calc(100vh - 160px);
+  /* 3x vertical height of previous setting */
+  height: calc(1.7 * (100vh - 96px));
 }
 
 /* Ensure the player editor card list grows and scrolls vertically */

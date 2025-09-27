@@ -23,6 +23,8 @@ import {
   getSimulationScheduleDefaults,
   getSimulationLeagueTeams,
   primeSimulationSetup,
+  getPlayersSelectedTeamIndex,
+  setPlayersSelectedTeamIndex,
 } from '../state.js';
 import {
   escapeHtml,
@@ -3497,12 +3499,13 @@ function renderLobby(teamLibraryState) {
     label: team.name || team.id,
   }));
 
-  const fallbackHome = optionList.length > 0 ? optionList[0].value : '';
+  // Do not auto-select a fallback for either side.
+  // Keep placeholder until the user explicitly chooses.
   if (homeSelect) {
     populateSelect(homeSelect, optionList, {
       placeholder: 'チームを選択する',
       selected: selection.home,
-      fallback: fallbackHome,
+      fallback: undefined,
     });
     // If reset is requested for this view, force placeholder selection
     if (stateCache.resetTeamSelect === true) {
@@ -3514,7 +3517,7 @@ function renderLobby(teamLibraryState) {
     populateSelect(awaySelect, optionList, {
       placeholder: 'チームを選択する',
       selected: selection.away,
-      fallback: optionList.length > 1 ? optionList[1].value : fallbackHome,
+      fallback: undefined,
     });
     if (stateCache.resetTeamSelect === true) {
       awaySelect.value = '';
@@ -4002,14 +4005,10 @@ function updateSimulationResultsViewUI() {
     simulationGamesSection,
     simulationPlayersSection,
     simulationPlayersTabsRow,
-    simulationPlayersAwayPanel,
-    simulationPlayersHomePanel,
     simulationPlayersTypeBatting,
     simulationPlayersTypePitching,
-    simulationAwayBattingTable,
-    simulationAwayPitchingTable,
-    simulationHomeBattingTable,
-    simulationHomePitchingTable,
+    simulationSelectedBattingTable,
+    simulationSelectedPitchingTable,
   } = elements;
   const { simulationTabSummary, simulationTabGames, simulationTabPlayers } = elements;
   const view = stateCache.simulationResultsView || 'summary';
@@ -4040,19 +4039,7 @@ function updateSimulationResultsViewUI() {
     simulationPlayersTabsRow.setAttribute('aria-hidden', showPlayers ? 'false' : 'true');
   }
   if (showPlayers) {
-    const teamView = stateCache.playersTeamView === 'home' ? 'home' : 'away';
     const typeView = stateCache.playersTypeView === 'pitching' ? 'pitching' : 'batting';
-    const awayVisible = teamView === 'away';
-    if (simulationPlayersAwayPanel) {
-      simulationPlayersAwayPanel.classList.toggle('hidden', !awayVisible);
-      simulationPlayersAwayPanel.setAttribute('aria-hidden', awayVisible ? 'false' : 'true');
-    }
-    if (simulationPlayersHomePanel) {
-      simulationPlayersHomePanel.classList.toggle('hidden', awayVisible);
-      simulationPlayersHomePanel.setAttribute('aria-hidden', awayVisible ? 'true' : 'false');
-    }
-    setTabActive(elements.simulationPlayersTabAway, awayVisible);
-    setTabActive(elements.simulationPlayersTabHome, !awayVisible);
 
     // 種別タブのActive表示
     setTabActive(simulationPlayersTypeBatting, typeView === 'batting');
@@ -4061,10 +4048,10 @@ function updateSimulationResultsViewUI() {
     // テーブルの表示切替（打者/投手）
     const showBatting = typeView === 'batting';
     const showPitching = typeView === 'pitching';
-    if (simulationAwayBattingTable) simulationAwayBattingTable.classList.toggle('hidden', !showBatting);
-    if (simulationAwayPitchingTable) simulationAwayPitchingTable.classList.toggle('hidden', !showPitching);
-    if (simulationHomeBattingTable) simulationHomeBattingTable.classList.toggle('hidden', !showBatting);
-    if (simulationHomePitchingTable) simulationHomePitchingTable.classList.toggle('hidden', !showPitching);
+    if (simulationSelectedBattingTable)
+      simulationSelectedBattingTable.classList.toggle('hidden', !showBatting);
+    if (simulationSelectedPitchingTable)
+      simulationSelectedPitchingTable.classList.toggle('hidden', !showPitching);
   }
 }
 
@@ -4234,18 +4221,13 @@ function renderSimulationTeamStatsTable(tbody, teams) {
 
 function renderSimulationMatchupsTable(tbody, games, aliases) {
   if (!tbody) return;
+  const table = elements.simulationMatchupsTable;
+  const thead = table ? table.querySelector('thead') : null;
+  // reset
+  if (thead) thead.innerHTML = '';
   tbody.innerHTML = '';
-  const schedule = Array.isArray(games) ? games : [];
-  if (!schedule.length) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 4;
-    td.textContent = '対戦成績はまだありません。';
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-    return;
-  }
 
+  const schedule = Array.isArray(games) ? games : [];
   const aliasMap = aliases && typeof aliases === 'object' ? aliases : {};
   const normalizeName = (name) => {
     if (!name || typeof name !== 'string') return '';
@@ -4253,130 +4235,100 @@ function renderSimulationMatchupsTable(tbody, games, aliases) {
     return aliasMap[trimmed] || trimmed;
   };
 
-  const matchupMap = new Map();
-  schedule.forEach((game) => {
-    const homeName = normalizeName(game.homeTeam ?? game.home_team);
-    const awayName = normalizeName(game.awayTeam ?? game.away_team);
-    if (!homeName || !awayName) return;
-    const keyTeams = [homeName, awayName].sort((a, b) => a.localeCompare(b));
-    const key = `${keyTeams[0]}@@${keyTeams[1]}`;
-    let entry = matchupMap.get(key);
-    if (!entry) {
-      entry = {
-        teams: keyTeams,
-        totalGames: 0,
-        stats: {},
-      };
-      matchupMap.set(key, entry);
-    }
-
-    const ensureStats = (teamName) => {
-      if (!entry.stats[teamName]) {
-        entry.stats[teamName] = {
-          wins: 0,
-          losses: 0,
-          draws: 0,
-          runsFor: 0,
-          runsAgainst: 0,
-        };
-      }
-      return entry.stats[teamName];
-    };
-
-    const homeStats = ensureStats(homeName);
-    const awayStats = ensureStats(awayName);
-    const homeScore = Number.isFinite(Number(game.homeScore ?? game.home_score))
-      ? Number(game.homeScore ?? game.home_score)
-      : 0;
-    const awayScore = Number.isFinite(Number(game.awayScore ?? game.away_score))
-      ? Number(game.awayScore ?? game.away_score)
-      : 0;
-
-    homeStats.runsFor += homeScore;
-    homeStats.runsAgainst += awayScore;
-    awayStats.runsFor += awayScore;
-    awayStats.runsAgainst += homeScore;
-
-    if (game.winner === 'home') {
-      homeStats.wins += 1;
-      awayStats.losses += 1;
-    } else if (game.winner === 'away') {
-      awayStats.wins += 1;
-      homeStats.losses += 1;
-    } else {
-      homeStats.draws += 1;
-      awayStats.draws += 1;
-    }
-
-    entry.totalGames += 1;
+  // Collect team names
+  const teamSet = new Set();
+  schedule.forEach((g) => {
+    const h = normalizeName(g.homeTeam ?? g.home_team);
+    const a = normalizeName(g.awayTeam ?? g.away_team);
+    if (h) teamSet.add(h);
+    if (a) teamSet.add(a);
   });
+  const teams = Array.from(teamSet).sort((a, b) => a.localeCompare(b));
 
-  const entries = Array.from(matchupMap.values());
-  entries.sort((a, b) => {
-    if (b.totalGames !== a.totalGames) {
-      return b.totalGames - a.totalGames;
-    }
-    const [a1, a2] = a.teams;
-    const [b1, b2] = b.teams;
-    const primary = a1.localeCompare(b1);
-    if (primary !== 0) return primary;
-    return a2.localeCompare(b2);
-  });
-
-  entries.forEach((entry) => {
-    const [teamA, teamB] = entry.teams;
-    const statsA = entry.stats[teamA] || {
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      runsFor: 0,
-      runsAgainst: 0,
-    };
-    const statsB = entry.stats[teamB] || {
-      wins: 0,
-      losses: 0,
-      draws: 0,
-      runsFor: 0,
-      runsAgainst: 0,
-    };
-
-    const recordParts = [`${statsA.wins}勝`, `${statsA.losses}敗`];
-    if (statsA.draws) {
-      recordParts.push(`${statsA.draws}分`);
-    }
-    const recordLabel = recordParts.join(' ');
-    const runsLabel = `${statsA.runsFor}-${statsB.runsFor}`;
-
-    const tr = document.createElement('tr');
-    const cells = [
-      `${teamA} vs ${teamB}`,
-      entry.totalGames,
-      recordLabel,
-      runsLabel,
-    ];
-
-    cells.forEach((value, index) => {
-      const isLabelCell = index === 0;
-      const cell = document.createElement(isLabelCell ? 'th' : 'td');
-      cell.textContent = typeof value === 'number' ? String(value) : value;
-      if (isLabelCell) {
-        cell.scope = 'row';
-        cell.style.fontWeight = '600';
-      }
-      tr.appendChild(cell);
-    });
-
-    tbody.appendChild(tr);
-  });
-
-  if (!entries.length) {
+  if (!teams.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 4;
     td.textContent = '対戦成績はまだありません。';
     tr.appendChild(td);
     tbody.appendChild(tr);
+    return;
   }
+
+  // Initialize matrix stats: stats[row][col] = {w,l,d}
+  const stats = new Map();
+  teams.forEach((r) => {
+    const inner = new Map();
+    teams.forEach((c) => {
+      if (r !== c) inner.set(c, { w: 0, l: 0, d: 0 });
+    });
+    stats.set(r, inner);
+  });
+
+  // Tally results
+  schedule.forEach((game) => {
+    const home = normalizeName(game.homeTeam ?? game.home_team);
+    const away = normalizeName(game.awayTeam ?? game.away_team);
+    if (!home || !away) return;
+    const winner = game.winner === 'home' || game.winner === 'away' ? game.winner : 'draw';
+    const rowHome = stats.get(home);
+    const rowAway = stats.get(away);
+    if (!rowHome || !rowAway) return;
+    const homeVsAway = rowHome.get(away);
+    const awayVsHome = rowAway.get(home);
+    if (!homeVsAway || !awayVsHome) return;
+    if (winner === 'home') {
+      homeVsAway.w += 1;
+      awayVsHome.l += 1;
+    } else if (winner === 'away') {
+      awayVsHome.w += 1;
+      homeVsAway.l += 1;
+    } else {
+      homeVsAway.d += 1;
+      awayVsHome.d += 1;
+    }
+  });
+
+  // Build header
+  if (thead) {
+    const hr = document.createElement('tr');
+    const corner = document.createElement('th');
+    corner.scope = 'col';
+    corner.textContent = 'チーム';
+    hr.appendChild(corner);
+    teams.forEach((name) => {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = name;
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+  }
+
+  // Build body rows
+  teams.forEach((rowTeam) => {
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.scope = 'row';
+    th.textContent = rowTeam;
+    th.style.fontWeight = '600';
+    tr.appendChild(th);
+
+    teams.forEach((colTeam) => {
+      const td = document.createElement('td');
+      if (rowTeam === colTeam) {
+        td.textContent = '—';
+        td.style.textAlign = 'center';
+      } else {
+        const rec = stats.get(rowTeam)?.get(colTeam) || { w: 0, l: 0, d: 0 };
+        const label = rec.d ? `${rec.w}-${rec.l}-${rec.d}` : `${rec.w}-${rec.l}`;
+        td.textContent = label;
+        td.style.textAlign = 'center';
+        td.title = `${rowTeam} vs ${colTeam}: ${label}`;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
 }
 
 function renderSimulationResults(simulationState) {
@@ -4386,16 +4338,15 @@ function renderSimulationResults(simulationState) {
     simulationResultsTableBody,
     simulationGamesTableBody,
     simulationGamesStats,
-    simulationAwayName,
-    simulationHomeName,
-    simulationAwaySummary,
-    simulationHomeSummary,
-    simulationAwayBattingBody,
-    simulationHomeBattingBody,
-    simulationAwayPitchingBody,
-    simulationHomePitchingBody,
+    simulationSelectedTeamName,
+    simulationSelectedTeamSummary,
+    simulationSelectedBattingBody,
+    simulationSelectedPitchingBody,
     simulationTeamStatsBody,
     simulationMatchupsBody,
+    simulationPlayersTeamSelect,
+    simulationSelectedBattingTable,
+    simulationSelectedPitchingTable,
   } = elements;
 
   const lastRun = simulationState?.lastRun || null;
@@ -4407,12 +4358,7 @@ function renderSimulationResults(simulationState) {
     if (simulationResultsMeta) {
       simulationResultsMeta.textContent = '';
     }
-    if (simulationAwayName) {
-      simulationAwayName.textContent = 'アウェイチーム';
-    }
-    if (simulationHomeName) {
-      simulationHomeName.textContent = 'ホームチーム';
-    }
+    if (simulationSelectedTeamName) simulationSelectedTeamName.textContent = 'チーム';
     if (simulationResultsTableBody) {
       simulationResultsTableBody.innerHTML = '';
     }
@@ -4426,12 +4372,10 @@ function renderSimulationResults(simulationState) {
       simulationGamesTableBody.appendChild(tr);
     }
     if (simulationGamesStats) simulationGamesStats.textContent = '';
-    if (simulationAwaySummary) simulationAwaySummary.textContent = '';
-    if (simulationHomeSummary) simulationHomeSummary.textContent = '';
-    if (simulationAwayBattingBody) simulationAwayBattingBody.innerHTML = '';
-    if (simulationHomeBattingBody) simulationHomeBattingBody.innerHTML = '';
-    if (simulationAwayPitchingBody) simulationAwayPitchingBody.innerHTML = '';
-    if (simulationHomePitchingBody) simulationHomePitchingBody.innerHTML = '';
+    if (simulationSelectedTeamSummary) simulationSelectedTeamSummary.textContent = '';
+    if (simulationSelectedBattingBody) simulationSelectedBattingBody.innerHTML = '';
+    if (simulationSelectedPitchingBody) simulationSelectedPitchingBody.innerHTML = '';
+    if (simulationPlayersTeamSelect) simulationPlayersTeamSelect.innerHTML = '';
     renderSimulationTeamStatsTable(simulationTeamStatsBody, []);
     renderSimulationMatchupsTable(simulationMatchupsBody, [], {});
     updateSimulationResultsViewUI();
@@ -4455,20 +4399,28 @@ function renderSimulationResults(simulationState) {
     }
   });
 
-  let awayTeam = rolesMap.get('away') || null;
-  let homeTeam = rolesMap.get('home') || null;
-  if (!awayTeam) {
-    awayTeam = teams[0] || null;
-  }
-  if (!homeTeam) {
-    homeTeam = teams.find((team) => team !== awayTeam) || teams[1] || teams[0] || null;
+  // 個人成績: チーム選択を生成
+  if (simulationPlayersTeamSelect) {
+    simulationPlayersTeamSelect.innerHTML = '';
+    teams.forEach((team, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx);
+      opt.textContent = team?.name || `チーム${idx + 1}`;
+      simulationPlayersTeamSelect.appendChild(opt);
+    });
   }
 
-  if (simulationAwayName) {
-    simulationAwayName.textContent = awayTeam?.name || 'アウェイチーム';
+  let selectedIndex = getPlayersSelectedTeamIndex ? getPlayersSelectedTeamIndex() : 0;
+  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= teams.length) {
+    selectedIndex = 0;
+    if (setPlayersSelectedTeamIndex) setPlayersSelectedTeamIndex(0);
   }
-  if (simulationHomeName) {
-    simulationHomeName.textContent = homeTeam?.name || 'ホームチーム';
+  const selectedTeam = teams[selectedIndex] || null;
+  if (simulationPlayersTeamSelect) {
+    simulationPlayersTeamSelect.value = String(selectedIndex);
+  }
+  if (simulationSelectedTeamName) {
+    simulationSelectedTeamName.textContent = selectedTeam?.name || 'チーム';
   }
 
   if (simulationResultsSummary) {
@@ -4478,8 +4430,9 @@ function renderSimulationResults(simulationState) {
         : teams.length;
       simulationResultsSummary.textContent = `${totalTeams || teams.length}チームによるリーグシミュレーション`;
     } else {
-      const awayName = awayTeam?.name || 'Away';
-      const homeName = homeTeam?.name || 'Home';
+      // 旧: 対戦形式。サマリにはAway/Homeを表示
+      const awayName = rolesMap.get('away')?.name || 'Away';
+      const homeName = rolesMap.get('home')?.name || 'Home';
       simulationResultsSummary.textContent = `${awayName} vs ${homeName}`;
     }
   }
@@ -4634,17 +4587,12 @@ function renderSimulationResults(simulationState) {
     addCard('平均合計得点', avgTotal);
   }
 
-  if (simulationAwaySummary) {
-    simulationAwaySummary.textContent = describeTeamTotals(awayTeam);
-  }
-  if (simulationHomeSummary) {
-    simulationHomeSummary.textContent = describeTeamTotals(homeTeam);
+  if (simulationSelectedTeamSummary) {
+    simulationSelectedTeamSummary.textContent = describeTeamTotals(selectedTeam);
   }
 
-  renderBattingTable(simulationAwayBattingBody, awayTeam);
-  renderBattingTable(simulationHomeBattingBody, homeTeam);
-  renderPitchingTable(simulationAwayPitchingBody, awayTeam);
-  renderPitchingTable(simulationHomePitchingBody, homeTeam);
+  renderBattingTable(simulationSelectedBattingBody, selectedTeam);
+  renderPitchingTable(simulationSelectedPitchingBody, selectedTeam);
 
   // 要約用の個人タイトル表示
   renderSimulationLeaders(lastRun);

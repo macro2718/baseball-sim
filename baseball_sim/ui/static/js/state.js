@@ -16,7 +16,7 @@ export const stateCache = {
   resetTeamSelect: false,
   resetSimulationSelect: false,
   simulationResultsView: 'summary',
-  playersTeamView: 'away',
+  playersSelectedTeamIndex: 0,
   playersTypeView: 'batting',
   matchSetup: { mode: 'manual', userTeam: 'home' },
   gameControl: {
@@ -53,6 +53,12 @@ export const stateCache = {
     catalog: 'batters',
     searchTerm: '',
     rotationSize: 5,
+    folders: [],
+    selectedFolder: '',
+  },
+  playerEditor: {
+    searchTerm: '',
+    folder: '',
   },
 };
 
@@ -73,14 +79,15 @@ export function getSimulationResultsView() {
   return v === 'games' || v === 'players' ? v : 'summary';
 }
 
-export function setPlayersTeamView(team) {
-  const next = team === 'home' ? 'home' : 'away';
-  stateCache.playersTeamView = next;
+export function setPlayersSelectedTeamIndex(index) {
+  const next = Number.isInteger(index) && index >= 0 ? index : 0;
+  stateCache.playersSelectedTeamIndex = next;
   return next;
 }
 
-export function getPlayersTeamView() {
-  return stateCache.playersTeamView === 'home' ? 'home' : 'away';
+export function getPlayersSelectedTeamIndex() {
+  const v = stateCache.playersSelectedTeamIndex;
+  return Number.isInteger(v) && v >= 0 ? v : 0;
 }
 
 export function setPlayersTypeView(type) {
