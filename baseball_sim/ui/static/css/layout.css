@@ -140,6 +140,25 @@
   line-height: 1.6;
 }
 
+/* Enhanced section title styling */
+.hero-section-title {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
+}
+
+.hero-section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--highlight));
+  opacity: 0.7;
+}
+
 .team-selection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1633,6 +1652,7 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-top: 18px;
+  perspective: 900px;
 }
 
 .action-card {
@@ -1647,7 +1667,8 @@
   box-shadow: 0 24px 56px rgba(5, 12, 30, 0.5);
   min-height: 160px;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  will-change: transform, box-shadow;
 }
 
 .action-card::before {
@@ -1659,12 +1680,38 @@
   pointer-events: none;
 }
 
+.action-card::after {
+  content: '';
+  position: absolute;
+  top: -120%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  transform: rotate(10deg);
+  background: linear-gradient(130deg, transparent 40%, rgba(125, 211, 252, 0.18) 52%, transparent 66%);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+
 .action-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) translateZ(0) scale(1.01) rotateX(0.6deg);
   border-color: rgba(125, 211, 252, 0.45);
   box-shadow:
     0 28px 64px rgba(5, 12, 30, 0.6),
     0 0 14px rgba(125, 211, 252, 0.18);
+}
+
+.action-card:hover::after {
+  opacity: 1;
+  transform: translateX(20%) rotate(10deg);
+}
+
+.action-card:focus-within {
+  border-color: rgba(125, 211, 252, 0.55);
+  box-shadow:
+    0 28px 66px rgba(5, 12, 30, 0.62),
+    0 0 18px rgba(125, 211, 252, 0.22);
 }
 
 .action-card .action-icon {
@@ -1713,19 +1760,56 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .action-card,
+  .action-card:hover { transform: none; }
+  .action-card::after { display: none; }
+}
+
 button {
+  position: relative;
   border: 1px solid rgba(125, 211, 252, 0.3);
   border-radius: 999px;
   padding: 12px 24px;
   background: rgba(7, 12, 24, 0.72);
   color: var(--text);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.1em;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  box-shadow: 0 18px 36px rgba(5, 12, 30, 0.5);
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.25s ease;
+  box-shadow:
+    0 18px 36px rgba(5, 12, 30, 0.5),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.08);
   backdrop-filter: blur(6px);
+  overflow: hidden;
+  will-change: transform, box-shadow, background;
+}
+
+/* Light sweep */
+button::before {
+  content: '';
+  position: absolute;
+  top: -120%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  transform: translateX(-40%) rotate(20deg);
+  background: linear-gradient(130deg, transparent 40%, rgba(255, 255, 255, 0.15) 50%, transparent 62%);
+  transition: transform 0.7s ease, opacity 0.35s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Outer glow ring */
+button::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.15), 0 0 0 0 rgba(192, 132, 252, 0.1);
+  transition: box-shadow 0.25s ease;
+  pointer-events: none;
 }
 
 button.primary {
@@ -1734,7 +1818,8 @@ button.primary {
   border: none;
   box-shadow:
     0 22px 44px rgba(96, 165, 250, 0.38),
-    0 0 18px rgba(192, 132, 252, 0.25);
+    0 0 18px rgba(192, 132, 252, 0.25),
+    inset 0 -6px 16px rgba(2, 6, 23, 0.18);
 }
 
 button.danger {
@@ -1743,11 +1828,12 @@ button.danger {
   color: #fff5f5;
   box-shadow:
     0 22px 44px rgba(127, 29, 29, 0.45),
-    0 0 18px rgba(248, 113, 113, 0.25);
+    0 0 18px rgba(248, 113, 113, 0.25),
+    inset 0 -6px 16px rgba(2, 6, 23, 0.22);
 }
 
 button:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.01);
   background: rgba(13, 19, 37, 0.78);
   border-color: rgba(125, 211, 252, 0.5);
   box-shadow:
@@ -1755,11 +1841,21 @@ button:hover:not(:disabled) {
     0 0 12px rgba(125, 211, 252, 0.25);
 }
 
+button:hover::before {
+  opacity: 1;
+  transform: translateX(60%) rotate(20deg);
+}
+
+button:hover::after {
+  box-shadow: 0 0 0 6px rgba(125, 211, 252, 0.12), 0 0 0 12px rgba(192, 132, 252, 0.08);
+}
+
 button.primary:hover:not(:disabled) {
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.96) 0%, rgba(192, 132, 252, 0.96) 100%);
   box-shadow:
     0 26px 52px rgba(96, 165, 250, 0.5),
-    0 0 24px rgba(192, 132, 252, 0.45);
+    0 0 24px rgba(192, 132, 252, 0.45),
+    inset 0 -6px 16px rgba(2, 6, 23, 0.18);
 }
 
 button.danger:hover:not(:disabled) {
@@ -1767,7 +1863,8 @@ button.danger:hover:not(:disabled) {
   border-color: rgba(248, 113, 113, 0.75);
   box-shadow:
     0 26px 52px rgba(127, 29, 29, 0.55),
-    0 0 24px rgba(248, 113, 113, 0.35);
+    0 0 24px rgba(248, 113, 113, 0.35),
+    inset 0 -6px 16px rgba(2, 6, 23, 0.22);
 }
 
 button:disabled {
@@ -1778,7 +1875,9 @@ button:disabled {
 
 button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.35);
+  box-shadow:
+    0 0 0 3px rgba(96, 165, 250, 0.35),
+    0 0 0 6px rgba(192, 132, 252, 0.2);
 }
 
 button.primary:focus-visible {
@@ -1786,7 +1885,28 @@ button.primary:focus-visible {
 }
 
 button.danger:focus-visible {
-  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.4);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.4), 0 0 0 6px rgba(248, 113, 113, 0.22);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow:
+    0 14px 28px rgba(5, 12, 30, 0.45),
+    inset 0 4px 12px rgba(2, 6, 23, 0.25);
+}
+
+/* Compact buttons inside action-card grids stay balanced */
+.action-card .action-buttons button {
+  font-weight: 600;
+  padding: 10px 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  button:hover,
+  button:active { transition: none; transform: none; }
+  button::before,
+  button::after { display: none; }
 }
 
 .toolbar {
