@@ -1357,6 +1357,53 @@
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
+.player-tags-control-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .player-tags-control-grid {
+    grid-template-columns: 1fr 1.4fr;
+    gap: 14px 16px;
+  }
+}
+
+.tag-create-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tag-create-group input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tag-manage-group {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.tag-manage-group .manage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tag-manage-group .manage-row select,
+.tag-manage-group .manage-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tag-manage-group .manage-row button {
+  white-space: nowrap;
+}
+
 .player-editor-form .form-field {
   display: flex;
   flex-direction: column;
