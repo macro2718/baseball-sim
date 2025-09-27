@@ -193,6 +193,12 @@ def reset_team_and_players(
     away_starting_pitcher=None,
 ):
     """チームと選手の状態をリセットする（投手のスタミナなど）"""
+    # 1試合ごとに退場(ejected)扱いをリセットし、シリーズ中に再登板/再出場できるようにする
+    # これを行わないと、交代した投手が以後の試合で永続的に使用不可となり、登板数が極端に偏る。
+    for team in (home_team, away_team):
+        if hasattr(team, "ejected_players"):
+            team.ejected_players = []
+
     if home_pitcher_pool is not None:
         home_team.pitchers = list(home_pitcher_pool)
     if away_pitcher_pool is not None:
