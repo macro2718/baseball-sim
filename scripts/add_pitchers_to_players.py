@@ -46,7 +46,7 @@ MIN_IP = 20          # Minimum innings pitched for relievers (query + RP filter)
 MIN_IP_SP = 50       # Minimum innings pitched for starters
 DRY_RUN = False       # True -> do not write file
 LIMIT = 0             # 0 = no limit
-TEAM = 'LAD'          # '' for all teams, else team code
+TEAM = 'SDP'          # '' for all teams, else team code
 USE_STATSAPI = True
 STARTER_THRESHOLD = 0.5  # proportion of games that are starts to be SP
 MIN_GS_FOR_SP = 5        # minimum games started requirement for SP

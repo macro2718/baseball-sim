@@ -1,0 +1,75 @@
+{
+  "name": "SFG('24)",
+  "lineup": [
+    {
+      "name": "LaMonte Wade Jr.('24)",
+      "position": "1B"
+    },
+    {
+      "name": "Thairo Estrada('24)",
+      "position": "2B"
+    },
+    {
+      "name": "Heliot Ramos('24)",
+      "position": "LF"
+    },
+    {
+      "name": "Jerar Encarnacion('24)",
+      "position": "DH"
+    },
+    {
+      "name": "Matt Chapman('24)",
+      "position": "3B"
+    },
+    {
+      "name": "Mike Yastrzemski('24)",
+      "position": "RF"
+    },
+    {
+      "name": "Patrick Bailey('24)",
+      "position": "C"
+    },
+    {
+      "name": "Luis Matos('24)",
+      "position": "CF"
+    },
+    {
+      "name": "Tyler Fitzgerald('24)",
+      "position": "SS"
+    }
+  ],
+  "pitchers": [
+    "Logan Webb('24)",
+    "Kyle Harrison('24)",
+    "Jordan Hicks('24)",
+    "Blake Snell('24)",
+    "Keaton Winn('24)",
+    "Hayden Birdsong('24)",
+    "Ryan Walker('24)",
+    "Landen Roupp('24)",
+    "Randy Rodriguez('24)",
+    "Sean Hjelle('24)",
+    "Erik Miller('24)",
+    "Taylor Rogers('24)",
+    "Camilo Doval('24)",
+    "Spencer Bivens('24)",
+    "Tyler Rogers('24)"
+  ],
+  "bench": [
+    "Michael Conforto('24)",
+    "Brett Wisely('24)",
+    "Jung Hoo Lee('24)",
+    "Grant McCray('24)",
+    "Curt Casali('24)",
+    "Wilmer Flores('24)",
+    "Marco Luciano('24)",
+    "Casey Schmitt('24)"
+  ],
+  "rotation": [
+    "Logan Webb('24)",
+    "Kyle Harrison('24)",
+    "Jordan Hicks('24)",
+    "Blake Snell('24)",
+    "Keaton Winn('24)"
+  ]
+}

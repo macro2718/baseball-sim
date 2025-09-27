@@ -1,0 +1,76 @@
+{
+  "name": "ARI('24)",
+  "lineup": [
+    {
+      "name": "Corbin Carroll('24)",
+      "position": "RF"
+    },
+    {
+      "name": "Ketel Marte('24)",
+      "position": "2B"
+    },
+    {
+      "name": "Christian Walker('24)",
+      "position": "1B"
+    },
+    {
+      "name": "Joc Pederson('24)",
+      "position": "DH"
+    },
+    {
+      "name": "Lourdes Gurriel Jr.('24)",
+      "position": "LF"
+    },
+    {
+      "name": "Eugenio Suarez('24)",
+      "position": "3B"
+    },
+    {
+      "name": "Gabriel Moreno('24)",
+      "position": "C"
+    },
+    {
+      "name": "Alek Thomas('24)",
+      "position": "CF"
+    },
+    {
+      "name": "Geraldo Perdomo('24)",
+      "position": "SS"
+    }
+  ],
+  "pitchers": [
+    "Zac Gallen('24)",
+    "Brandon Pfaadt('24)",
+    "Jordan Montgomery('24)",
+    "Ryne Nelson('24)",
+    "Slade Cecconi('24)",
+    "Merrill Kelly('24)",
+    "Kevin Ginkel('24)",
+    "Justin Martinez('24)",
+    "Ryan Thompson('24)",
+    "Joe Mantiply('24)",
+    "Scott McGough('24)",
+    "Bryce Jarvis('24)",
+    "Logan Allen('24)",
+    "Yilber Diaz('24)",
+    "Paul Sewald('24)",
+    "Eduardo Rodriguez('24)"
+  ],
+  "bench": [
+    "Kevin Newman('24)",
+    "Adrian Del Castillo('24)",
+    "Randal Grichuk('24)",
+    "Jake McCarthy('24)",
+    "Jose Herrera('24)",
+    "Pavin Smith('24)",
+    "Tucker Barnhart('24)",
+    "Blaze Alexander('24)"
+  ],
+  "rotation": [
+    "Zac Gallen('24)",
+    "Brandon Pfaadt('24)",
+    "Jordan Montgomery('24)",
+    "Ryne Nelson('24)",
+    "Slade Cecconi('24)"
+  ]
+}

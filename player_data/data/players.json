@@ -298,83 +298,6 @@
       "id": "95b53c3d-ba03-4dec-aea8-87cfcac8d34f"
     },
     {
-      "name": "Chris Sale('24)",
-      "k_pct": 32.1,
-      "bb_pct": 5.6,
-      "hard_pct": 31.2,
-      "gb_pct": 46,
-      "pitcher_type": "SP",
-      "throws": "L",
-      "stamina": 80,
-      "id": "23e77093-00a2-4809-b931-ef235b0d416b"
-    },
-    {
-      "name": "Corbin Burnes('24)",
-      "k_pct": 23.1,
-      "bb_pct": 6.1,
-      "hard_pct": 31.6,
-      "gb_pct": 48.8,
-      "pitcher_type": "SP",
-      "throws": "R",
-      "stamina": 80,
-      "id": "2d6007f5-7fa7-41bd-af6f-6a405d275c5a"
-    },
-    {
-      "name": "Paul Skenes('24)",
-      "k_pct": 33.1,
-      "bb_pct": 6.2,
-      "hard_pct": 36.3,
-      "gb_pct": 52.3,
-      "pitcher_type": "SP",
-      "throws": "R",
-      "stamina": 80,
-      "id": "05befa10-4651-49e5-b6f3-792737ea1578"
-    },
-    {
-      "name": "Zack Wheeler('24)",
-      "k_pct": 28.5,
-      "bb_pct": 6.6,
-      "hard_pct": 33.6,
-      "gb_pct": 43.1,
-      "pitcher_type": "SP",
-      "throws": "R",
-      "stamina": 80,
-      "id": "9b75c06b-eb7d-427b-a2de-6497b6856a26"
-    },
-    {
-      "name": "Tarik Skubal('24)",
-      "k_pct": 30.3,
-      "bb_pct": 4.6,
-      "hard_pct": 33.9,
-      "gb_pct": 46.4,
-      "pitcher_type": "SP",
-      "throws": "L",
-      "stamina": 80,
-      "id": "3980494a-c913-4d50-949a-657333982596"
-    },
-    {
-      "name": "Ryan Helsley('24)",
-      "k_pct": 29.7,
-      "bb_pct": 8.6,
-      "hard_pct": 35.4,
-      "gb_pct": 37.2,
-      "pitcher_type": "RP",
-      "throws": "R",
-      "stamina": 40,
-      "id": "cb952445-5d99-468e-a6d3-156d8adaca4d"
-    },
-    {
-      "name": "Emmanuel Clase('24)",
-      "k_pct": 24.4,
-      "bb_pct": 3.7,
-      "hard_pct": 29.7,
-      "gb_pct": 57.8,
-      "pitcher_type": "RP",
-      "throws": "R",
-      "stamina": 40,
-      "id": "f2d7d874-7ddf-4019-8815-448f9afe0553"
-    },
-    {
       "name": "Tyler Glasnow('24)",
       "pitcher_type": "SP",
       "k_pct": 32.2,
@@ -583,136 +506,625 @@
       "folders": [
         "LAD('24)"
       ]
+    },
+    {
+      "name": "Brandon Pfaadt('24)",
+      "pitcher_type": "SP",
+      "k_pct": 24.3,
+      "bb_pct": 5.5,
+      "hard_pct": 30.6,
+      "gb_pct": 41.5,
+      "stamina": 98,
+      "throws": "R",
+      "id": "b8c5f356-1c7b-4bda-9160-fdcd0490bf30",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Zac Gallen('24)",
+      "pitcher_type": "SP",
+      "k_pct": 25.1,
+      "bb_pct": 8.7,
+      "hard_pct": 35.1,
+      "gb_pct": 46.2,
+      "stamina": 94,
+      "throws": "R",
+      "id": "62976a58-9fb3-46aa-9dfa-caca7c961903",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Ryne Nelson('24)",
+      "pitcher_type": "SP",
+      "k_pct": 20.0,
+      "bb_pct": 5.4,
+      "hard_pct": 33.8,
+      "gb_pct": 41.6,
+      "stamina": 95,
+      "throws": "R",
+      "id": "84a6d426-a8af-431d-8555-e66532593906",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Justin Martinez('24)",
+      "pitcher_type": "RP",
+      "k_pct": 29.5,
+      "bb_pct": 11.7,
+      "hard_pct": 25.7,
+      "gb_pct": 58.9,
+      "stamina": 47,
+      "throws": "R",
+      "id": "cd348c08-2a94-4e6b-a1d8-2f50f1672e3e",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Kevin Ginkel('24)",
+      "pitcher_type": "RP",
+      "k_pct": 26.5,
+      "bb_pct": 5.2,
+      "hard_pct": 33.2,
+      "gb_pct": 43.8,
+      "stamina": 47,
+      "throws": "R",
+      "id": "e336fceb-8710-4582-bd12-b273312392bc",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Joe Mantiply('24)",
+      "pitcher_type": "RP",
+      "k_pct": 21.8,
+      "bb_pct": 7.4,
+      "hard_pct": 33.7,
+      "gb_pct": 53.0,
+      "stamina": 45,
+      "throws": "L",
+      "id": "7d686329-8e3b-4767-a39b-1a5989452686",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Ryan Thompson('24)",
+      "pitcher_type": "RP",
+      "k_pct": 19.1,
+      "bb_pct": 5.5,
+      "hard_pct": 32.8,
+      "gb_pct": 61.4,
+      "stamina": 46,
+      "throws": "R",
+      "id": "6d991908-d9f2-4b87-a7a0-29fd3249d6e5",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Jordan Montgomery('24)",
+      "pitcher_type": "SP",
+      "k_pct": 15.6,
+      "bb_pct": 8.3,
+      "hard_pct": 34.6,
+      "gb_pct": 42.3,
+      "stamina": 91,
+      "throws": "R",
+      "id": "c6db97b6-9ac3-41f6-bfa5-a7ae41303429",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Merrill Kelly('24)",
+      "pitcher_type": "SP",
+      "k_pct": 21.0,
+      "bb_pct": 6.3,
+      "hard_pct": 33.5,
+      "gb_pct": 42.5,
+      "stamina": 87,
+      "throws": "R",
+      "id": "bb013abe-32fd-4c69-95df-153d47e549ce",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Eduardo Rodriguez('24)",
+      "pitcher_type": "SP",
+      "k_pct": 21.0,
+      "bb_pct": 8.5,
+      "hard_pct": 33.8,
+      "gb_pct": 37.0,
+      "stamina": 85,
+      "throws": "L",
+      "id": "bd4536a4-d95a-4a30-b89a-de5db1a343ee",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Paul Sewald('24)",
+      "pitcher_type": "RP",
+      "k_pct": 26.1,
+      "bb_pct": 6.1,
+      "hard_pct": 37.6,
+      "gb_pct": 26.6,
+      "stamina": 43,
+      "throws": "R",
+      "id": "1a050dd9-1771-4cdd-8749-047a02d910e1",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Slade Cecconi('24)",
+      "pitcher_type": "SP",
+      "k_pct": 18.9,
+      "bb_pct": 5.0,
+      "hard_pct": 33.2,
+      "gb_pct": 33.6,
+      "stamina": 87,
+      "throws": "R",
+      "id": "43f15063-568c-478c-b617-ed2e6bff3814",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Yilber Diaz('24)",
+      "pitcher_type": "RP",
+      "k_pct": 16.0,
+      "bb_pct": 10.1,
+      "hard_pct": 35.2,
+      "gb_pct": 35.6,
+      "stamina": 42,
+      "throws": "R",
+      "id": "2915a84a-5bbd-4063-a363-78db2989987b",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Logan Allen('24)",
+      "pitcher_type": "RP",
+      "k_pct": 16.4,
+      "bb_pct": 7.8,
+      "hard_pct": 29.5,
+      "gb_pct": 41.1,
+      "stamina": 42,
+      "throws": "L",
+      "id": "b764f0f4-156d-41d4-b6cc-76c2d9e3079f",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Bryce Jarvis('24)",
+      "pitcher_type": "RP",
+      "k_pct": 14.7,
+      "bb_pct": 12.8,
+      "hard_pct": 36.8,
+      "gb_pct": 43.4,
+      "stamina": 45,
+      "throws": "R",
+      "id": "843c3b37-77de-4e06-89b9-0551a0298a8f",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Scott McGough('24)",
+      "pitcher_type": "RP",
+      "k_pct": 16.7,
+      "bb_pct": 14.0,
+      "hard_pct": 39.8,
+      "gb_pct": 40.8,
+      "stamina": 43,
+      "throws": "R",
+      "id": "1d12684d-b0d7-46ca-88f1-636d967a970b",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Logan Webb('24)",
+      "pitcher_type": "SP",
+      "k_pct": 20.5,
+      "bb_pct": 5.9,
+      "hard_pct": 29.2,
+      "gb_pct": 56.8,
+      "stamina": 100,
+      "throws": "R",
+      "id": "9ab10757-fbac-4e19-a25a-0188301e4ad5",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Blake Snell('24)",
+      "pitcher_type": "SP",
+      "k_pct": 34.7,
+      "bb_pct": 10.5,
+      "hard_pct": 25.4,
+      "gb_pct": 42.0,
+      "stamina": 90,
+      "throws": "L",
+      "id": "f10fbafb-a867-449f-9586-20c002945c37",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Ryan Walker('24)",
+      "pitcher_type": "RP",
+      "k_pct": 32.1,
+      "bb_pct": 5.8,
+      "hard_pct": 27.5,
+      "gb_pct": 46.9,
+      "stamina": 48,
+      "throws": "R",
+      "id": "90062e3e-8966-4c3d-b0a7-05a2be147a17",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Kyle Harrison('24)",
+      "pitcher_type": "SP",
+      "k_pct": 22.2,
+      "bb_pct": 7.9,
+      "hard_pct": 34.5,
+      "gb_pct": 40.9,
+      "stamina": 92,
+      "throws": "L",
+      "id": "ab4f350e-9b25-4916-a4df-8621718b19f4",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Tyler Rogers('24)",
+      "pitcher_type": "RP",
+      "k_pct": 17.6,
+      "bb_pct": 2.1,
+      "hard_pct": 23.1,
+      "gb_pct": 54.5,
+      "stamina": 47,
+      "throws": "R",
+      "id": "df1d3c52-e13c-4383-8b7d-8377760b7f34",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Jordan Hicks('24)",
+      "pitcher_type": "SP",
+      "k_pct": 20.0,
+      "bb_pct": 9.8,
+      "hard_pct": 33.7,
+      "gb_pct": 50.9,
+      "stamina": 90,
+      "throws": "R",
+      "id": "e9bb686d-d4e4-4d85-9732-e9847e2ea9ff",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Randy Rodriguez('24)",
+      "pitcher_type": "RP",
+      "k_pct": 24.0,
+      "bb_pct": 8.1,
+      "hard_pct": 23.3,
+      "gb_pct": 41.0,
+      "stamina": 45,
+      "throws": "R",
+      "id": "9100e8a1-f92d-4516-b420-642216dd71b7",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Landen Roupp('24)",
+      "pitcher_type": "RP",
+      "k_pct": 21.7,
+      "bb_pct": 12.0,
+      "hard_pct": 25.2,
+      "gb_pct": 47.2,
+      "stamina": 45,
+      "throws": "R",
+      "id": "8f65172d-180e-40c6-9585-c4db472a9455",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Erik Miller('24)",
+      "pitcher_type": "RP",
+      "k_pct": 30.6,
+      "bb_pct": 13.4,
+      "hard_pct": 34.8,
+      "gb_pct": 50.6,
+      "stamina": 46,
+      "throws": "L",
+      "id": "cc61660e-e03b-48c6-b315-0523c510cab7",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Sean Hjelle('24)",
+      "pitcher_type": "RP",
+      "k_pct": 22.3,
+      "bb_pct": 4.2,
+      "hard_pct": 28.8,
+      "gb_pct": 59.0,
+      "stamina": 48,
+      "throws": "R",
+      "id": "fb28b4bd-7e2c-44e0-8227-1ec49a5f9736",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Taylor Rogers('24)",
+      "pitcher_type": "RP",
+      "k_pct": 25.7,
+      "bb_pct": 8.8,
+      "hard_pct": 26.7,
+      "gb_pct": 46.3,
+      "stamina": 46,
+      "throws": "L",
+      "id": "4a50f9be-13f3-414d-aa38-31e304cfa913",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Hayden Birdsong('24)",
+      "pitcher_type": "SP",
+      "k_pct": 27.9,
+      "bb_pct": 13.7,
+      "hard_pct": 41.7,
+      "gb_pct": 39.8,
+      "stamina": 87,
+      "throws": "R",
+      "id": "ee149972-96df-48fe-90db-ed01757ef96a",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Camilo Doval('24)",
+      "pitcher_type": "RP",
+      "k_pct": 28.8,
+      "bb_pct": 14.4,
+      "hard_pct": 30.9,
+      "gb_pct": 60.0,
+      "stamina": 45,
+      "throws": "R",
+      "id": "864617d9-6ea9-4eb4-a209-275cf3caef02",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Keaton Winn('24)",
+      "pitcher_type": "SP",
+      "k_pct": 20.2,
+      "bb_pct": 8.4,
+      "hard_pct": 43.6,
+      "gb_pct": 50.0,
+      "stamina": 85,
+      "throws": "R",
+      "id": "647250b5-f3c8-4400-a29b-d33266eb81ce",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Spencer Bivens('24)",
+      "pitcher_type": "RP",
+      "k_pct": 18.3,
+      "bb_pct": 5.4,
+      "hard_pct": 32.0,
+      "gb_pct": 53.9,
+      "stamina": 44,
+      "throws": "R",
+      "id": "a0e5430e-ac7c-43eb-8327-ff1c184d3053",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Dylan Cease('24)",
+      "pitcher_type": "SP",
+      "k_pct": 29.4,
+      "bb_pct": 8.5,
+      "hard_pct": 30.7,
+      "gb_pct": 39.8,
+      "stamina": 98,
+      "throws": "R",
+      "id": "7f5d5ce8-9674-4b18-8d17-3d81aa601d3b",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Michael King('24)",
+      "pitcher_type": "SP",
+      "k_pct": 27.7,
+      "bb_pct": 8.7,
+      "hard_pct": 26.4,
+      "gb_pct": 40.4,
+      "stamina": 97,
+      "throws": "R",
+      "id": "4c4fb1aa-9367-4e64-9f39-6e20186980b6",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Matt Waldron('24)",
+      "pitcher_type": "SP",
+      "k_pct": 21.3,
+      "bb_pct": 6.4,
+      "hard_pct": 30.2,
+      "gb_pct": 38.9,
+      "stamina": 94,
+      "throws": "R",
+      "id": "8390c967-af35-406b-a380-67ddb7605452",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Jeremiah Estrada('24)",
+      "pitcher_type": "RP",
+      "k_pct": 37.3,
+      "bb_pct": 9.1,
+      "hard_pct": 30.6,
+      "gb_pct": 35.1,
+      "stamina": 46,
+      "throws": "R",
+      "id": "97dbc2d2-7906-4e9c-b73d-aee0e5a11255",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Joe Musgrove('24)",
+      "pitcher_type": "SP",
+      "k_pct": 24.6,
+      "bb_pct": 5.6,
+      "hard_pct": 34.1,
+      "gb_pct": 41.3,
+      "stamina": 89,
+      "throws": "R",
+      "id": "579b070e-5ff4-42fe-8820-029a3c1deeec",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Yu Darvish('24)",
+      "pitcher_type": "SP",
+      "k_pct": 23.6,
+      "bb_pct": 6.6,
+      "hard_pct": 32.5,
+      "gb_pct": 38.7,
+      "stamina": 88,
+      "throws": "R",
+      "id": "dbf3724e-948f-46bb-aec4-df2562a7b5da",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Adrian Morejon('24)",
+      "pitcher_type": "RP",
+      "k_pct": 26.1,
+      "bb_pct": 7.7,
+      "hard_pct": 31.3,
+      "gb_pct": 51.4,
+      "stamina": 46,
+      "throws": "L",
+      "id": "3ae1814f-b16a-4101-badd-1e91a79781ec",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Robert Suarez('24)",
+      "pitcher_type": "RP",
+      "k_pct": 22.9,
+      "bb_pct": 6.2,
+      "hard_pct": 32.2,
+      "gb_pct": 41.8,
+      "stamina": 46,
+      "throws": "R",
+      "id": "50d6a4ef-e628-46fd-bbff-fd202d6e75e7",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Randy Vasquez('24)",
+      "pitcher_type": "SP",
+      "k_pct": 14.4,
+      "bb_pct": 6.7,
+      "hard_pct": 33.3,
+      "gb_pct": 38.7,
+      "stamina": 89,
+      "throws": "R",
+      "id": "793628a1-6591-4c65-a3be-0a6ad7510118",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Yuki Matsui('24)",
+      "pitcher_type": "RP",
+      "k_pct": 26.8,
+      "bb_pct": 10.5,
+      "hard_pct": 31.7,
+      "gb_pct": 38.5,
+      "stamina": 46,
+      "throws": "L",
+      "id": "5cdfcf2e-886c-4a2d-8f41-af50e4a42895",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Stephen Kolek('24)",
+      "pitcher_type": "RP",
+      "k_pct": 18.5,
+      "bb_pct": 5.7,
+      "hard_pct": 23.7,
+      "gb_pct": 55.9,
+      "stamina": 44,
+      "throws": "R",
+      "id": "c5e23def-c068-4197-aa5f-adf44d890410",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Jhony Brito('24)",
+      "pitcher_type": "RP",
+      "k_pct": 15.7,
+      "bb_pct": 5.4,
+      "hard_pct": 30.1,
+      "gb_pct": 48.3,
+      "stamina": 44,
+      "throws": "R",
+      "id": "96f619f1-18e7-461b-ab2f-9e002c80a540",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Wandy Peralta('24)",
+      "pitcher_type": "RP",
+      "k_pct": 13.6,
+      "bb_pct": 8.0,
+      "hard_pct": 35.2,
+      "gb_pct": 52.9,
+      "stamina": 43,
+      "throws": "L",
+      "id": "538e9f5e-e704-4ac5-b00c-c7a12f01f8f3",
+      "folders": [
+        "SDP('24)"
+      ]
     }
   ],
   "batters": [
-    {
-      "name": "Ohtani Shohei('24)",
-      "k_pct": 22.2,
-      "bb_pct": 11.1,
-      "hard_pct": 60.1,
-      "gb_pct": 36.3,
-      "eligible_positions": [
-        "RF",
-        "DH"
-      ],
-      "bats": "L",
-      "speed": 115,
-      "fielding_skill": 100,
-      "id": "a00707e7-a901-4e7c-b289-2a89089da322"
-    },
-    {
-      "name": "Suzuki Seiya('24)",
-      "k_pct": 27.4,
-      "bb_pct": 10.8,
-      "hard_pct": 49.2,
-      "gb_pct": 33.7,
-      "eligible_positions": [
-        "RF",
-        "DH"
-      ],
-      "bats": "R",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "edef24f9-d9c9-4b01-8b05-b576ded5f98a"
-    },
-    {
-      "name": "Vladimir Guerrero Jr.('24)",
-      "k_pct": 13.8,
-      "bb_pct": 10.3,
-      "hard_pct": 54.9,
-      "gb_pct": 47.7,
-      "eligible_positions": [
-        "1B",
-        "3B",
-        "DH"
-      ],
-      "bats": "R",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "7ab2fdfa-1b03-4e83-8e65-09eebbf6b04c"
-    },
-    {
-      "name": "Juan Soto('24)",
-      "k_pct": 16.7,
-      "bb_pct": 18.1,
-      "hard_pct": 57,
-      "gb_pct": 44.7,
-      "eligible_positions": [
-        "LF",
-        "RF",
-        "DH"
-      ],
-      "bats": "L",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "72005c1f-ad9d-4856-bb5e-df73e36b0826"
-    },
-    {
-      "name": "José Ramírez('24)",
-      "k_pct": 12,
-      "bb_pct": 7.9,
-      "hard_pct": 39.7,
-      "gb_pct": 34.2,
-      "eligible_positions": [
-        "2B",
-        "3B",
-        "SS",
-        "DH"
-      ],
-      "bats": "S",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "b6c7ef58-bd52-4439-a332-a5799566c8dc"
-    },
-    {
-      "name": "Bobby Witt Jr.('24)",
-      "k_pct": 15,
-      "bb_pct": 8,
-      "hard_pct": 48.3,
-      "gb_pct": 37.5,
-      "eligible_positions": [
-        "3B",
-        "SS",
-        "DH"
-      ],
-      "bats": "R",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "80abb474-e2ab-4c9f-b6d7-f463ac10f871"
-    },
-    {
-      "name": "Ketel Marte('24)",
-      "k_pct": 18.2,
-      "bb_pct": 11.1,
-      "hard_pct": 53.8,
-      "gb_pct": 48.9,
-      "eligible_positions": [
-        "2B",
-        "SS",
-        "CF",
-        "DH"
-      ],
-      "bats": "S",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "389d1e80-a3fa-4650-95d2-2b656512acfc"
-    },
-    {
-      "name": "William Contreras('24)",
-      "k_pct": 20.5,
-      "bb_pct": 11.5,
-      "hard_pct": 49.5,
-      "gb_pct": 54,
-      "eligible_positions": [
-        "C",
-        "DH"
-      ],
-      "bats": "R",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "4cd514ae-abf2-43e7-b792-e81eecef9c8f"
-    },
     {
       "name": "Ryo Kimura",
       "k_pct": 20.458366889374453,
@@ -1360,23 +1772,6 @@
       "id": "2f9b777e-0a3e-4b4e-aa8e-fe899c16693f"
     },
     {
-      "name": "Aaron Judge('24)",
-      "k_pct": 24.3,
-      "bb_pct": 18.9,
-      "hard_pct": 61,
-      "gb_pct": 31.5,
-      "folders": [],
-      "eligible_positions": [
-        "CF",
-        "RF",
-        "DH"
-      ],
-      "bats": "R",
-      "speed": 100,
-      "fielding_skill": 100,
-      "id": "87fceb5e-649a-4da5-a53e-fac745b1f102"
-    },
-    {
       "name": "Shohei Ohtani('24)",
       "k_pct": 22.2,
       "bb_pct": 11.1,
@@ -1639,12 +2034,932 @@
       "folders": [
         "LAD('24)"
       ]
+    },
+    {
+      "name": "Corbin Carroll('24)",
+      "k_pct": 19.0,
+      "bb_pct": 10.7,
+      "hard_pct": 33.1,
+      "gb_pct": 44.1,
+      "eligible_positions": [
+        "CF",
+        "RF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "84bd04f1-b483-4b91-914f-5c10e021692b",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Eugenio Suarez('24)",
+      "k_pct": 27.5,
+      "bb_pct": 7.7,
+      "hard_pct": 36.5,
+      "gb_pct": 32.8,
+      "eligible_positions": [
+        "3B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "9944adc4-4751-4dcc-b6ab-2da9a6ba8181",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Christian Walker('24)",
+      "k_pct": 24.1,
+      "bb_pct": 10.0,
+      "hard_pct": 38.7,
+      "gb_pct": 37.9,
+      "eligible_positions": [
+        "1B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "102f92b4-090a-4189-b863-f837bf19e3d6",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Joc Pederson('24)",
+      "k_pct": 23.4,
+      "bb_pct": 12.2,
+      "hard_pct": 37.6,
+      "gb_pct": 39.2,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "434a43fc-2988-4a9e-beec-0948836a3e1d",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Jake McCarthy('24)",
+      "k_pct": 15.8,
+      "bb_pct": 6.3,
+      "hard_pct": 19.9,
+      "gb_pct": 50.4,
+      "eligible_positions": [
+        "RF",
+        "CF",
+        "LF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "69b1acec-a27a-460d-9400-e958110c69a6",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Gabriel Moreno('24)",
+      "k_pct": 14.8,
+      "bb_pct": 11.7,
+      "hard_pct": 32.8,
+      "gb_pct": 49.6,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "0c0145d4-bd30-44a2-85f6-f845ebe4e69b",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Lourdes Gurriel Jr.('24)",
+      "k_pct": 18.3,
+      "bb_pct": 5.2,
+      "hard_pct": 32.1,
+      "gb_pct": 37.9,
+      "eligible_positions": [
+        "LF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "c298397f-d664-4e2d-847d-6350f22ebe89",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Geraldo Perdomo('24)",
+      "k_pct": 14.9,
+      "bb_pct": 9.3,
+      "hard_pct": 25.1,
+      "gb_pct": 41.3,
+      "eligible_positions": [
+        "SS",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "df0a1fb1-1047-44b2-8bc8-c3504ce60aaa",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Randal Grichuk('24)",
+      "k_pct": 16.5,
+      "bb_pct": 7.2,
+      "hard_pct": 39.5,
+      "gb_pct": 36.7,
+      "eligible_positions": [
+        "RF",
+        "DH",
+        "LF"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "2b9b2c8b-19c0-4897-809a-44428dbbc937",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Kevin Newman('24)",
+      "k_pct": 15.4,
+      "bb_pct": 4.8,
+      "hard_pct": 21.0,
+      "gb_pct": 48.1,
+      "eligible_positions": [
+        "SS",
+        "2B",
+        "1B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "7450819f-c1e1-4dfb-a6ab-bfd8e174014d",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Pavin Smith('24)",
+      "k_pct": 19.6,
+      "bb_pct": 11.4,
+      "hard_pct": 38.5,
+      "gb_pct": 43.1,
+      "eligible_positions": [
+        "1B",
+        "RF",
+        "LF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "9cda278b-5c75-4631-96e3-a5f83dcddcc3",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Adrian Del Castillo('24)",
+      "k_pct": 32.2,
+      "bb_pct": 8.0,
+      "hard_pct": 32.7,
+      "gb_pct": 35.3,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "87dd3e98-944a-4a09-8afe-8c429030ec5e",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Jose Herrera('24)",
+      "k_pct": 23.7,
+      "bb_pct": 7.9,
+      "hard_pct": 21.8,
+      "gb_pct": 47.1,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "a0515f49-080e-4759-b171-0ce35094e4d8",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Blaze Alexander('24)",
+      "k_pct": 26.5,
+      "bb_pct": 8.1,
+      "hard_pct": 31.4,
+      "gb_pct": 51.7,
+      "eligible_positions": [
+        "SS",
+        "2B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "d05d6689-a898-410d-829d-0cc3b9ece4e7",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Alek Thomas('24)",
+      "k_pct": 16.5,
+      "bb_pct": 6.8,
+      "hard_pct": 41.8,
+      "gb_pct": 60.5,
+      "eligible_positions": [
+        "CF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "bdf808ca-ab1b-45f5-a842-cc9878c8f444",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Tucker Barnhart('24)",
+      "k_pct": 32.3,
+      "bb_pct": 13.5,
+      "hard_pct": 15.4,
+      "gb_pct": 48.9,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "ac622c81-588a-4b67-a74d-c84196355d65",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Ketel Marte('24)",
+      "k_pct": 18.2,
+      "bb_pct": 11.1,
+      "hard_pct": 43.0,
+      "gb_pct": 48.1,
+      "eligible_positions": [
+        "2B",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "eb54bb40-8937-41c0-a2b6-bb07a2aecb37",
+      "folders": [
+        "ARI('24)"
+      ]
+    },
+    {
+      "name": "Matt Chapman('24)",
+      "k_pct": 24.4,
+      "bb_pct": 9.9,
+      "hard_pct": 37.5,
+      "gb_pct": 38.4,
+      "eligible_positions": [
+        "3B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "d66c8757-523d-49b8-a466-e0a5ef2b6319",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Patrick Bailey('24)",
+      "k_pct": 22.3,
+      "bb_pct": 8.7,
+      "hard_pct": 30.1,
+      "gb_pct": 39.1,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "4abc5ab2-12ac-4637-9eaf-65dfa8bcfa9c",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Tyler Fitzgerald('24)",
+      "k_pct": 31.7,
+      "bb_pct": 6.5,
+      "hard_pct": 23.7,
+      "gb_pct": 32.7,
+      "eligible_positions": [
+        "SS",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "edadc47e-4b2d-498c-9445-7c2cb8d74826",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Heliot Ramos('24)",
+      "k_pct": 26.1,
+      "bb_pct": 7.1,
+      "hard_pct": 31.7,
+      "gb_pct": 43.0,
+      "eligible_positions": [
+        "CF",
+        "LF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "d184a16b-f94f-41e9-bef7-18f7133e3e74",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Mike Yastrzemski('24)",
+      "k_pct": 26.2,
+      "bb_pct": 8.0,
+      "hard_pct": 33.7,
+      "gb_pct": 35.9,
+      "eligible_positions": [
+        "RF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "be1a7339-103e-4a38-ae56-c773330f1b7a",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "LaMonte Wade Jr.('24)",
+      "k_pct": 22.4,
+      "bb_pct": 15.5,
+      "hard_pct": 33.9,
+      "gb_pct": 39.9,
+      "eligible_positions": [
+        "1B",
+        "RF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "28bd7b33-e3df-4cd7-bbfd-0c77867a4377",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Michael Conforto('24)",
+      "k_pct": 24.2,
+      "bb_pct": 8.6,
+      "hard_pct": 36.2,
+      "gb_pct": 41.8,
+      "eligible_positions": [
+        "LF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "ad2761c7-8606-4150-b53f-c44ebf61a9e0",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Brett Wisely('24)",
+      "k_pct": 23.9,
+      "bb_pct": 4.8,
+      "hard_pct": 25.5,
+      "gb_pct": 40.9,
+      "eligible_positions": [
+        "2B",
+        "SS",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "26eae1c1-fefc-4d3d-a6ed-eeb5880158a4",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Casey Schmitt('24)",
+      "k_pct": 22.1,
+      "bb_pct": 3.5,
+      "hard_pct": 36.1,
+      "gb_pct": 38.6,
+      "eligible_positions": [
+        "2B",
+        "SS",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "129efd57-e57b-4338-be6f-10f469435824",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Thairo Estrada('24)",
+      "k_pct": 19.9,
+      "bb_pct": 2.6,
+      "hard_pct": 28.3,
+      "gb_pct": 47.2,
+      "eligible_positions": [
+        "2B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "f65e4dcf-db07-43fa-957b-5af7a8fe1b40",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Jung Hoo Lee('24)",
+      "k_pct": 8.2,
+      "bb_pct": 6.3,
+      "hard_pct": 29.9,
+      "gb_pct": 47.0,
+      "eligible_positions": [
+        "CF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "a0776b33-203b-4895-ad9d-ea6fe9a211e4",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Jerar Encarnacion('24)",
+      "k_pct": 28.6,
+      "bb_pct": 4.2,
+      "hard_pct": 43.8,
+      "gb_pct": 48.8,
+      "eligible_positions": [
+        "DH",
+        "RF"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "6eacdeb7-c329-4efc-a74e-6cde6df95951",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Grant McCray('24)",
+      "k_pct": 43.1,
+      "bb_pct": 4.6,
+      "hard_pct": 38.2,
+      "gb_pct": 48.4,
+      "eligible_positions": [
+        "CF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "cf3d5982-67a5-40e4-a234-c5ab14c1dc93",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Curt Casali('24)",
+      "k_pct": 17.6,
+      "bb_pct": 10.4,
+      "hard_pct": 18.2,
+      "gb_pct": 37.6,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "8357f7b5-0116-4fbb-aee9-cfde4788daa5",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Wilmer Flores('24)",
+      "k_pct": 13.6,
+      "bb_pct": 8.3,
+      "hard_pct": 24.7,
+      "gb_pct": 32.8,
+      "eligible_positions": [
+        "1B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "db940276-2408-4f22-afdb-aa9e33751527",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Marco Luciano('24)",
+      "k_pct": 34.6,
+      "bb_pct": 6.2,
+      "hard_pct": 29.2,
+      "gb_pct": 35.4,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "cd4f7bf1-6e3e-4c30-930e-b278174ff8e8",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Luis Matos('24)",
+      "k_pct": 15.4,
+      "bb_pct": 3.2,
+      "hard_pct": 28.3,
+      "gb_pct": 38.6,
+      "eligible_positions": [
+        "RF",
+        "CF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "e0b1ef9c-a13a-4e51-bccb-51dbbab83299",
+      "folders": [
+        "SFG('24)"
+      ]
+    },
+    {
+      "name": "Jackson Merrill('24)",
+      "k_pct": 17.0,
+      "bb_pct": 4.9,
+      "hard_pct": 35.5,
+      "gb_pct": 35.9,
+      "eligible_positions": [
+        "CF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "cd19e213-1d63-49fe-8f72-748357cbeb22",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Jurickson Profar('24)",
+      "k_pct": 15.1,
+      "bb_pct": 11.4,
+      "hard_pct": 32.1,
+      "gb_pct": 42.2,
+      "eligible_positions": [
+        "LF",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "0beb9509-2257-49aa-a5a3-920ad49214b6",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Manny Machado('24)",
+      "k_pct": 19.3,
+      "bb_pct": 7.0,
+      "hard_pct": 37.2,
+      "gb_pct": 43.9,
+      "eligible_positions": [
+        "3B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "cec47f9a-a60a-4326-9649-23fd06ebfba6",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Fernando Tatis Jr.('24)",
+      "k_pct": 21.9,
+      "bb_pct": 7.3,
+      "hard_pct": 38.9,
+      "gb_pct": 46.2,
+      "eligible_positions": [
+        "RF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "e37cae75-42ae-4236-be7e-0acab96c2ff4",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Ha-seong Kim('24)",
+      "k_pct": 16.4,
+      "bb_pct": 12.3,
+      "hard_pct": 25.2,
+      "gb_pct": 39.8,
+      "eligible_positions": [
+        "SS",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "081f3ec1-4a9c-4d84-85b6-41c448ccea99",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Jake Cronenworth('24)",
+      "k_pct": 18.0,
+      "bb_pct": 9.3,
+      "hard_pct": 30.9,
+      "gb_pct": 43.5,
+      "eligible_positions": [
+        "1B",
+        "2B",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "727adc4d-da4c-4556-b03f-71c49887741e",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Xander Bogaerts('24)",
+      "k_pct": 17.1,
+      "bb_pct": 6.0,
+      "hard_pct": 27.0,
+      "gb_pct": 47.9,
+      "eligible_positions": [
+        "2B",
+        "SS",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "b5f87ccb-cf01-4a36-ad04-72a5551cc6c9",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Kyle Higashioka('24)",
+      "k_pct": 28.1,
+      "bb_pct": 5.7,
+      "hard_pct": 39.7,
+      "gb_pct": 28.1,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "75c6afde-6382-4c51-ab62-8dd0a987b031",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Donovan Solano('24)",
+      "k_pct": 21.0,
+      "bb_pct": 7.1,
+      "hard_pct": 28.8,
+      "gb_pct": 44.3,
+      "eligible_positions": [
+        "3B",
+        "DH",
+        "1B"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "9de99c49-79e8-4862-bdfc-1c6deaba60a9",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "David Peralta('24)",
+      "k_pct": 20.8,
+      "bb_pct": 8.5,
+      "hard_pct": 31.9,
+      "gb_pct": 47.3,
+      "eligible_positions": [
+        "RF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "f611c340-3238-446b-a4b2-28ea255eee9d",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Eguy Rosario('24)",
+      "k_pct": 35.1,
+      "bb_pct": 3.5,
+      "hard_pct": 29.4,
+      "gb_pct": 36.4,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "a36fe43d-4c72-4f90-938b-a673225b060f",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Mason McCoy('24)",
+      "k_pct": 33.3,
+      "bb_pct": 8.8,
+      "hard_pct": 15.2,
+      "gb_pct": 53.6,
+      "eligible_positions": [
+        "SS",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "b53d097a-3f81-40e3-ab47-a403b91fdbc3",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Bryce Johnson('24)",
+      "k_pct": 16.4,
+      "bb_pct": 9.6,
+      "hard_pct": 18.5,
+      "gb_pct": 46.7,
+      "eligible_positions": [
+        "RF",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "4716beec-488e-4a4d-81a7-ea6039effbe6",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Jose Azocar('24)",
+      "k_pct": 24.1,
+      "bb_pct": 6.3,
+      "hard_pct": 16.4,
+      "gb_pct": 47.2,
+      "eligible_positions": [
+        "LF",
+        "CF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "4f090af4-090c-4d68-936b-19d2b2e348d9",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Tyler Wade('24)",
+      "k_pct": 18.6,
+      "bb_pct": 7.1,
+      "hard_pct": 17.7,
+      "gb_pct": 41.6,
+      "eligible_positions": [
+        "3B",
+        "2B",
+        "SS",
+        "LF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "dd12b8e6-851d-4834-b52f-78fe09552256",
+      "folders": [
+        "SDP('24)"
+      ]
+    },
+    {
+      "name": "Luis Campusano('24)",
+      "k_pct": 13.7,
+      "bb_pct": 6.7,
+      "hard_pct": 26.6,
+      "gb_pct": 46.0,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "328068a7-dd57-4224-9a69-908f524ee72a",
+      "folders": [
+        "SDP('24)"
+      ]
     }
   ],
   "folders": [
     "Default Players",
     "Average Players",
     "中日ドラゴンズ('24)",
-    "LAD('24)"
+    "LAD('24)",
+    "ARI('24)",
+    "SFG('24)",
+    "SDP('24)"
   ]
 }

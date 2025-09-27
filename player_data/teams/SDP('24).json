@@ -1,0 +1,72 @@
+{
+  "name": "SDP('24)",
+  "lineup": [
+    {
+      "name": "Donovan Solano('24)",
+      "position": "DH"
+    },
+    {
+      "name": "Fernando Tatis Jr.('24)",
+      "position": "RF"
+    },
+    {
+      "name": "Manny Machado('24)",
+      "position": "3B"
+    },
+    {
+      "name": "Jurickson Profar('24)",
+      "position": "LF"
+    },
+    {
+      "name": "Ha-seong Kim('24)",
+      "position": "SS"
+    },
+    {
+      "name": "Jake Cronenworth('24)",
+      "position": "1B"
+    },
+    {
+      "name": "Jackson Merrill('24)",
+      "position": "CF"
+    },
+    {
+      "name": "Luis Campusano('24)",
+      "position": "C"
+    },
+    {
+      "name": "Xander Bogaerts('24)",
+      "position": "2B"
+    }
+  ],
+  "pitchers": [
+    "Dylan Cease('24)",
+    "Michael King('24)",
+    "Matt Waldron('24)",
+    "Randy Vasquez('24)",
+    "Joe Musgrove('24)",
+    "Yu Darvish('24)",
+    "Adrian Morejon('24)",
+    "Jeremiah Estrada('24)",
+    "Yuki Matsui('24)",
+    "Robert Suarez('24)",
+    "Wandy Peralta('24)",
+    "Jhony Brito('24)",
+    "Stephen Kolek('24)"
+  ],
+  "bench": [
+    "David Peralta('24)",
+    "Kyle Higashioka('24)",
+    "Bryce Johnson('24)",
+    "Eguy Rosario('24)",
+    "Tyler Wade('24)",
+    "Jose Azocar('24)",
+    "Mason McCoy('24)"
+  ],
+  "rotation": [
+    "Dylan Cease('24)",
+    "Michael King('24)",
+    "Matt Waldron('24)",
+    "Randy Vasquez('24)",
+    "Joe Musgrove('24)"
+  ]
+}

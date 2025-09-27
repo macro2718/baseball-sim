@@ -61,7 +61,7 @@ DRY_RUN = False          # True = don't write file
 LIMIT = 0                # 0 = no limit; otherwise process first N new players
 USE_STATSAPI = True      # False: skip statsapi fielding splits (all players => ['DH'])
 BACKFILL_POSITIONS = False  # True to backfill defensive positions for existing DH-only entries for this YEAR
-TEAM = 'LAD'                # e.g. 'LAD' to restrict to one team; '' for all teams
+TEAM = 'SDP'                # e.g. 'LAD' to restrict to one team; '' for all teams
 
 def _computed_suffix() -> str:
     if SUFFIX is not None and SUFFIX != '':
