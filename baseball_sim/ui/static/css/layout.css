@@ -159,6 +159,65 @@
   opacity: 0.7;
 }
 
+/* Lobby grouped layout */
+.lobby-groups {
+  display: grid;
+  grid-template-columns: 1fr; /* 縦積み */
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.action-group {
+  position: relative;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(7, 12, 28, 0.86), rgba(26, 39, 72, 0.52));
+  box-shadow: 0 24px 56px rgba(5, 12, 30, 0.5);
+  overflow: hidden;
+}
+
+.action-group::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.12), transparent 60%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.group-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px 8px;
+}
+
+.group-title {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.group-caption {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* 基本は縦に並べる */
+  gap: 12px;
+  padding: 10px 12px 14px;
+}
+
+@media (min-width: 1200px) {
+  /* 画面が広くても縦並びを維持。必要ならここで2列にできる */
+}
+
 .team-selection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1744,8 +1803,8 @@
 
 /* Button group inside category cards */
 .action-card .action-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column; /* 縦にボタンを並べる */
   gap: 10px;
   margin-top: auto;
 }
@@ -1754,11 +1813,7 @@
   margin-top: 0;
 }
 
-@media (max-width: 460px) {
-  .action-card .action-buttons {
-    grid-template-columns: 1fr;
-  }
-}
+/* もともとの横並び切替は不要になったため削除 */
 
 @media (prefers-reduced-motion: reduce) {
   .action-card,

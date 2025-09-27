@@ -1,8 +1,11 @@
 import { createGameActions } from './controllers/actions.js';
 import { initEventListeners } from './controllers/events.js';
 import { render } from './ui/renderers.js';
+import { initButtonClickSound } from './ui/sound.js';
 
 async function bootstrap() {
+  // Initialize UI click sound effects
+  initButtonClickSound();
   const actions = createGameActions(render);
   initEventListeners(actions);
 
