@@ -89,13 +89,44 @@ class DataLoader:
             team.add_player_to_bench(players_dict[player_name])
 
     @classmethod
+    def _build_team(
+        cls,
+        team_data: Dict,
+        *,
+        player_data: Dict,
+    ) -> Team:
+        """与えられたチームデータから :class:`Team` インスタンスを生成する"""
+
+        team = Team(team_data["name"])
+
+        # 選手辞書の作成（チームごとに独立したインスタンスを生成する）
+        players = cls.create_players_dict(player_data)
+
+        # 投手・野手の登録
+        cls.setup_team_pitchers(team, team_data, players)
+        cls.setup_team_lineup(team, team_data, players)
+        cls.setup_team_bench(team, team_data, players)
+
+        # ラインナップの妥当性チェックを行い、警告を表示
+        print(f"\n=== Validating lineup: {team.name} ===")
+        validation_errors = team.validate_lineup()
+        if validation_errors:
+            print(f"{team.name} lineup errors:")
+            for error in validation_errors:
+                print(f"  - {error}")
+        else:
+            print(f"{team.name} lineup is valid")
+
+        return team
+
+    @classmethod
     def create_teams_from_data(
         cls,
         *,
         home_team_override: Dict | None = None,
         away_team_override: Dict | None = None,
     ) -> Tuple[Team, Team]:
-        """JSONデータからチームを作成"""
+        """JSONデータからホーム/アウェイの2チームを作成する"""
         # パス管理
         player_data_path = path_manager.get_players_data_path()
         team_data_path = path_manager.get_teams_data_path()
@@ -114,44 +145,16 @@ class DataLoader:
         if not isinstance(away_team_data, dict):
             raise ValueError("Away team data could not be loaded.")
 
-        # チームの作成
-        home_team = Team(home_team_data["name"])
-        away_team = Team(away_team_data["name"])
+        # チームの作成（ラインナップ検証を含む）
+        home_team = cls._build_team(home_team_data, player_data=player_data)
+        away_team = cls._build_team(away_team_data, player_data=player_data)
 
-        # 選手辞書の作成（home/awayで別インスタンスにする）
-        # 同じ選手名を共有すると、試合中のスタミナや成績が相互に影響してしまうため
-        players_home = cls.create_players_dict(player_data)
-        players_away = cls.create_players_dict(player_data)
-
-        # 投手陣の設定
-        cls.setup_team_pitchers(home_team, home_team_data, players_home)
-        cls.setup_team_pitchers(away_team, away_team_data, players_away)
-
-        # ラインナップの設定
-        home_errors = cls.setup_team_lineup(home_team, home_team_data, players_home)
-        away_errors = cls.setup_team_lineup(away_team, away_team_data, players_away)
-
-        # ベンチの設定
-        cls.setup_team_bench(home_team, home_team_data, players_home)
-        cls.setup_team_bench(away_team, away_team_data, players_away)
-        
-        # ラインナップの妥当性チェック
-        print(f"\n=== Validating lineups ===")
-        home_validation_errors = home_team.validate_lineup()
-        away_validation_errors = away_team.validate_lineup()
-        
-        if home_validation_errors:
-            print(f"{home_team.name} lineup errors:")
-            for error in home_validation_errors:
-                print(f"  - {error}")
-        else:
-            print(f"{home_team.name} lineup is valid")
-        
-        if away_validation_errors:
-            print(f"{away_team.name} lineup errors:")
-            for error in away_validation_errors:
-                print(f"  - {error}")
-        else:
-            print(f"{away_team.name} lineup is valid")
-        
         return home_team, away_team
+
+    @classmethod
+    def create_team(cls, team_data: Dict, *, player_data: Dict | None = None) -> Team:
+        """単一チームを生成するためのヘルパー"""
+        if player_data is None:
+            player_data_path = path_manager.get_players_data_path()
+            player_data = cls.load_json_data(player_data_path)
+        return cls._build_team(team_data, player_data=player_data)
