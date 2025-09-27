@@ -7,6 +7,12 @@ import {
   setSimulationResultsView,
   setPlayersTeamView,
   setPlayersTypeView,
+  addSimulationLeagueTeam,
+  removeSimulationLeagueTeam,
+  clearSimulationLeagueTeams,
+  getSimulationLeagueTeams,
+  updateSimulationScheduleField,
+  getSimulationSchedule,
 } from '../state.js';
 import {
   hideDefenseMenu,
@@ -3517,12 +3523,6 @@ export function initEventListeners(actions) {
     });
   }
 
-  if (elements.simulationGameCountInput) {
-    elements.simulationGameCountInput.addEventListener('input', () => {
-      elements.simulationGameCountInput.dataset.userModified = 'true';
-    });
-  }
-
   if (elements.simulationSetupCancel) {
     elements.simulationSetupCancel.addEventListener('click', () => {
       setUIView('lobby');
@@ -3530,25 +3530,84 @@ export function initEventListeners(actions) {
     });
   }
 
-  // シミュレーション設定: チーム選択変更時にボタン活性状態などを更新
+  // シミュレーション設定: チーム/カード数の入力に応じてボタン活性状態などを更新
   function updateSimulationStartEnabled() {
-    const homeId = elements.simulationSetupHome?.value ?? '';
-    const awayId = elements.simulationSetupAway?.value ?? '';
     const running = Boolean(stateCache.simulation?.running);
-    const canStart = Boolean(homeId && awayId) && !running && homeId !== '' && awayId !== '';
+    const teams = getSimulationLeagueTeams();
+    const schedule = getSimulationSchedule();
+    const hasTeams = teams.length >= 2;
+    const validSchedule =
+      Number.isFinite(schedule.gamesPerCard) &&
+      schedule.gamesPerCard > 0 &&
+      Number.isFinite(schedule.cardsPerOpponent) &&
+      schedule.cardsPerOpponent > 0;
+    const canStart = hasTeams && validSchedule && !running;
     if (elements.simulationStartButton) {
       elements.simulationStartButton.disabled = !canStart;
     }
   }
 
-  if (elements.simulationSetupAway) {
-    elements.simulationSetupAway.addEventListener('change', () => {
+  if (elements.simulationGamesPerCardInput) {
+    elements.simulationGamesPerCardInput.addEventListener('change', (event) => {
+      const defaults = updateSimulationScheduleField('gamesPerCard', event.target.value);
+      elements.simulationGamesPerCardInput.value = String(defaults.gamesPerCard);
+      updateSimulationStartEnabled();
+    });
+    elements.simulationGamesPerCardInput.addEventListener('input', () => {
       updateSimulationStartEnabled();
     });
   }
-  if (elements.simulationSetupHome) {
-    elements.simulationSetupHome.addEventListener('change', () => {
+
+  if (elements.simulationCardsPerOpponentInput) {
+    elements.simulationCardsPerOpponentInput.addEventListener('change', (event) => {
+      const defaults = updateSimulationScheduleField('cardsPerOpponent', event.target.value);
+      elements.simulationCardsPerOpponentInput.value = String(defaults.cardsPerOpponent);
       updateSimulationStartEnabled();
+    });
+    elements.simulationCardsPerOpponentInput.addEventListener('input', () => {
+      updateSimulationStartEnabled();
+    });
+  }
+
+  if (elements.simulationLeagueAdd) {
+    elements.simulationLeagueAdd.addEventListener('click', () => {
+      const select = elements.simulationLeagueSelect;
+      if (!select) return;
+      const teamId = select.value;
+      if (!teamId) {
+        showStatus('追加するチームを選択してください。', 'danger');
+        return;
+      }
+      const before = getSimulationLeagueTeams();
+      addSimulationLeagueTeam(teamId);
+      const after = getSimulationLeagueTeams();
+      if (after.length === before.length) {
+        showStatus('同じチームが既にリストに含まれています。', 'info');
+      }
+      updateSimulationStartEnabled();
+      refreshView();
+    });
+  }
+
+  if (elements.simulationLeagueClear) {
+    elements.simulationLeagueClear.addEventListener('click', () => {
+      clearSimulationLeagueTeams();
+      updateSimulationStartEnabled();
+      refreshView();
+    });
+  }
+
+  if (elements.simulationLeagueList) {
+    elements.simulationLeagueList.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.dataset.action;
+      if (action !== 'remove') return;
+      const teamId = target.dataset.teamId;
+      if (!teamId) return;
+      removeSimulationLeagueTeam(teamId);
+      updateSimulationStartEnabled();
+      refreshView();
     });
   }
 
@@ -3571,9 +3630,8 @@ export function initEventListeners(actions) {
       event.preventDefault();
       if (!actions.startSimulation) return;
 
-      const awayId = elements.simulationSetupAway?.value ?? '';
-      const homeId = elements.simulationSetupHome?.value ?? '';
-      const gamesValue = elements.simulationGameCountInput?.value ?? '';
+      const teams = getSimulationLeagueTeams();
+      const schedule = getSimulationSchedule();
 
       const button = elements.simulationStartButton;
       let originalText = '';
@@ -3584,14 +3642,17 @@ export function initEventListeners(actions) {
       }
 
       try {
-        await actions.startSimulation(homeId, awayId, gamesValue);
+        await actions.startSimulation({
+          league: {
+            teams,
+            games_per_card: schedule.gamesPerCard,
+            cards_per_opponent: schedule.cardsPerOpponent,
+          },
+        });
         // 実行直後は要約ビューをデフォルト表示
         setSimulationResultsView('summary');
         setPlayersTeamView('away');
         setPlayersTypeView('batting');
-        if (elements.simulationGameCountInput) {
-          elements.simulationGameCountInput.dataset.userModified = '';
-        }
       } finally {
         if (button) {
           button.disabled = false;
@@ -3600,6 +3661,8 @@ export function initEventListeners(actions) {
       }
     });
   }
+
+  updateSimulationStartEnabled();
 
   // 個人成績用サブタブ（Away/Home）
   if (elements.simulationPlayersTabAway) {

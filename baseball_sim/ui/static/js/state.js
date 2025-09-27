@@ -33,6 +33,7 @@ export const stateCache = {
     instruction: '',
   },
   simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min: 1, max: 200 } },
+  simulationSetup: { leagueTeams: [], gamesPerCard: 3, cardsPerOpponent: 1 },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   titleLineup: {
     plans: { home: null, away: null },
@@ -209,4 +210,111 @@ export function resetDefenseSelection() {
 
 export function isKnownFieldPosition(positionKey) {
   return FIELD_POSITION_KEYS.has(positionKey);
+}
+
+function ensureSimulationSetupState() {
+  if (!stateCache.simulationSetup) {
+    stateCache.simulationSetup = { leagueTeams: [], gamesPerCard: 3, cardsPerOpponent: 1 };
+  }
+}
+
+function normalizeTeamIdList(teamIds) {
+  if (!Array.isArray(teamIds)) {
+    return [];
+  }
+  const seen = new Set();
+  const normalized = [];
+  teamIds.forEach((teamId) => {
+    if (typeof teamId !== 'string') return;
+    const trimmed = teamId.trim();
+    if (!trimmed || seen.has(trimmed)) return;
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  });
+  return normalized;
+}
+
+export function getSimulationLeagueTeams() {
+  ensureSimulationSetupState();
+  return Array.isArray(stateCache.simulationSetup.leagueTeams)
+    ? [...stateCache.simulationSetup.leagueTeams]
+    : [];
+}
+
+export function setSimulationLeagueTeams(teamIds) {
+  ensureSimulationSetupState();
+  const normalized = normalizeTeamIdList(teamIds);
+  stateCache.simulationSetup.leagueTeams = normalized;
+  return normalized;
+}
+
+export function addSimulationLeagueTeam(teamId) {
+  if (typeof teamId !== 'string' || !teamId.trim()) {
+    return getSimulationLeagueTeams();
+  }
+  ensureSimulationSetupState();
+  const normalized = teamId.trim();
+  const current = normalizeTeamIdList(stateCache.simulationSetup.leagueTeams);
+  if (!current.includes(normalized)) {
+    current.push(normalized);
+  }
+  stateCache.simulationSetup.leagueTeams = current;
+  return [...current];
+}
+
+export function removeSimulationLeagueTeam(teamId) {
+  ensureSimulationSetupState();
+  const normalized = normalizeTeamIdList(stateCache.simulationSetup.leagueTeams);
+  const filtered = normalized.filter((id) => id !== teamId);
+  stateCache.simulationSetup.leagueTeams = filtered;
+  return [...filtered];
+}
+
+export function clearSimulationLeagueTeams() {
+  ensureSimulationSetupState();
+  stateCache.simulationSetup.leagueTeams = [];
+  return [];
+}
+
+export function getSimulationScheduleDefaults() {
+  ensureSimulationSetupState();
+  const { gamesPerCard, cardsPerOpponent } = stateCache.simulationSetup;
+  return {
+    gamesPerCard: Number.isFinite(gamesPerCard) && gamesPerCard > 0 ? gamesPerCard : 3,
+    cardsPerOpponent:
+      Number.isFinite(cardsPerOpponent) && cardsPerOpponent > 0 ? cardsPerOpponent : 1,
+  };
+}
+
+export function setSimulationScheduleDefaults({ gamesPerCard, cardsPerOpponent }) {
+  ensureSimulationSetupState();
+  if (Number.isFinite(gamesPerCard) && gamesPerCard > 0) {
+    stateCache.simulationSetup.gamesPerCard = gamesPerCard;
+  }
+  if (Number.isFinite(cardsPerOpponent) && cardsPerOpponent > 0) {
+    stateCache.simulationSetup.cardsPerOpponent = cardsPerOpponent;
+  }
+  return getSimulationScheduleDefaults();
+}
+
+export function updateSimulationScheduleField(field, value) {
+  ensureSimulationSetupState();
+  const numeric = Number.parseInt(value, 10);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return getSimulationScheduleDefaults();
+  }
+  if (field === 'gamesPerCard') {
+    stateCache.simulationSetup.gamesPerCard = numeric;
+  } else if (field === 'cardsPerOpponent') {
+    stateCache.simulationSetup.cardsPerOpponent = numeric;
+  }
+  return getSimulationScheduleDefaults();
+}
+
+export function getSimulationSchedule() {
+  ensureSimulationSetupState();
+  return {
+    gamesPerCard: stateCache.simulationSetup.gamesPerCard,
+    cardsPerOpponent: stateCache.simulationSetup.cardsPerOpponent,
+  };
 }

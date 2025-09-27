@@ -78,17 +78,31 @@ export function createGameActions(render) {
     }
   }
 
-  async function handleRunSimulation(games, options = {}) {
-    const parsedGames = Number.parseInt(games, 10);
-    if (!Number.isFinite(parsedGames) || parsedGames <= 0) {
-      showStatus('試合数には1以上の整数を入力してください。', 'danger');
+  async function handleRunSimulation(requestBody, options = {}) {
+    if (!requestBody || typeof requestBody !== 'object') {
+      showStatus('シミュレーション設定を解釈できませんでした。', 'danger');
+      return null;
+    }
+
+    const body = { ...requestBody };
+    if (Object.prototype.hasOwnProperty.call(body, 'games')) {
+      const parsedGames = Number.parseInt(body.games, 10);
+      if (!Number.isFinite(parsedGames) || parsedGames <= 0) {
+        showStatus('試合数には1以上の整数を入力してください。', 'danger');
+        return null;
+      }
+      body.games = parsedGames;
+    }
+
+    if (!body.league && !body.games) {
+      showStatus('シミュレーション設定を確認してください。', 'danger');
       return null;
     }
 
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.simulationRun, {
         method: 'POST',
-        body: JSON.stringify({ games: parsedGames }),
+        body: JSON.stringify(body),
       });
       if (options?.setView) {
         setUIView(options.setView);
@@ -101,23 +115,50 @@ export function createGameActions(render) {
     }
   }
 
-  async function handleSimulationStart(homeId, awayId, games) {
-    if (!homeId || !awayId) {
-      showStatus('ホーム・アウェイのチームを選択してください。', 'danger');
+  async function handleSimulationStart(config = {}) {
+    const leagueConfig = config?.league || {};
+    const leagueTeamsRaw = Array.isArray(leagueConfig.teams)
+      ? leagueConfig.teams.filter((teamId) => typeof teamId === 'string' && teamId.trim())
+      : [];
+    const leagueTeams = leagueTeamsRaw.map((teamId) => teamId.trim());
+    const gamesPerCard = Number.parseInt(leagueConfig.games_per_card, 10);
+    const cardsPerOpponent = Number.parseInt(leagueConfig.cards_per_opponent, 10);
+
+    if (leagueTeams.length >= 2) {
+      const [homeTeamId, awayTeamId] = leagueTeams;
+      try {
+        await apiRequest(CONFIG.api.endpoints.teamSelect, {
+          method: 'POST',
+          body: JSON.stringify({ home: homeTeamId, away: awayTeamId }),
+        });
+      } catch (error) {
+        handleApiError(error, render);
+        throw error;
+      }
+
+      const leaguePayload = {
+        teams: leagueTeams,
+        games_per_card: Number.isFinite(gamesPerCard) && gamesPerCard > 0 ? gamesPerCard : undefined,
+        cards_per_opponent:
+          Number.isFinite(cardsPerOpponent) && cardsPerOpponent > 0 ? cardsPerOpponent : undefined,
+        role_assignment: { home: 0, away: 1 },
+      };
+
+      if (!leaguePayload.games_per_card || !leaguePayload.cards_per_opponent) {
+        showStatus('カード設定は1以上の数値で指定してください。', 'danger');
+        return;
+      }
+
+      await handleRunSimulation({ league: leaguePayload }, { setView: 'simulation-results' });
       return;
     }
 
-    try {
-      await apiRequest(CONFIG.api.endpoints.teamSelect, {
-        method: 'POST',
-        body: JSON.stringify({ home: homeId, away: awayId }),
-      });
-    } catch (error) {
-      handleApiError(error, render);
-      throw error;
+    if (Object.prototype.hasOwnProperty.call(config, 'games')) {
+      await handleRunSimulation({ games: config.games }, { setView: 'simulation-results' });
+      return;
     }
 
-    await handleRunSimulation(games, { setView: 'simulation-results' });
+    showStatus('リーグに参加するチームを2チーム以上追加してください。', 'danger');
   }
 
   async function handleSwing() {

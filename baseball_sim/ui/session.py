@@ -51,6 +51,7 @@ class WebGameSession(
             "log": [],
             "default_games": 20,
             "limits": {"min_games": 1, "max_games": 200},
+            "league": {"teams": [], "games_per_card": None, "cards_per_opponent": None},
         }
         self._control_mode: str = "manual"
         self._user_team_key: Optional[str] = None

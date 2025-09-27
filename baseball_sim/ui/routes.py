@@ -183,8 +183,13 @@ def create_routes(session: WebGameSession) -> Blueprint:
     def run_simulation() -> Dict[str, Any]:
         payload = request.get_json(silent=True) or {}
         games = parse_int_param(payload, "games")
+        league_payload = payload.get("league")
         try:
-            state = session.run_simulation(games)
+            if isinstance(league_payload, dict):
+                num_games = games if games > 0 else None
+                state = session.run_simulation(num_games, league_options=league_payload)
+            else:
+                state = session.run_simulation(games)
         except GameSessionError as exc:
             return create_error_response(str(exc), session)
         return jsonify(state)

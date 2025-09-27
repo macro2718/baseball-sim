@@ -13,26 +13,102 @@ def summarize_simulation_results(
     *,
     home_team: Optional[object],
     away_team: Optional[object],
-    num_games: int,
+    num_games: Optional[int],
+    league: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Convert simulator output to the structure consumed by the web UI."""
 
     team_objects = _extract_team_objects(results)
     team_stats = results.get("team_stats") or {}
+    alias_map = results.get("team_aliases") or {}
 
-    teams_summary = [
-        _build_team_entry("away", away_team, team_objects, team_stats),
-        _build_team_entry("home", home_team, team_objects, team_stats),
-    ]
+    unique_teams = list(_iter_unique_teams(results))
+    league_mode = bool(league) or len(unique_teams) > 2
+
+    role_map: Dict[str, str] = {}
+    for role in ("away", "home"):
+        candidate = team_objects.get(role)
+        if candidate is not None:
+            name = getattr(candidate, "name", None)
+            if name:
+                role_map[role] = name
+
+    team_ids = []
+    if league and isinstance(league, Mapping):
+        raw_ids = league.get("teams")
+        if isinstance(raw_ids, list):
+            team_ids = [str(team_id) for team_id in raw_ids]
+
+    team_entries: List[Dict[str, Any]] = []
+    for index, team_obj in enumerate(unique_teams):
+        summary = _build_team_entry(
+            index,
+            team_obj,
+            team_objects,
+            team_stats,
+            alias_map,
+            role_map,
+            team_ids,
+            league_mode,
+        )
+        team_entries.append(summary)
+
+    if league_mode:
+        team_entries.sort(
+            key=lambda entry: (
+                entry["record"].get("wins", 0),
+                entry["record"].get("runDiff", 0),
+                entry["record"].get("runsScored", 0),
+            ),
+            reverse=True,
+        )
+    else:
+        ordered: List[Dict[str, Any]] = []
+        for key in ("away", "home"):
+            entry = next((team for team in team_entries if key in team.get("roles", []) or team.get("key") == key), None)
+            if entry and entry not in ordered:
+                ordered.append(entry)
+        for entry in team_entries:
+            if entry not in ordered:
+                ordered.append(entry)
+        team_entries = ordered
+
+    for position, entry in enumerate(team_entries, start=1):
+        entry["rank"] = position if league_mode else None
 
     games, recent_games = _build_game_summaries(results.get("games") or [])
 
+    meta = results.get("meta") or {}
+    fallback_games = num_games if isinstance(num_games, int) and num_games > 0 else 0
+    total_games = int(meta.get("completed_games") or meta.get("scheduled_games") or fallback_games or len(games))
+    league_meta = {
+        "total_teams": int(meta.get("total_teams") or len(unique_teams)),
+        "games_per_card": int(meta.get("games_per_card", 0) or 0) or None,
+        "cards_per_opponent": int(meta.get("cards_per_opponent", 0) or 0) or None,
+        "completed_days": int(meta.get("completed_days", 0) or 0) or None,
+        "total_days": int(meta.get("total_days", 0) or 0) or None,
+        "completed_games": int(meta.get("completed_games", 0) or 0) or None,
+        "scheduled_games": int(meta.get("scheduled_games", 0) or 0) or None,
+        "teams": team_ids,
+    }
+    if league:
+        if league.get("games_per_card"):
+            league_meta["games_per_card"] = league.get("games_per_card")
+        if league.get("cards_per_opponent"):
+            league_meta["cards_per_opponent"] = league.get("cards_per_opponent")
+        if league.get("teams"):
+            league_meta["teams"] = list(league.get("teams"))
+
     return {
-        "total_games": int(num_games),
+        "total_games": total_games,
         "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "teams": teams_summary,
+        "teams": team_entries,
         "games": games,
         "recent_games": recent_games,
+        "mode": "league" if league_mode else "series",
+        "league": league_meta,
+        "aliases": alias_map,
+        "roles": role_map,
     }
 
 
@@ -48,31 +124,46 @@ def _extract_team_objects(results: Mapping[str, Any]) -> Mapping[str, object]:
 
 
 def _build_team_entry(
-    team_key: str,
-    fallback_team: Optional[object],
+    index: int,
+    team_obj: Optional[object],
     team_objects: Mapping[str, object],
     team_stats: Mapping[str, Any],
+    alias_map: Mapping[str, str],
+    role_map: Mapping[str, str],
+    team_ids: List[str],
+    league_mode: bool,
 ) -> Dict[str, Any]:
-    team_name = getattr(fallback_team, "name", None) or team_key.title()
-    # Prefer role-specific mapping ('home'/'away'), then role-suffixed name, then plain name
-    role_suffixed = f"{team_name} ({'Away' if team_key == 'away' else 'Home'})"
-    if team_key in team_objects:
-        team_obj = team_objects[team_key]
-    elif role_suffixed in team_objects:
-        team_obj = team_objects[role_suffixed]
-    else:
-        team_obj = team_objects.get(team_name, fallback_team)
-    # Display name clarifies role for same-team matchups
-    display_name = f"{team_name} ({'Away' if team_key == 'away' else 'Home'})"
+    team_name = getattr(team_obj, "name", None) or f"Team {index + 1}"
+    resolved_roles = [role for role, name in role_map.items() if name == team_name]
+    resolved_aliases = [alias for alias, target in alias_map.items() if target == team_name]
+    if not team_obj and team_name in team_objects:
+        team_obj = team_objects.get(team_name)
+
+    key = resolved_roles[0] if resolved_roles else f"team-{index + 1}"
+    record = _build_team_record(team_name, team_stats, role=resolved_roles[0] if resolved_roles else None)
+    batting = _compute_team_batting(team_obj)
+    pitching = _compute_team_pitching(team_obj)
+    batters = _build_batter_stats(team_obj)
+    pitchers = _build_pitcher_stats(team_obj)
+    team_id = team_ids[index] if index < len(team_ids) else None
+
+    display_name = team_name
+    if resolved_roles and not league_mode:
+        role_label = 'Away' if resolved_roles[0] == 'away' else 'Home'
+        display_name = f"{team_name} ({role_label})"
 
     return {
-        "key": team_key,
+        "key": key,
+        "id": team_id,
         "name": display_name,
-        "record": _build_team_record(team_name, team_stats, role=team_key),
-        "batting": _compute_team_batting(team_obj),
-        "pitching": _compute_team_pitching(team_obj),
-        "batters": _build_batter_stats(team_obj),
-        "pitchers": _build_pitcher_stats(team_obj),
+        "roles": resolved_roles,
+        "aliases": resolved_aliases,
+        "record": record,
+        "batting": batting,
+        "pitching": pitching,
+        "batters": batters,
+        "pitchers": pitchers,
+        "rank": index + 1,
     }
 
 
@@ -97,6 +188,7 @@ def _build_team_record(team_name: str, team_stats: Mapping[str, Any], *, role: O
         "runs_allowed": runs_allowed,
         "run_diff": runs_scored - runs_allowed,
         "win_pct": win_pct,
+        "games": int(stats.get("games", total)),
     }
 
 
@@ -388,6 +480,10 @@ def _build_game_summaries(
                 "away_score": away_score,
                 "innings": int(game.get("innings", 0) or 0),
                 "winner": winner,
+                "day": int(game.get("day", 0) or 0) or None,
+                "card": int(game.get("card", 0) or 0) or None,
+                "round": int(game.get("round", 0) or 0) or None,
+                "card_game": int(game.get("card_game", 0) or 0) or None,
             }
         )
 
