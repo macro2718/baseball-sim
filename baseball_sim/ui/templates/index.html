@@ -33,6 +33,102 @@
             </div>
           </div>
 
+          <div class="hero-grid" aria-label="ホーム画面ヒーロー">
+            <section class="hero-scoreboard" aria-labelledby="hero-scoreboard-title">
+              <header class="hero-scoreboard-header">
+                <p id="hero-scoreboard-title" class="scoreboard-label">LIVE MODEL PROJECTION</p>
+                <span class="scoreboard-clock">7回裏・1アウト・走者1,3塁</span>
+              </header>
+              <div class="scoreboard-body" role="presentation">
+                <div class="scoreboard-row is-away">
+                  <div class="scoreboard-team">
+                    <span class="team-abbr">AWY</span>
+                    <span class="team-name">Analytics Travelers</span>
+                  </div>
+                  <div class="scoreboard-score">
+                    <span class="runs">3</span>
+                    <span class="detail">OPS .742</span>
+                  </div>
+                </div>
+                <div class="scoreboard-row is-home">
+                  <div class="scoreboard-team">
+                    <span class="team-abbr">HME</span>
+                    <span class="team-name">Sabermetric Nine</span>
+                  </div>
+                  <div class="scoreboard-score">
+                    <span class="runs highlight">4</span>
+                    <span class="detail">wRC+ 126</span>
+                  </div>
+                </div>
+              </div>
+              <div class="scoreboard-trend" role="img" aria-label="最近5打席のWPAトレンド">
+                <span style="--p: 32%"></span>
+                <span style="--p: 64%"></span>
+                <span style="--p: 48%"></span>
+                <span style="--p: 78%"></span>
+                <span style="--p: 92%"></span>
+              </div>
+              <footer class="scoreboard-footer">
+                <div class="scoreboard-meta">
+                  <span class="meta-label">RISP指数</span>
+                  <span class="meta-value">1.34</span>
+                </div>
+                <div class="scoreboard-meta">
+                  <span class="meta-label">投球効率</span>
+                  <span class="meta-value">71%</span>
+                </div>
+                <div class="scoreboard-meta">
+                  <span class="meta-label">AI勝率</span>
+                  <span class="meta-value accent">68%</span>
+                </div>
+              </footer>
+            </section>
+
+            <section class="hero-spotlight" aria-labelledby="hero-spotlight-title">
+              <h3 id="hero-spotlight-title">データスポットライト</h3>
+              <ul class="spotlight-list">
+                <li>
+                  <span class="spotlight-label">xwOBA トレンド</span>
+                  <span class="spotlight-value positive">+0.027</span>
+                  <span class="spotlight-meter" aria-hidden="true"><span style="width: 68%"></span></span>
+                </li>
+                <li>
+                  <span class="spotlight-label">ホットゾーン捕球率</span>
+                  <span class="spotlight-value">78%</span>
+                  <span class="spotlight-meter" aria-hidden="true"><span style="width: 54%"></span></span>
+                </li>
+                <li>
+                  <span class="spotlight-label">次打者シミュ期待値</span>
+                  <span class="spotlight-value">0.62 run</span>
+                  <span class="spotlight-meter" aria-hidden="true"><span style="width: 82%"></span></span>
+                </li>
+              </ul>
+              <p class="spotlight-note">最新のサーベイメトリクスで試合の熱量を可視化しています。</p>
+            </section>
+
+            <section class="hero-lab" aria-labelledby="hero-lab-title">
+              <h3 id="hero-lab-title">Strategy Lab</h3>
+              <p class="hero-lab-intro">AIアシスタントが最適な采配とリスク対効果をリアルタイムに提案。</p>
+              <div class="hero-lab-grid">
+                <article class="lab-card">
+                  <p class="lab-label">推奨オーダー</p>
+                  <p class="lab-value">ダブルスチール 36%</p>
+                  <p class="lab-meta">成功時の勝率 +9pt</p>
+                </article>
+                <article class="lab-card">
+                  <p class="lab-label">投球プラン</p>
+                  <p class="lab-value">スプリット増 18%</p>
+                  <p class="lab-meta">被打率 0.211 予測</p>
+                </article>
+                <article class="lab-card">
+                  <p class="lab-label">守備シフト</p>
+                  <p class="lab-value">プル対策 D+</p>
+                  <p class="lab-meta">ISO -0.053</p>
+                </article>
+              </div>
+            </section>
+          </div>
+
           <div class="header-insights" id="insight-grid">
             <article class="insight-card" data-insight="inning-run-expectancy">
               <header class="insight-header">
@@ -101,6 +197,14 @@
             </article>
           </div>
 
+          <div class="metric-marquee" role="list" aria-label="データハイライト">
+            <span class="marquee-item" role="listitem"><strong>WPA</strong> +0.18 直前の二塁打</span>
+            <span class="marquee-item" role="listitem"><strong>CS%</strong> 38% 盗塁阻止の余地</span>
+            <span class="marquee-item" role="listitem"><strong>BABIP</strong> .284 &rarr; .301 過去10試合</span>
+            <span class="marquee-item" role="listitem"><strong>PitchMix</strong> 42% フォーシーム</span>
+            <span class="marquee-item" role="listitem"><strong>Clutch</strong> +1.2 今季累計</span>
+          </div>
+
           <div class="developer-hint">
             <small>💡 開発者向け: <kbd>Tab</kbd>キーでログパネルを表示/非表示</small>
           </div>
@@ -113,6 +217,39 @@
           <div class="title-card lobby-card">
             <h2>ホーム</h2>
             <p class="lobby-description">ようこそ。以下から選択してください。</p>
+            <div class="lobby-insight-panel" aria-label="ホーム分析">
+              <div class="lobby-infobar">
+                <article class="infobar-card">
+                  <p class="infobar-label">OPS トラッキング</p>
+                  <p class="infobar-value positive">+8.3%</p>
+                  <span class="infobar-spark" aria-hidden="true">
+                    <span style="--h: 22%"></span>
+                    <span style="--h: 48%"></span>
+                    <span style="--h: 62%"></span>
+                    <span style="--h: 86%"></span>
+                    <span style="--h: 68%"></span>
+                  </span>
+                </article>
+                <article class="infobar-card">
+                  <p class="infobar-label">投手WAR 残価</p>
+                  <p class="infobar-value">3.4</p>
+                  <p class="infobar-meta">次のローテ更新で+0.6予測</p>
+                </article>
+                <article class="infobar-card">
+                  <p class="infobar-label">守備効率</p>
+                  <p class="infobar-value highlight">92.1%</p>
+                  <p class="infobar-meta">リーグ平均 +4.8pt</p>
+                </article>
+              </div>
+              <div class="lobby-highlights">
+                <h3>今日のリサーチノート</h3>
+                <ul>
+                  <li>クラッチシナリオに合わせた代打候補を自動推薦。</li>
+                  <li>マイナー選手の成長曲線を可視化して昇格タイミングを提示。</li>
+                  <li>投手のリリースポイント差分をプロットして不調原因を診断。</li>
+                </ul>
+              </div>
+            </div>
             <div class="action-grid">
               <article class="action-card">
                 <div class="action-icon" aria-hidden="true">⚾</div>
