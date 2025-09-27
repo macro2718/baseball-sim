@@ -33,7 +33,7 @@ export const stateCache = {
     instruction: '',
   },
   simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min: 1, max: 200 } },
-  simulationSetup: { leagueTeams: [], gamesPerCard: 3, cardsPerOpponent: 1 },
+  simulationSetup: { leagueTeams: [], gamesPerCard: 3, cardsPerOpponent: 1, seed: null },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   titleLineup: {
     plans: { home: null, away: null },
@@ -214,7 +214,12 @@ export function isKnownFieldPosition(positionKey) {
 
 function ensureSimulationSetupState() {
   if (!stateCache.simulationSetup) {
-    stateCache.simulationSetup = { leagueTeams: [], gamesPerCard: 3, cardsPerOpponent: 1 };
+    stateCache.simulationSetup = {
+      leagueTeams: [],
+      gamesPerCard: 3,
+      cardsPerOpponent: 1,
+      seed: null,
+    };
   }
 }
 
@@ -222,13 +227,11 @@ function normalizeTeamIdList(teamIds) {
   if (!Array.isArray(teamIds)) {
     return [];
   }
-  const seen = new Set();
   const normalized = [];
   teamIds.forEach((teamId) => {
     if (typeof teamId !== 'string') return;
     const trimmed = teamId.trim();
-    if (!trimmed || seen.has(trimmed)) return;
-    seen.add(trimmed);
+    if (!trimmed) return;
     normalized.push(trimmed);
   });
   return normalized;
@@ -254,26 +257,65 @@ export function addSimulationLeagueTeam(teamId) {
   }
   ensureSimulationSetupState();
   const normalized = teamId.trim();
-  const current = normalizeTeamIdList(stateCache.simulationSetup.leagueTeams);
-  if (!current.includes(normalized)) {
-    current.push(normalized);
-  }
-  stateCache.simulationSetup.leagueTeams = current;
-  return [...current];
+  const current = Array.isArray(stateCache.simulationSetup.leagueTeams)
+    ? [...stateCache.simulationSetup.leagueTeams]
+    : [];
+  current.push(normalized);
+  stateCache.simulationSetup.leagueTeams = normalizeTeamIdList(current);
+  return [...stateCache.simulationSetup.leagueTeams];
 }
 
-export function removeSimulationLeagueTeam(teamId) {
+export function removeSimulationLeagueTeamAt(index) {
   ensureSimulationSetupState();
-  const normalized = normalizeTeamIdList(stateCache.simulationSetup.leagueTeams);
-  const filtered = normalized.filter((id) => id !== teamId);
-  stateCache.simulationSetup.leagueTeams = filtered;
-  return [...filtered];
+  const current = Array.isArray(stateCache.simulationSetup.leagueTeams)
+    ? [...stateCache.simulationSetup.leagueTeams]
+    : [];
+  if (!Number.isInteger(index) || index < 0 || index >= current.length) {
+    return current;
+  }
+  current.splice(index, 1);
+  stateCache.simulationSetup.leagueTeams = normalizeTeamIdList(current);
+  return [...stateCache.simulationSetup.leagueTeams];
 }
 
 export function clearSimulationLeagueTeams() {
   ensureSimulationSetupState();
   stateCache.simulationSetup.leagueTeams = [];
   return [];
+}
+
+export function primeSimulationSetup({ teams, gamesPerCard, cardsPerOpponent }) {
+  ensureSimulationSetupState();
+
+  const normalizedTeams = normalizeTeamIdList(Array.isArray(teams) ? teams : []);
+  const normalizedGames = Number.isFinite(gamesPerCard) && gamesPerCard > 0 ? gamesPerCard : null;
+  const normalizedCards =
+    Number.isFinite(cardsPerOpponent) && cardsPerOpponent > 0 ? cardsPerOpponent : null;
+
+  const seedPayload = {
+    teams: normalizedTeams,
+    gamesPerCard: normalizedGames,
+    cardsPerOpponent: normalizedCards,
+  };
+  const seed = JSON.stringify(seedPayload);
+  if (stateCache.simulationSetup.seed === seed) {
+    return;
+  }
+
+  stateCache.simulationSetup.seed = seed;
+
+  if (normalizedTeams.length) {
+    stateCache.simulationSetup.leagueTeams = normalizedTeams;
+  } else if (!stateCache.simulationSetup.leagueTeams.length) {
+    stateCache.simulationSetup.leagueTeams = [];
+  }
+
+  if (normalizedGames) {
+    stateCache.simulationSetup.gamesPerCard = normalizedGames;
+  }
+  if (normalizedCards) {
+    stateCache.simulationSetup.cardsPerOpponent = normalizedCards;
+  }
 }
 
 export function getSimulationScheduleDefaults() {

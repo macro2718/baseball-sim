@@ -112,6 +112,24 @@ def summarize_simulation_results(
     }
 
 
+def _iter_unique_teams(results: Mapping[str, Any]) -> Iterable[object]:
+    """Yield unique team objects present in the results.
+
+    Mirrors the logic in `interface/simulation._iter_unique_teams` but kept
+    locally to avoid tight coupling and import cycles between UI and core.
+    """
+    teams = results.get("teams") or {}
+    seen_ids: set[int] = set()
+    for team in teams.values():
+        if team is None:
+            continue
+        identifier = id(team)
+        if identifier in seen_ids:
+            continue
+        seen_ids.add(identifier)
+        yield team
+
+
 def _extract_team_objects(results: Mapping[str, Any]) -> Mapping[str, object]:
     raw = results.get("teams") or {}
     named = {}

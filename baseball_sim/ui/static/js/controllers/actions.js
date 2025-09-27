@@ -124,7 +124,25 @@ export function createGameActions(render) {
     const gamesPerCard = Number.parseInt(leagueConfig.games_per_card, 10);
     const cardsPerOpponent = Number.parseInt(leagueConfig.cards_per_opponent, 10);
 
-    if (leagueTeams.length >= 2) {
+    if (leagueTeams.length > 0) {
+      if (leagueTeams.length < 2) {
+        showStatus('リーグには2チーム以上の参加が必要です。', 'danger');
+        return;
+      }
+      if (leagueTeams.length % 2 !== 0) {
+        showStatus('リーグ参加チーム数は偶数にしてください。', 'danger');
+        return;
+      }
+
+      if (!Number.isFinite(gamesPerCard) || gamesPerCard <= 0) {
+        showStatus('1カードあたりの試合数は1以上の整数を入力してください。', 'danger');
+        return;
+      }
+      if (!Number.isFinite(cardsPerOpponent) || cardsPerOpponent <= 0) {
+        showStatus('対戦カード数は1以上の整数を入力してください。', 'danger');
+        return;
+      }
+
       const [homeTeamId, awayTeamId] = leagueTeams;
       try {
         await apiRequest(CONFIG.api.endpoints.teamSelect, {
@@ -138,16 +156,10 @@ export function createGameActions(render) {
 
       const leaguePayload = {
         teams: leagueTeams,
-        games_per_card: Number.isFinite(gamesPerCard) && gamesPerCard > 0 ? gamesPerCard : undefined,
-        cards_per_opponent:
-          Number.isFinite(cardsPerOpponent) && cardsPerOpponent > 0 ? cardsPerOpponent : undefined,
+        games_per_card: gamesPerCard,
+        cards_per_opponent: cardsPerOpponent,
         role_assignment: { home: 0, away: 1 },
       };
-
-      if (!leaguePayload.games_per_card || !leaguePayload.cards_per_opponent) {
-        showStatus('カード設定は1以上の数値で指定してください。', 'danger');
-        return;
-      }
 
       await handleRunSimulation({ league: leaguePayload }, { setView: 'simulation-results' });
       return;

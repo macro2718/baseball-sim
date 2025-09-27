@@ -82,6 +82,9 @@ class SimulationControlsMixin:
             team_datas.append(dict(team_payload))
             team_ids.append(team_id or str(len(team_datas)))
 
+        if len(team_datas) % 2 != 0:
+            raise GameSessionError("リーグ参加チーム数は偶数で指定してください。")
+
         games_per_card = int(league_options.get("games_per_card", 0) or 0)
         cards_per_opponent = int(league_options.get("cards_per_opponent", 0) or 0)
         if games_per_card <= 0 or cards_per_opponent <= 0:
@@ -205,10 +208,12 @@ class SimulationControlsMixin:
 
         self._simulation_state["last_run"] = summary
 
-        self._notifications.publish(
-            "success",
-            f"{num_games}試合のシミュレーションが完了しました。",
-        )
+        total_games = summary.get("total_games") or num_games or 0
+        if summary.get("mode") == "league":
+            message = f"リーグシミュレーションが完了しました（{total_games}試合）。"
+        else:
+            message = f"{total_games}試合のシミュレーションが完了しました。"
+
+        self._notifications.publish("success", message)
 
         return self.build_state()
-

@@ -18,10 +18,11 @@ import {
   setPinchRunContext,
   setPinchRunSelectedBase,
   getPinchRunSelectedBase,
-  setSimulationScheduleDefaults,
   setSimulationLeagueTeams,
   getSimulationSchedule,
+  getSimulationScheduleDefaults,
   getSimulationLeagueTeams,
+  primeSimulationSetup,
 } from '../state.js';
 import {
   escapeHtml,
@@ -3698,27 +3699,25 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
 
   const leagueDefaults = simulationState?.league || {};
   const defaultTeams = Array.isArray(leagueDefaults.teams) ? leagueDefaults.teams : [];
-  if (defaultTeams.length) {
-    const sanitizedDefaults = defaultTeams
-      .filter((teamId) => typeof teamId === 'string' && teamId.trim())
-      .map((teamId) => teamId.trim())
-      .filter((teamId) => optionMap.has(teamId));
-    if (sanitizedDefaults.length) {
-      setSimulationLeagueTeams(sanitizedDefaults);
-    }
-  }
+  const sanitizedDefaults = defaultTeams
+    .filter((teamId) => typeof teamId === 'string' && teamId.trim())
+    .map((teamId) => teamId.trim())
+    .filter((teamId) => optionMap.has(teamId));
 
-  const scheduleDefaults = setSimulationScheduleDefaults({
+  primeSimulationSetup({
+    teams: sanitizedDefaults,
     gamesPerCard:
       typeof leagueDefaults.gamesPerCard === 'number' && leagueDefaults.gamesPerCard > 0
         ? leagueDefaults.gamesPerCard
-        : undefined,
+        : null,
     cardsPerOpponent:
       typeof leagueDefaults.cardsPerOpponent === 'number' && leagueDefaults.cardsPerOpponent > 0
         ? leagueDefaults.cardsPerOpponent
-        : undefined,
+        : null,
   });
+
   const schedule = getSimulationSchedule();
+  const scheduleDefaults = getSimulationScheduleDefaults();
 
   if (simulationLeagueSelect) {
     populateSelect(simulationLeagueSelect, options, {
@@ -3738,6 +3737,9 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
 
   const currentTeams = getSimulationLeagueTeams().filter((teamId) => optionMap.has(teamId));
   setSimulationLeagueTeams(currentTeams);
+
+  const hasTeams = currentTeams.length >= 2;
+  const evenTeamCount = currentTeams.length % 2 === 0;
 
   if (simulationLeagueList) {
     simulationLeagueList.innerHTML = '';
@@ -3764,6 +3766,7 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
         removeButton.className = 'ghost danger';
         removeButton.dataset.action = 'remove';
         removeButton.dataset.teamId = teamId;
+        removeButton.dataset.index = String(index);
         removeButton.textContent = '削除';
 
         li.appendChild(order);
@@ -3796,13 +3799,12 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
     simulationCardsPerOpponentInput.disabled = running;
   }
 
-  const hasTeams = currentTeams.length >= 2;
   const validSchedule =
     Number.isFinite(schedule.gamesPerCard) &&
     schedule.gamesPerCard > 0 &&
     Number.isFinite(schedule.cardsPerOpponent) &&
     schedule.cardsPerOpponent > 0;
-  const canStart = hasTeams && validSchedule && !running;
+  const canStart = hasTeams && evenTeamCount && validSchedule && !running;
 
   if (simulationStartButton) {
     simulationStartButton.disabled = !canStart;
@@ -3818,6 +3820,9 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
       level = 'danger';
     } else if (!hasTeams) {
       message = 'リーグに参加させるチームを2チーム以上追加してください。';
+    } else if (!evenTeamCount) {
+      message = 'リーグ参加チーム数は偶数で指定してください。';
+      level = 'danger';
     } else if (!validSchedule) {
       message = 'カード設定は1以上の数値で指定してください。';
       level = 'danger';

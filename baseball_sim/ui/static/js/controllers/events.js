@@ -8,7 +8,7 @@ import {
   setPlayersTeamView,
   setPlayersTypeView,
   addSimulationLeagueTeam,
-  removeSimulationLeagueTeam,
+  removeSimulationLeagueTeamAt,
   clearSimulationLeagueTeams,
   getSimulationLeagueTeams,
   updateSimulationScheduleField,
@@ -3536,12 +3536,13 @@ export function initEventListeners(actions) {
     const teams = getSimulationLeagueTeams();
     const schedule = getSimulationSchedule();
     const hasTeams = teams.length >= 2;
+    const evenTeamCount = teams.length % 2 === 0;
     const validSchedule =
       Number.isFinite(schedule.gamesPerCard) &&
       schedule.gamesPerCard > 0 &&
       Number.isFinite(schedule.cardsPerOpponent) &&
       schedule.cardsPerOpponent > 0;
-    const canStart = hasTeams && validSchedule && !running;
+    const canStart = hasTeams && evenTeamCount && validSchedule && !running;
     if (elements.simulationStartButton) {
       elements.simulationStartButton.disabled = !canStart;
     }
@@ -3603,9 +3604,9 @@ export function initEventListeners(actions) {
       if (!(target instanceof HTMLElement)) return;
       const action = target.dataset.action;
       if (action !== 'remove') return;
-      const teamId = target.dataset.teamId;
-      if (!teamId) return;
-      removeSimulationLeagueTeam(teamId);
+      const indexValue = Number.parseInt(target.dataset.index || '', 10);
+      if (!Number.isFinite(indexValue)) return;
+      removeSimulationLeagueTeamAt(indexValue);
       updateSimulationStartEnabled();
       refreshView();
     });
@@ -3632,6 +3633,15 @@ export function initEventListeners(actions) {
 
       const teams = getSimulationLeagueTeams();
       const schedule = getSimulationSchedule();
+
+      if (teams.length < 2) {
+        showStatus('リーグには2チーム以上の参加が必要です。', 'danger');
+        return;
+      }
+      if (teams.length % 2 !== 0) {
+        showStatus('リーグ参加チーム数は偶数にしてください。', 'danger');
+        return;
+      }
 
       const button = elements.simulationStartButton;
       let originalText = '';
