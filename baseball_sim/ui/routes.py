@@ -200,6 +200,24 @@ def create_routes(session: WebGameSession) -> Blueprint:
             return create_error_response(str(exc), session)
         return jsonify(state)
 
+    @api_bp.post("/simulation/match/start")
+    def start_simulation_match() -> Dict[str, Any]:
+        payload = request.get_json(silent=True) or {}
+        away_key = str(payload.get("away") or "")
+        home_key = str(payload.get("home") or "")
+        control_mode = payload.get("mode")
+        user_team = payload.get("user_team")
+        try:
+            state = session.start_simulation_match(
+                away_key=away_key,
+                home_key=home_key,
+                control_mode=control_mode,
+                user_team=user_team,
+            )
+        except GameSessionError as exc:
+            return create_error_response(str(exc), session)
+        return jsonify(state)
+
     @api_bp.post("/teams/reload")
     def reload_teams() -> Dict[str, Any]:
         state = session.reload_teams()

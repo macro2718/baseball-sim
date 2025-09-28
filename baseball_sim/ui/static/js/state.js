@@ -34,6 +34,12 @@ export const stateCache = {
   },
   simulation: { running: false, defaultGames: 20, lastRun: null, log: [], limits: { min: 1, max: 200 } },
   simulationSetup: { leagueTeams: [], gamesPerCard: 3, cardsPerOpponent: 1, seed: null },
+  simulationMatch: {
+    teams: [],
+    selection: { home: null, away: null },
+    defaults: { home: null, away: null },
+    timestamp: null,
+  },
   teamLibrary: { teams: [], selection: { home: null, away: null }, ready: false, hint: '' },
   titleLineup: {
     plans: { home: null, away: null },

@@ -60,15 +60,9 @@ class TeamManagementMixin:
 
         return self.home_team, self.away_team
 
-    def start_new_game(
-        self,
-        reload_teams: bool = False,
-        *,
-        control_mode: Optional[str] = None,
-        user_team: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Create a new :class:`GameState` and reset bookkeeping."""
-
+    def _prepare_game_setup(
+        self, control_mode: Optional[str], user_team: Optional[str]
+    ) -> None:
         if hasattr(self, "_configure_control_mode"):
             try:
                 self._configure_control_mode(control_mode, user_team)
@@ -76,7 +70,7 @@ class TeamManagementMixin:
                 # Fallback to manual control if configuration fails unexpectedly
                 self._configure_control_mode(None, None)  # type: ignore[call-arg]
 
-        self.ensure_teams(force_reload=reload_teams)
+    def _start_loaded_game(self) -> Dict[str, Any]:
         self._ensure_lineups_are_valid()
 
         if not self.home_team or not self.away_team:
@@ -135,6 +129,19 @@ class TeamManagementMixin:
         banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
         self._log.extend_banner(banner)
         return self.build_state()
+
+    def start_new_game(
+        self,
+        reload_teams: bool = False,
+        *,
+        control_mode: Optional[str] = None,
+        user_team: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Create a new :class:`GameState` and reset bookkeeping."""
+
+        self._prepare_game_setup(control_mode, user_team)
+        self.ensure_teams(force_reload=reload_teams)
+        return self._start_loaded_game()
 
     def stop_game(self) -> Dict[str, Any]:
         """Exit the current game and return to the title screen."""

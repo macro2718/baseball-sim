@@ -18,6 +18,7 @@ export const CONFIG = {
       changePitcher: '/api/strategy/change_pitcher',
       clearLog: '/api/log/clear',
       simulationRun: '/api/simulation/run',
+      simulationMatchStart: '/api/simulation/match/start',
       reloadTeams: '/api/teams/reload',
       teamSelect: '/api/teams/library/select',
       teamSave: '/api/teams/library/save',
