@@ -9,12 +9,15 @@ references) and keeps the HTTP specific concerns inside the Flask handlers.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
-import os
 import uuid
 
-from baseball_sim.config.paths import FileUtils, path_manager
+from baseball_sim.config import FileUtils, get_project_paths
+
+
+PATHS = get_project_paths()
 
 
 @dataclass
@@ -22,7 +25,7 @@ class PlayerDataset:
     """Container for the players JSON document."""
 
     data: Dict[str, List[dict]]
-    path: str
+    path: Path
     mutated: bool = False
 
 
@@ -61,7 +64,7 @@ class PlayerLibraryService:
         - Ensures each player has an optional "folders" list (if present and valid)
         """
 
-        players_path = path_manager.get_players_data_path()
+        players_path = Path(PATHS.get_players_data_path())
         raw = self._file_utils.safe_json_load(
             players_path, default={"batters": [], "pitchers": [], "folders": []}
         )
@@ -356,7 +359,7 @@ class PlayerLibraryService:
             return refs
 
         try:
-            teams_path = path_manager.get_teams_data_path()
+            teams_path = Path(PATHS.get_teams_data_path())
             teams_data = self._file_utils.safe_json_load(teams_path, default=None)
             if isinstance(teams_data, dict):
                 for key in ("home_team", "away_team"):
@@ -370,17 +373,14 @@ class PlayerLibraryService:
             pass
 
         try:
-            teams_dir = path_manager.get_team_library_path()
-            if os.path.isdir(teams_dir):
-                for fname in os.listdir(teams_dir):
-                    if not fname.lower().endswith(".json"):
-                        continue
-                    fpath = os.path.join(teams_dir, fname)
-                    team_obj = self._file_utils.safe_json_load(fpath, default=None)
+            teams_dir = Path(PATHS.get_team_library_path())
+            if teams_dir.is_dir():
+                for file_path in teams_dir.glob("*.json"):
+                    team_obj = self._file_utils.safe_json_load(file_path, default=None)
                     if isinstance(team_obj, dict) and self._team_mentions_player(
                         team_obj, target_name
                     ):
-                        team_name = team_obj.get("name") or os.path.splitext(fname)[0]
+                        team_name = team_obj.get("name") or file_path.stem
                         refs.append(str(team_name))
         except Exception:
             pass
@@ -435,7 +435,7 @@ class PlayerLibraryService:
             return
 
         try:
-            teams_path = path_manager.get_teams_data_path()
+            teams_path = Path(PATHS.get_teams_data_path())
             teams_data = self._file_utils.safe_json_load(teams_path, default=None)
         except Exception:
             teams_data = None
@@ -451,20 +451,17 @@ class PlayerLibraryService:
             if updated:
                 self._file_utils.safe_json_save(teams_data, teams_path)
 
-        teams_dir = path_manager.get_team_library_path()
-        if os.path.isdir(teams_dir):
-            for fname in os.listdir(teams_dir):
-                if not fname.lower().endswith(".json"):
-                    continue
-                fpath = os.path.join(teams_dir, fname)
+        teams_dir = Path(PATHS.get_team_library_path())
+        if teams_dir.is_dir():
+            for file_path in teams_dir.glob("*.json"):
                 try:
-                    team_obj = self._file_utils.safe_json_load(fpath, default=None)
+                    team_obj = self._file_utils.safe_json_load(file_path, default=None)
                 except Exception:
                     continue
                 if isinstance(team_obj, dict) and self._rename_player_in_team(
                     team_obj, old_name, new_name
                 ):
-                    self._file_utils.safe_json_save(team_obj, fpath)
+                    self._file_utils.safe_json_save(team_obj, file_path)
 
     # ------------------------------------------------------------------
     # Business actions

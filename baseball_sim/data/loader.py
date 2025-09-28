@@ -1,28 +1,33 @@
 """Load teams and player data from JSON sources."""
 
 import json
+from pathlib import Path
 from typing import Dict, List, Tuple
 
-from baseball_sim.config import path_manager
+from baseball_sim.config import get_project_paths
 from baseball_sim.data.player import Player
 from baseball_sim.data.player_factory import PlayerFactory
 from baseball_sim.gameplay.team import Team
 from baseball_sim.infrastructure.logging_utils import log_error
 
 
+PATHS = get_project_paths()
+
+
 class DataLoader:
     """JSONファイルからチームと選手データを読み込むクラス"""
-    
+
     @staticmethod
     @log_error
-    def load_json_data(filepath: str) -> Dict:
+    def load_json_data(filepath: Path | str) -> Dict:
         """JSONファイルからデータを読み込む"""
-        if not path_manager.file_exists(filepath):
-            raise FileNotFoundError(f"Data file not found: {filepath}")
-        
+        path = Path(filepath)
+        if not PATHS.file_exists(path):
+            raise FileNotFoundError(f"Data file not found: {path}")
+
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            with path.open('r', encoding='utf-8') as handle:
+                return json.load(handle)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON in data file: {e}")
 
@@ -128,8 +133,8 @@ class DataLoader:
     ) -> Tuple[Team, Team]:
         """JSONデータからホーム/アウェイの2チームを作成する"""
         # パス管理
-        player_data_path = path_manager.get_players_data_path()
-        team_data_path = path_manager.get_teams_data_path()
+        player_data_path = PATHS.get_players_data_path()
+        team_data_path = PATHS.get_teams_data_path()
 
         # JSONからデータを読み込む
         player_data = cls.load_json_data(player_data_path)
@@ -155,6 +160,6 @@ class DataLoader:
     def create_team(cls, team_data: Dict, *, player_data: Dict | None = None) -> Team:
         """単一チームを生成するためのヘルパー"""
         if player_data is None:
-            player_data_path = path_manager.get_players_data_path()
+            player_data_path = PATHS.get_players_data_path()
             player_data = cls.load_json_data(player_data_path)
         return cls._build_team(team_data, player_data=player_data)

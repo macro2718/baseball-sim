@@ -14,7 +14,7 @@ from baseball_sim.config import (
     OUTS_PER_INNING,
     StatColumns,
     config,
-    path_manager,
+    get_project_paths,
 )
 from baseball_sim.gameplay.outcomes.handler import AtBatOutcomeHandler
 from baseball_sim.gameplay.outcomes.probability import OutcomeProbabilityCalculator
@@ -26,6 +26,9 @@ from baseball_sim.gameplay.state import (
     Scoreboard,
 )
 from baseball_sim.prediction.batting import BattingModelLoader
+
+
+PATHS = get_project_paths()
 
 try:
     from baseball_sim.infrastructure.logging_utils import logger
@@ -62,7 +65,7 @@ class GameState:
         self.fielding_team = home_team
         self.game_ended = False
 
-        model_info = BattingModelLoader(config, path_manager, logger).load()
+        model_info = BattingModelLoader(config, PATHS, logger).load()
         self.model = model_info.estimator
         self.model_type = model_info.model_type
         self._probability_calculator = OutcomeProbabilityCalculator(self.model, self.model_type)

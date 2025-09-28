@@ -28,9 +28,9 @@ class BattingModel:
 class BattingModelLoader:
     """Loads the configured batting prediction model with graceful fallbacks."""
 
-    def __init__(self, config, path_manager, logger) -> None:
+    def __init__(self, config, project_paths, logger) -> None:
         self._config = config
-        self._path_manager = path_manager
+        self._paths = project_paths
         self._logger = logger
 
     def load(self) -> BattingModel:
@@ -47,8 +47,8 @@ class BattingModelLoader:
         return BattingModel(estimator=None, model_type="linear")
 
     def _load_linear_model(self) -> BattingModel:
-        model_path = self._path_manager.get_batting_model_path()
-        if not self._path_manager.file_exists(model_path) or joblib is None:
+        model_path = self._paths.get_batting_model_path()
+        if not self._paths.file_exists(model_path) or joblib is None:
             if joblib is None:
                 self._logger.warning(
                     "joblib is not installed; using default linear prediction model"
@@ -71,8 +71,8 @@ class BattingModelLoader:
             )
             return self._load_linear_model()
 
-        model_path = self._path_manager.get_nn_model_path()
-        if not self._path_manager.file_exists(model_path):
+        model_path = self._paths.get_nn_model_path()
+        if not self._paths.file_exists(model_path):
             self._logger.warning(
                 f"NN model not found at {model_path}, falling back to linear model"
             )

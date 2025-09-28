@@ -110,10 +110,10 @@ class GameResults:
 
 # ファイルパス定数
 class FilePaths:
-    DATA_DIR = "player/data"
+    DATA_DIR = "player_data/data"
     PLAYERS_JSON = "players.json"
     TEAMS_JSON = "teams.json"
-    MODELS_DIR = "prediction/models"
+    MODELS_DIR = "prediction_models/models"
     BATTING_MODEL = "batting_model.joblib"
     NN_MODEL = "trained_model_NN.pth"
     DEFAULT_SIMULATION_OUTPUT = "simulation_results.txt"
