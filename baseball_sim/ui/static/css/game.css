@@ -1528,6 +1528,21 @@
   border-bottom: none;
 }
 
+.simulation-table tbody tr:nth-child(odd) td,
+.simulation-table tbody tr:nth-child(odd) th {
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.simulation-table tbody tr:nth-child(even) td,
+.simulation-table tbody tr:nth-child(even) th {
+  background: rgba(15, 23, 42, 0.22);
+}
+
+.simulation-table tbody tr:hover td,
+.simulation-table tbody tr:hover th {
+  background: rgba(59, 130, 246, 0.18);
+}
+
 .simulation-table td.simulation-winrate {
   font-family: var(--font-mono);
 }

@@ -142,13 +142,13 @@
                     <div class="action-icon" aria-hidden="true">⚾</div>
                     <h3 class="action-title">試合</h3>
                     <p class="action-caption">ホーム/アウェイを選んで一戦勝負。</p>
-                    <button id="open-match" class="primary">はじめる</button>
+                    <button type="button" id="open-match" class="primary">はじめる</button>
                   </article>
                   <article class="action-card">
                     <div class="action-icon" aria-hidden="true">📈</div>
                     <h3 class="action-title">シミュレーション</h3>
                     <p class="action-caption">複数試合を自動で回して傾向を分析。</p>
-                    <button id="open-simulation">設定へ</button>
+                    <button type="button" id="open-simulation">設定へ</button>
                   </article>
                 </div>
               </section>
@@ -164,8 +164,8 @@
                     <h3 class="action-title">チーム管理</h3>
                     <p class="action-caption">作成/編集や削除など、チームを管理。</p>
                     <div class="action-buttons">
-                      <button id="open-team-builder">作成/編集</button>
-                      <button id="open-team-delete" class="danger">削除</button>
+                      <button type="button" id="open-team-builder">作成/編集</button>
+                      <button type="button" id="open-team-delete" class="danger">削除</button>
                     </div>
                   </article>
                   <article class="action-card">
@@ -173,8 +173,8 @@
                     <h3 class="action-title">選手管理</h3>
                     <p class="action-caption">作成/編集や削除など、選手を管理。</p>
                     <div class="action-buttons">
-                      <button id="open-player-builder">作成/編集</button>
-                      <button id="open-player-delete" class="danger">削除</button>
+                      <button type="button" id="open-player-builder">作成/編集</button>
+                      <button type="button" id="open-player-delete" class="danger">削除</button>
                     </div>
                   </article>
                 </div>
@@ -307,6 +307,17 @@
 
             <!-- 要約ビュー -->
             <div id="simulation-summary-section" class="simulation-results-grid simulation-view-section">
+              <article class="simulation-results-block simulation-highlights-block">
+                <h3>ハイライト</h3>
+                <div
+                  id="simulation-results-highlights"
+                  class="simulation-highlights"
+                  aria-live="polite"
+                >
+                  <p class="simulation-empty-message">シミュレーションを実行するとハイライトが表示されます。</p>
+                </div>
+              </article>
+
               <article class="simulation-results-block">
                 <h3>チーム成績</h3>
                 <table class="simulation-table" id="simulation-result-table">
@@ -336,6 +347,17 @@
 
             <!-- 試合一覧ビュー -->
             <div id="simulation-games-section" class="simulation-results-grid simulation-view-section hidden" aria-hidden="true">
+              <article class="simulation-results-block">
+                <h3>シリーズ概要</h3>
+                <div
+                  id="simulation-game-stats"
+                  class="simulation-stats-cards"
+                  aria-live="polite"
+                >
+                  <p class="simulation-empty-message">集計可能な試合がまだありません。</p>
+                </div>
+              </article>
+
               <article class="simulation-results-block">
                 <h3>対戦成績</h3>
                 <table class="simulation-table" id="simulation-matchups-table">

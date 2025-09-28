@@ -187,6 +187,7 @@ export const elements = {
   simulationSetupFeedback: document.getElementById('simulation-setup-feedback'),
   simulationResultsSummary: document.getElementById('simulation-results-summary'),
   simulationResultsMeta: document.getElementById('simulation-results-meta'),
+  simulationResultsHighlights: document.getElementById('simulation-results-highlights'),
   simulationTabSummary: document.getElementById('simulation-tab-summary'),
   simulationTabGames: document.getElementById('simulation-tab-games'),
   simulationTabPlayers: document.getElementById('simulation-tab-players'),
