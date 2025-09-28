@@ -1,10 +1,18 @@
 import os
 import torch
-from pred_NN import Net, predict
+try:
+    from prediction_models.prediction import Net
+    from prediction_models.pred_NN import predict
+except ModuleNotFoundError:
+    import sys as _sys
+    _sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from prediction_models.prediction import Net
+    from prediction_models.pred_NN import predict
 
 # テスト用のサンプルデータ
 features = ['K%', 'BB%', 'Hard%', 'GB%']
 status = [0.228, 0.085, 0.386, 0.446]
+#status = [0.226, 0.090, 0.302, 0.486]
 sample = dict(zip(features, status))
 
 # モデルファイルのパスを指定
