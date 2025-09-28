@@ -20,11 +20,11 @@ from .constants import (  # noqa: F401
     BuntConstants,
 )
 from .environment import (  # noqa: F401
+    FileUtils,
     ProjectPaths,
     get_project_paths,
     setup_project_environment,
 )
-from .paths import FileUtils, PathManager, path_manager  # noqa: F401
 from .settings import ConfigManager, config  # noqa: F401
 from .league import LeagueAverages  # noqa: F401
 
@@ -39,7 +39,6 @@ __all__ = [
     "MAX_EXTRA_INNINGS",
     "OUTS_PER_INNING",
     "PLAYERS_PER_TEAM",
-    "PathManager",
     "Positions",
     "ProjectPaths",
     "LeagueAverages",
@@ -47,6 +46,5 @@ __all__ = [
     "UIConstants",
     "config",
     "get_project_paths",
-    "path_manager",
     "setup_project_environment",
 ]

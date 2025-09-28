@@ -8,8 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from baseball_sim.config import path_manager
-from baseball_sim.config.paths import FileUtils
+from baseball_sim.config import FileUtils, get_project_paths
 
 
 class TeamLibraryError(RuntimeError):
@@ -57,9 +56,9 @@ class TeamLibrary:
     """Manage single-team JSON files used by the browser UI."""
 
     def __init__(self) -> None:
-        self._directory = Path(path_manager.get_team_library_path())
-        path_manager.ensure_directory_exists(str(self._directory))
-        self._selection_path = Path(path_manager.get_team_selection_path())
+        self._directory = Path(PATHS.get_team_library_path())
+        PATHS.ensure_directory_exists(self._directory)
+        self._selection_path = Path(PATHS.get_team_selection_path())
 
     # ------------------------------------------------------------------
     # Public helpers
@@ -67,11 +66,11 @@ class TeamLibrary:
     def ensure_initialized(self) -> None:
         """Create default team files and selection when missing."""
 
-        path_manager.ensure_directory_exists(str(self._directory))
+        PATHS.ensure_directory_exists(self._directory)
 
         has_teams = any(self._directory.glob("*.json"))
         if not has_teams:
-            combined_path = path_manager.get_teams_data_path()
+            combined_path = PATHS.get_teams_data_path()
             combined = FileUtils.safe_json_load(combined_path, default=None)
             if not isinstance(combined, dict):
                 return
@@ -92,7 +91,7 @@ class TeamLibrary:
                     "home": defaults[0][1],
                     "away": defaults[1][1] if len(defaults) > 1 else defaults[0][1],
                 }
-                FileUtils.safe_json_save(selection, str(self._selection_path))
+                FileUtils.safe_json_save(selection, self._selection_path)
         else:
             if not self._selection_path.exists():
                 self.ensure_selection_valid()
@@ -104,7 +103,7 @@ class TeamLibrary:
 
         records: List[TeamRecord] = []
         for file_path in sorted(self._directory.glob("*.json")):
-            data = FileUtils.safe_json_load(str(file_path), default=None)
+            data = FileUtils.safe_json_load(file_path, default=None)
             name = ""
             if isinstance(data, dict):
                 name_value = data.get("name")
@@ -161,7 +160,7 @@ class TeamLibrary:
     def get_selection(self) -> Dict[str, Optional[str]]:
         """Return the currently selected team identifiers."""
 
-        data = FileUtils.safe_json_load(str(self._selection_path), default={})
+        data = FileUtils.safe_json_load(self._selection_path, default={})
         home = data.get("home")
         away = data.get("away")
         result = {
@@ -180,7 +179,7 @@ class TeamLibrary:
             raise TeamLibraryError(f"アウェイチーム '{away_id}' が見つかりません。")
 
         selection = {"home": home_id, "away": away_id}
-        if not FileUtils.safe_json_save(selection, str(self._selection_path)):
+        if not FileUtils.safe_json_save(selection, self._selection_path):
             raise TeamLibraryError("チーム選択の保存に失敗しました。")
         return selection
 
@@ -191,7 +190,7 @@ class TeamLibrary:
         if not file_path.is_file():
             raise TeamLibraryError(f"チーム '{team_id}' のファイルが見つかりません。")
 
-        data = FileUtils.safe_json_load(str(file_path), default=None)
+        data = FileUtils.safe_json_load(file_path, default=None)
         if not isinstance(data, dict):
             raise TeamLibraryError(f"チーム '{team_id}' のデータを読み込めませんでした。")
         return data
@@ -257,14 +256,14 @@ class TeamLibrary:
         target_path = self._directory / f"{team_id}.json"
         if not overwrite and target_path.exists():
             return
-        if not FileUtils.safe_json_save(payload, str(target_path)):
+        if not FileUtils.safe_json_save(payload, target_path):
             raise TeamLibraryError(f"チーム '{team_id}' の保存に失敗しました。")
 
     def ensure_selection_valid(self) -> Dict[str, str]:
         teams = self.list_teams()
         if not teams:
             selection = {"home": None, "away": None}
-            FileUtils.safe_json_save(selection, str(self._selection_path))
+            FileUtils.safe_json_save(selection, self._selection_path)
             return selection
 
         ids = [record.team_id for record in teams]
@@ -278,7 +277,7 @@ class TeamLibrary:
             away = ids[1] if len(ids) > 1 else ids[0]
 
         selection = {"home": home, "away": away}
-        FileUtils.safe_json_save(selection, str(self._selection_path))
+        FileUtils.safe_json_save(selection, self._selection_path)
         return selection
 
     def _normalise_team_payload(self, raw: Dict[str, object]) -> Dict[str, object]:
@@ -354,3 +353,6 @@ class TeamLibrary:
 
 
 __all__ = ["TeamLibrary", "TeamLibraryError"]
+
+PATHS = get_project_paths()
+

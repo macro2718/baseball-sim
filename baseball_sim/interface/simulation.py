@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
-from baseball_sim.config import get_project_paths, path_manager, setup_project_environment
+from baseball_sim.config import get_project_paths, setup_project_environment
 from baseball_sim.gameplay.game import GameState
 from baseball_sim.gameplay.statistics import StatsCalculator
 from baseball_sim.gameplay.substitutions import SubstitutionManager
@@ -36,6 +36,7 @@ class TeamContext:
         return pitcher
 
 setup_project_environment()
+PATHS = get_project_paths()
 
 
 def get_pitcher_rotation(pitchers, preferred_rotation=None):
@@ -99,7 +100,7 @@ def _build_team_contexts(team_datas: Sequence[Mapping[str, object]]) -> List[Tea
 
     from baseball_sim.data.loader import DataLoader
 
-    player_data_path = path_manager.get_players_data_path()
+    player_data_path = PATHS.get_players_data_path()
     player_data = DataLoader.load_json_data(player_data_path)
 
     contexts: List[TeamContext] = []
@@ -377,7 +378,7 @@ def simulate_games(
         # 従来仕様: 指定の2チームでシリーズを構成
         from baseball_sim.data.loader import DataLoader
 
-        team_data_path = path_manager.get_teams_data_path()
+        team_data_path = PATHS.get_teams_data_path()
         raw_team_data = DataLoader.load_json_data(team_data_path)
         if not isinstance(raw_team_data, Mapping):
             raise ValueError("Team data file is invalid or missing required structure.")
