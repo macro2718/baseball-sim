@@ -9,7 +9,7 @@ from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-def fetch_data_from_pybaseball(start_year=2014, end_year=2024, min_pa=100):
+def fetch_data_from_pybaseball(start_year=2015, end_year=2024, min_pa=100):
     """pybaseballを用いて2014～2024年のデータを取得し、特徴量と、全打数における各アウト・安打割合のターゲットベクトルを抽出・整形します"""
     from pybaseball import batting_stats
     frames = []
@@ -60,32 +60,19 @@ class Net(nn.Module):
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
-        x = self.fc3(x)  # logits（学習はCE、推論でsoftmax）
+        x = self.fc3(x)  # 回帰（MSE）用にそのまま出力
         return x
 
 def train_model(data):
-    # 特徴量は ["K%", "BB%", "Hard%", "GB%"], 出力はAB内の5カテゴリ分布 [1B, 2B, 3B, HR, OUT_woSO]
+    # 特徴量は ["K%", "BB%", "Hard%", "GB%"], 目的変数は [1B_rate, 2B_rate, 3B_rate, HR_rate]
     features = ["K%", "BB%", "Hard%", "GB%"]
+    target = ["1B_rate", "2B_rate", "3B_rate", "HR_rate"]
 
-    # fetch_data_from_pybaseball が返すレート列からAB内分布を構築（原データにSO/BBカウントが無い環境でも動くように）
     df = data.copy()
-    # other_prob = AB / PA = 1 - SO_rate - BB_rate
-    df["other_prob"] = 1.0 - df["SO_rate"] - df["BB_rate"]
-    # 数値安定化（other_probが極小/負のレコードは除外）
-    df = df[df["other_prob"] > 1e-6].reset_index(drop=True)
-
     X = df[features].values.astype(np.float32)
-    # AB内の分布（soft labels）: 各PA比率をother_probで割る
-    y = np.stack([
-        (df["1B_rate"].values / df["other_prob"].values),
-        (df["2B_rate"].values / df["other_prob"].values),
-        (df["3B_rate"].values / df["other_prob"].values),
-        (df["HR_rate"].values / df["other_prob"].values),
-        (df["OTH_rate"].values / df["other_prob"].values),
-    ], axis=1).astype(np.float32)
-    # 数値誤差対策としてクリップし、正規化
+    y = df[target].values.astype(np.float32)
+    # 数値誤差対策としてクリップのみ（正規化は行わない）
     y = np.clip(y, 0.0, None)
-    y = y / (y.sum(axis=1, keepdims=True) + 1e-8)
     
     # データを学習・検証用に分割
     X_train, X_test, y_train, y_test = train_test_split(
@@ -102,10 +89,11 @@ def train_model(data):
     output_dim = y_train.shape[1]
     model = Net(input_dim, output_dim)
     
+    criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
-    epochs = 1000
-    batch_size = 32
+    epochs = 2000
+    batch_size = 64
     # --- 重み付きサンプリング（正規分布を仮定）---
     # 学習特徴量 X_train について多変量正規分布 N(μ, Σ) を仮定し、
     # サンプル重みを w_i ∝ 1 / pdf(x_i) で定義（平均1に正規化、上位分位でクリップ）。
@@ -124,27 +112,12 @@ def train_model(data):
     # 1/pdf に比例する重み（相対値で十分なので平均0化してexp）
     weights = np.exp(-(log_pdf - log_pdf.mean())).astype(np.float32)
     # 外れ値による極端な重みを抑える（上位5%でクリップ）
-    cap = np.quantile(weights, 0.95)
+    cap = np.quantile(weights, 0.999)
     weights = np.minimum(weights, cap)
     # 平均を1に正規化
     weights = weights / (weights.mean() + 1e-8)
 
-    # ターゲット尾部（HR率が高い）サンプルの損失重み（AB内HR比の上位分位を強調）
-    hr_rate_train = y_train[:, 3].astype(np.float32)
-    if len(hr_rate_train) > 10:
-        q80, q90 = np.quantile(hr_rate_train, [0.8, 0.9])
-    else:
-        q80, q90 = 0.0, 0.0
-    target_tail_weight = np.ones_like(hr_rate_train, dtype=np.float32)
-    if q90 > 0:
-        target_tail_weight[hr_rate_train >= q90] = 3.0
-    if q80 > 0:
-        mask = (hr_rate_train >= q80) & (hr_rate_train < q90)
-        target_tail_weight[mask] = 2.0
-
-    dataset = torch.utils.data.TensorDataset(
-        X_train_tensor, y_train_tensor, torch.from_numpy(target_tail_weight)
-    )
+    dataset = torch.utils.data.TensorDataset(X_train_tensor, y_train_tensor)
     sampler = WeightedRandomSampler(weights=torch.from_numpy(weights), num_samples=len(weights), replacement=True)
     loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=sampler)
     
@@ -152,12 +125,10 @@ def train_model(data):
     for epoch in tqdm(range(epochs)):
         model.train()
         epoch_losses = []
-        for batch_X, batch_y, batch_w in loader:
+        for batch_X, batch_y in loader:
             optimizer.zero_grad()
-            logits = model(batch_X)
-            log_probs = torch.log_softmax(logits, dim=1)
-            ce = -(batch_y * log_probs).sum(dim=1)
-            loss = (ce * batch_w.float()).mean()
+            outputs = model(batch_X)
+            loss = criterion(outputs, batch_y)
             loss.backward()
             optimizer.step()
             epoch_losses.append(loss.item())
@@ -174,10 +145,9 @@ def train_model(data):
     
     model.eval()
     with torch.no_grad():
-        logits = model(X_test_tensor)
-        log_probs = torch.log_softmax(logits, dim=1)
-        nll = - (y_test_tensor * log_probs).sum(dim=1).mean().item()
-    print(f"テスト平均NLL: {nll:.6f}")
+        y_pred = model(X_test_tensor).numpy()
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"テストMSE: {mse:.6f}")
     # モデルを保存する
     import os
     models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
@@ -193,19 +163,15 @@ def predict(model, sample):
     tensor_input = torch.from_numpy(X_new)
     model.eval()
     with torch.no_grad():
-        logits = model(tensor_input)
-        probs = torch.softmax(logits, dim=1).numpy()
-    return probs[0]  # 出力は5要素（AB内の分布）
+        prediction = model(tensor_input).numpy()
+    return prediction[0]  # 出力は4要素のベクトル
 
 if __name__ == "__main__":
     print("データ取得中...")
     data = fetch_data_from_pybaseball()
-    # 取得した選手数（重複名を除く）を出力
-    try:
-        n_players = data['Name'].nunique()
-    except Exception:
-        n_players = len(data)
-    print(f"データ取得完了: 選手数 {n_players}人")
+    # 同じ選手の複数年は別データとして扱う（= 選手-年レコードをそのまま件数化）
+    record_count = len(data)
+    print(f"データ取得完了: 選手-年レコード {record_count}件")
     model = train_model(data)
     
     # 実際の1人の選手について、特徴量およびターゲット割合ベクトルを取得

@@ -12,17 +12,31 @@ _INFIELD_FLY_RATIO = 0.13
 
 @dataclass
 class OutcomeProbabilityCalculator:
-    """Builds probability distributions for at-bat outcomes."""
+    """Builds probability distributions for at-bat outcomes.
+
+    responsibility: Weight of batter vs pitcher contribution in component
+    probabilities. In [0,1]. 0.5 means equal (current behavior), values >0.5
+    weight batter more, values <0.5 weight pitcher more.
+    """
 
     model: Optional[object]
     model_type: str
+    responsibility: float = 0.5
 
     def calculate(self, batter, pitcher) -> Dict[str, float]:
         """Return a probability distribution over possible at-bat results."""
-        k_prob = self._calculate_component(batter.k_pct, pitcher.k_pct, league_average=22.8)
-        bb_prob = self._calculate_component(batter.bb_pct, pitcher.bb_pct, league_average=8.5)
-        hard_prob = self._calculate_component(batter.hard_pct, pitcher.hard_pct, league_average=38.6)
-        gb_prob = self._calculate_component(batter.gb_pct, pitcher.gb_pct, league_average=44.6)
+        k_prob = self._calculate_component(
+            batter.k_pct, pitcher.k_pct, league_average=22.8, responsibility=0.65
+        )
+        bb_prob = self._calculate_component(
+            batter.bb_pct, pitcher.bb_pct, league_average=8.5, responsibility=0.65
+        )
+        hard_prob = self._calculate_component(
+            batter.hard_pct, pitcher.hard_pct, league_average=38.6, responsibility=0.8
+        )
+        gb_prob = self._calculate_component(
+            batter.gb_pct, pitcher.gb_pct, league_average=44.6, responsibility=0.5
+        )
 
         other_prob = max(0.0, 1 - k_prob - bb_prob)
         model_prediction = self._get_model_prediction({
@@ -72,17 +86,60 @@ class OutcomeProbabilityCalculator:
             "outfield_flyout": outfield_flyout_prob,
         }
 
-    def _calculate_component(self, batter_value: float, pitcher_value: float, league_average: float) -> float:
-        league_rate = league_average / 100
-        batter_rate = batter_value / 100
-        pitcher_rate = pitcher_value / 100
-        if batter_rate * pitcher_rate == 0:
+    def _calculate_component(
+        self,
+        batter_value: float,
+        pitcher_value: float,
+        league_average: float,
+        responsibility: float = 0.5,
+    ) -> float:
+        """Combine batter/pitcher component into a single probability.
+
+        This uses a weighted odds-combination. Let prior odds be
+        (1-L)/L where L is league rate. Let LR_b = b/(1-b), LR_p = p/(1-p).
+        Then posterior odds = prior_odds * LR_b^(2r) * LR_p^(2(1-r)), where
+        r in [0,1] is the responsibility weight (r=0.5 -> original behavior).
+        """
+        # Clamp responsibility to [0,1] for safety
+        r = max(0.0, min(1.0, responsibility))
+        # Convert percentages to rates
+        league_rate = league_average / 100.0
+        batter_rate = batter_value / 100.0
+        pitcher_rate = pitcher_value / 100.0
+
+        # Guard against degenerate league rates
+        eps = 1e-12
+        league_rate = min(max(league_rate, eps), 1.0 - eps)
+        batter_rate = min(max(batter_rate, 0.0), 1.0)
+        pitcher_rate = min(max(pitcher_rate, 0.0), 1.0)
+
+        # If any side is exactly 0 and the other weighting would nullify it at r=0.5,
+        # return 0 to mirror the original behavior.
+        if r == 0.5 and (batter_rate == 0.0 or pitcher_rate == 0.0):
             return 0.0
-        numerator = batter_rate * pitcher_rate * (1 - league_rate)
-        denominator = numerator + (1 - batter_rate) * (1 - pitcher_rate) * league_rate
-        if denominator == 0:
+
+        # Avoid division by zero in likelihood ratios by clamping away from 0/1
+        b = min(max(batter_rate, eps), 1.0 - eps)
+        p = min(max(pitcher_rate, eps), 1.0 - eps)
+
+        # Likelihood ratios
+        lr_b = b / (1.0 - b)
+        lr_p = p / (1.0 - p)
+        prior_odds = (1.0 - league_rate) / league_rate
+
+        # Weighted combination; exponents sum to 2 so r=0.5 recovers original (power 1 each)
+        eb = 2.0 * r
+        ep = 2.0 * (1.0 - r)
+        posterior_odds = prior_odds * (lr_b ** eb) * (lr_p ** ep)
+
+        # Convert odds back to probability
+        prob = posterior_odds / (1.0 + posterior_odds)
+        # Numerical safety
+        if prob < 0.0:
             return 0.0
-        return numerator / denominator
+        if prob > 1.0:
+            return 1.0
+        return prob
 
     def _get_model_prediction(self, data) -> list:
         if self.model is None:
