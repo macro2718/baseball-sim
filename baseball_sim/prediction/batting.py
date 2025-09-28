@@ -78,8 +78,17 @@ class BattingModelLoader:
             )
             return self._load_linear_model()
 
-        model = Net(input_dim=4, output_dim=5)
+        # モデルの最終層形状から出力次元(4 or 5)を自動判別
         state_dict = torch.load(model_path, map_location="cpu")
+        out_dim = 5
+        try:
+            weight = state_dict.get("fc3.weight")
+            if weight is not None and hasattr(weight, "shape") and len(weight.shape) >= 1:
+                out_dim = int(weight.shape[0])
+        except Exception:
+            out_dim = 5
+
+        model = Net(input_dim=4, output_dim=out_dim)
         model.load_state_dict(state_dict)
         model.eval()
         self._logger.info("NN batting model loaded successfully")

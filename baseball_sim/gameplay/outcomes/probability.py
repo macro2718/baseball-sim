@@ -32,18 +32,28 @@ class OutcomeProbabilityCalculator:
             "GB%": gb_prob,
         })
 
-        single_prob, double_prob, triple_prob, hr_prob, out_woSO_prob = model_prediction
-        total = single_prob + double_prob + triple_prob + hr_prob + out_woSO_prob
-        if total > 0:
-            scale = other_prob / total
-            single_prob *= scale
-            double_prob *= scale
-            triple_prob *= scale
-            hr_prob *= scale
-            out_woSO_prob *= scale
+        # NNの出力が4要素（1B,2B,3B,HR）または5要素（+OTH）どちらにも対応。
+        # single_prob などは最小値を0にし、total_hits が other_prob を超える場合のみスケーリング。
+        single_prob = double_prob = triple_prob = hr_prob = out_woSO_prob = 0.0
+        cleaned = list(model_prediction) if isinstance(model_prediction, (list, tuple)) else []
+        if len(cleaned) >= 4:
+            single_prob = max(0.0, float(cleaned[0]))
+            double_prob = max(0.0, float(cleaned[1]))
+            triple_prob = max(0.0, float(cleaned[2]))
+            hr_prob = max(0.0, float(cleaned[3]))
+
+            total_hits = single_prob + double_prob + triple_prob + hr_prob
+            if total_hits > other_prob and total_hits > 0:
+                scale = other_prob / total_hits
+                single_prob = max(0.0, single_prob * scale)
+                double_prob = max(0.0, double_prob * scale)
+                triple_prob = max(0.0, triple_prob * scale)
+                hr_prob = max(0.0, hr_prob * scale)
+
+            out_woSO_prob = max(0.0, other_prob - (single_prob + double_prob + triple_prob + hr_prob))
         else:
-            single_prob = double_prob = triple_prob = hr_prob = 0.0
-            out_woSO_prob = other_prob
+            # 予期しない形状はデフォルトにフォールバック
+            single_prob, double_prob, triple_prob, hr_prob, out_woSO_prob = _DEFAULT_MODEL_OUTPUT
 
         groundout_prob = out_woSO_prob * gb_prob
         flyout_prob = max(0.0, out_woSO_prob - groundout_prob)
@@ -82,6 +92,4 @@ class OutcomeProbabilityCalculator:
         cleaned = []
         for value in prediction:
             cleaned.append(max(0.0, value))
-        if len(cleaned) < 5:
-            cleaned.extend([0.0] * (5 - len(cleaned)))
-        return cleaned[:5]
+        return cleaned

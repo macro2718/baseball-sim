@@ -63,9 +63,10 @@ class Net(nn.Module):
         return x
 
 def train_model(data):
-    # 特徴量は ["K%", "BB%", "Hard%", "GB%"]、回帰対象は5要素の割合ベクトル ("1B_rate", "2B_rate", "3B_rate", "HR_rate", "OTH_rate")
+    # 特徴量は ["K%", "BB%", "Hard%", "GB%"]、回帰対象は4要素の割合ベクトル ("1B_rate", "2B_rate", "3B_rate", "HR_rate")
+    # 旧仕様の "OTH_rate" は回帰対象から除外する
     features = ["K%", "BB%", "Hard%", "GB%"]
-    target = ["1B_rate", "2B_rate", "3B_rate", "HR_rate", "OTH_rate"]
+    target = ["1B_rate", "2B_rate", "3B_rate", "HR_rate"]
     
     X = data[features].values.astype(np.float32)
     y = data[target].values.astype(np.float32)
@@ -134,7 +135,7 @@ def predict(model, sample):
     model.eval()
     with torch.no_grad():
         prediction = model(tensor_input).numpy()
-    return prediction[0]  # 出力は5要素のベクトルとなる
+    return prediction[0]  # 出力は4要素のベクトルとなる
 
 if __name__ == "__main__":
     print("データ取得中...")
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     
     # 実際の1人の選手について、特徴量およびターゲット割合ベクトルを取得
     features = ["K%", "BB%", "Hard%", "GB%"]
-    target = ["1B_rate", "2B_rate", "3B_rate", "HR_rate", "OTH_rate"]
+    target = ["1B_rate", "2B_rate", "3B_rate", "HR_rate"]
     player_sample = data.iloc[1]
     sample_features = player_sample[features].to_dict()
     predicted = predict(model, sample_features)
