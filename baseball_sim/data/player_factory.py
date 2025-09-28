@@ -4,27 +4,31 @@ import random
 from typing import Dict, List
 
 from baseball_sim.data.player import Pitcher, Player
+from baseball_sim.config.league import LeagueAverages
 
 
 class PlayerFactory:
     """プレイヤー作成の統一クラス"""
     
     # デフォルトパラメータ（generate_team_data.pyから移動）
+    # Baseline parameters reference league averages for percentages.
+    # Non-percentage defaults remain here.
+    league_avgs = LeagueAverages.load()
     PITCHER_PARAMS = {
-        "k_pct": 22.8,             # K%（三振率）
-        "bb_pct": 8.5,             # BB%（四球率）
-        "hard_pct": 38.6,          # Hard%（強い打球を打たれる割合）
-        "gb_pct": 44.6,            # GB%（ゴロ打率）
-        "stamina": 80              # スタミナ
+        "k_pct": league_avgs.k_pct,
+        "bb_pct": league_avgs.bb_pct,
+        "hard_pct": league_avgs.hard_pct,
+        "gb_pct": league_avgs.gb_pct,
+        "stamina": 80,
     }
-    
+
     BATTER_PARAMS = {
-        "k_pct": 22.8,             # K%（三振率）
-        "bb_pct": 8.5,             # BB%（四球率）
-        "hard_pct": 38.6,          # Hard%（強い打球の割合）
-        "gb_pct": 44.6,            # GB%（ゴロ打率）
-        "speed": 100.0,            # 走力（評価値、100が平均）
-        "fielding_skill": 100      # 守備力
+        "k_pct": league_avgs.k_pct,
+        "bb_pct": league_avgs.bb_pct,
+        "hard_pct": league_avgs.hard_pct,
+        "gb_pct": league_avgs.gb_pct,
+        "speed": 100.0,
+        "fielding_skill": 100,
     }
     
     @staticmethod

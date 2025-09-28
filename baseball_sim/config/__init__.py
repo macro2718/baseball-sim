@@ -26,6 +26,7 @@ from .environment import (  # noqa: F401
 )
 from .paths import FileUtils, PathManager, path_manager  # noqa: F401
 from .settings import ConfigManager, config  # noqa: F401
+from .league import LeagueAverages  # noqa: F401
 
 __all__ = [
     "BASES_COUNT",
@@ -41,6 +42,7 @@ __all__ = [
     "PathManager",
     "Positions",
     "ProjectPaths",
+    "LeagueAverages",
     "StatColumns",
     "UIConstants",
     "config",
@@ -48,4 +50,3 @@ __all__ = [
     "path_manager",
     "setup_project_environment",
 ]
-

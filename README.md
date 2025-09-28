@@ -33,6 +33,22 @@ requirements.txt は最小構成（Flask のみ）です。予測モデルや学
   - `simulation.prediction_model_type`: `"linear"` または `"nn"`
   - `simulation.use_ml_prediction`: 予測モデル利用のON/OFF（未インストール時は自動フォールバック）
 
+### リーグ平均の管理（K%, BB%, Hard%, GB%）
+- 参照元は `baseball_sim/config/league.py` の `LeagueAverages`。
+- デフォルト値は `settings.py` の `league.averages` に定義（K%: 22.8, BB%: 8.5, Hard%: 38.6, GB%: 44.6）。
+- ユーザー設定で上書きする場合は `baseball_sim/config/config.json` に次を追加:
+  ```json
+  {
+    "league": {
+      "averages": { "k_pct": 22.8, "bb_pct": 8.5, "hard_pct": 38.6, "gb_pct": 44.6 }
+    }
+  }
+  ```
+- 利用箇所:
+  - 打席結果の確率分布計算: `baseball_sim/gameplay/outcomes/probability.py`
+  - 新規選手作成のデフォルト能力値: `baseball_sim/data/player_factory.py`
+  - 一部ユーティリティ（バント計算など）: `baseball_sim/gameplay/utils.py`
+
 ## データ配置
 - 選手・チーム定義: `player_data/data/players.json`, `player_data/data/teams.json`
 - チームライブラリ（UIからの読み書き対象）: `player_data/teams/*.json`

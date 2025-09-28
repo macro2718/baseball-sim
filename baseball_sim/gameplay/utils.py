@@ -10,6 +10,7 @@ from baseball_sim.config import (
     StatColumns,
 )
 from baseball_sim.infrastructure.logging_utils import logger
+from baseball_sim.config.league import LeagueAverages
 
 
 AVERAGE_SPEED = BuntConstants.STANDARD_RUNNER_SPEED
@@ -55,12 +56,13 @@ class BuntCalculator:
         base_success_rate = 0.70
         
         # バッターによる影響
-        # 三振率が低いほど、バットコントロールが良い
-        batter_skill_factor = 1.0 + (25.0 - batter.k_pct) / 100.0  # 標準的な三振率25%を基準
+        # 三振率が低いほど、バットコントロールが良い（リーグ平均基準）
+        league = LeagueAverages.load()
+        batter_skill_factor = 1.0 + (league.k_pct - batter.k_pct) / 100.0
         
         # ピッチャーによる影響  
         # 投手の制球力（四球率が低いほど制球が良い）
-        pitcher_control_factor = 1.0 + (8.5 - pitcher.bb_pct) / 50.0  # 標準的な四球率8.5%を基準
+        pitcher_control_factor = 1.0 + (league.bb_pct - pitcher.bb_pct) / 50.0
         
         # 投手のスタミナ影響（疲れているほどバントしやすい）
         stamina_factor = 1

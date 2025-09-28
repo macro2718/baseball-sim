@@ -1,7 +1,9 @@
 import { createGameActions } from './controllers/actions.js';
 import { initEventListeners } from './controllers/events.js';
-import { render } from './ui/renderers.js';
+import { render, setLeagueAveragesForColoring } from './ui/renderers.js';
 import { initButtonClickSound } from './ui/sound.js';
+import { CONFIG } from './config.js';
+import { apiRequest } from './services/apiClient.js';
 
 async function bootstrap() {
   // Initialize UI click sound effects
@@ -11,6 +13,14 @@ async function bootstrap() {
 
   console.log('%c🏟️ Baseball Simulation - Developer Mode', 'color: #f97316; font-size: 16px; font-weight: bold;');
   console.log('%cTabキーを押すと開発者用ログパネルを表示/表示できます', 'color: #60a5fa; font-size: 14px;');
+
+  try {
+    const payload = await apiRequest(CONFIG.api.endpoints.leagueAverages);
+    const avgs = (payload && payload.averages) || payload || null;
+    if (avgs) setLeagueAveragesForColoring(avgs);
+  } catch (e) {
+    // Non-fatal: keep defaults if fetch fails
+  }
 
   await actions.loadInitialState();
 }

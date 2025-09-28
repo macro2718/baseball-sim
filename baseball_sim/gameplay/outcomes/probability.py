@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional
 
 from prediction_models.prediction import predict_auto
+from baseball_sim.config.league import LeagueAverages
 
 _DEFAULT_MODEL_OUTPUT = [0.15, 0.05, 0.01, 0.03, 0.76]
 _INFIELD_FLY_RATIO = 0.13
@@ -25,17 +26,18 @@ class OutcomeProbabilityCalculator:
 
     def calculate(self, batter, pitcher) -> Dict[str, float]:
         """Return a probability distribution over possible at-bat results."""
+        league = LeagueAverages.load()
         k_prob = self._calculate_component(
-            batter.k_pct, pitcher.k_pct, league_average=22.8, responsibility=0.65
+            batter.k_pct, pitcher.k_pct, league_average=league.k_pct, responsibility=0.65
         )
         bb_prob = self._calculate_component(
-            batter.bb_pct, pitcher.bb_pct, league_average=8.5, responsibility=0.65
+            batter.bb_pct, pitcher.bb_pct, league_average=league.bb_pct, responsibility=0.65
         )
         hard_prob = self._calculate_component(
-            batter.hard_pct, pitcher.hard_pct, league_average=38.6, responsibility=0.8
+            batter.hard_pct, pitcher.hard_pct, league_average=league.hard_pct, responsibility=0.8
         )
         gb_prob = self._calculate_component(
-            batter.gb_pct, pitcher.gb_pct, league_average=44.6, responsibility=0.5
+            batter.gb_pct, pitcher.gb_pct, league_average=league.gb_pct, responsibility=0.5
         )
 
         other_prob = max(0.0, 1 - k_prob - bb_prob)

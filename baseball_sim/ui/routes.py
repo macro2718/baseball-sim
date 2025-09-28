@@ -20,6 +20,7 @@ from .player_service import (
     PlayerSaveResult,
 )
 from .session import GameSessionError, WebGameSession
+from baseball_sim.config import LeagueAverages
 
 
 def create_error_response(error: str, session: WebGameSession) -> Tuple[Response, int]:
@@ -55,6 +56,11 @@ def create_routes(session: WebGameSession) -> Blueprint:
     def get_state() -> Dict[str, Any]:
         state = session.build_state()
         return jsonify(state)
+
+    @api_bp.get("/league/averages")
+    def get_league_averages() -> Dict[str, Any]:
+        league = LeagueAverages.load()
+        return jsonify({"averages": league.as_dict()})
 
     @api_bp.post("/game/start")
     def start_game() -> Dict[str, Any]:

@@ -18,6 +18,15 @@ class ConfigManager:
     def _load_default_config(self) -> Dict[str, Any]:
         """デフォルト設定を読み込み"""
         return {
+            "league": {
+                "averages": {
+                    # League-average percentages (expressed as 0-100 scale)
+                    "k_pct": 22.8,
+                    "bb_pct": 8.5,
+                    "hard_pct": 38.6,
+                    "gb_pct": 44.6,
+                }
+            },
             "game": {
                 "max_innings": 12,
                 "enable_dh": True,

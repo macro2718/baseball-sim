@@ -163,6 +163,16 @@ const ABILITY_METRIC_CONFIG = {
   stamina: { mean: 80, variation: 0.15, min: 30, max: 150 },
 };
 
+// Allow the app to update coloring baselines from server-side league averages.
+export function setLeagueAveragesForColoring(averages) {
+  if (!averages || typeof averages !== 'object') return;
+  const { k_pct, bb_pct, hard_pct, gb_pct } = averages;
+  if (Number.isFinite(Number(k_pct))) ABILITY_METRIC_CONFIG.k_pct.mean = Number(k_pct);
+  if (Number.isFinite(Number(bb_pct))) ABILITY_METRIC_CONFIG.bb_pct.mean = Number(bb_pct);
+  if (Number.isFinite(Number(hard_pct))) ABILITY_METRIC_CONFIG.hard_pct.mean = Number(hard_pct);
+  if (Number.isFinite(Number(gb_pct))) ABILITY_METRIC_CONFIG.gb_pct.mean = Number(gb_pct);
+}
+
 export const ABILITY_COLOR_PRESETS = {
   table: Object.freeze({ emphasize: true, glowBase: 4.6, glowScale: 5.4 }),
   matchupPitcher: Object.freeze({ emphasize: true, glowBase: 3.1, glowScale: 4.6 }),

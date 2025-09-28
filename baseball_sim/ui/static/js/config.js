@@ -35,6 +35,7 @@ export const CONFIG = {
       playerFolderCreate: '/api/players/folders/create',
       playerFolderDelete: '/api/players/folders/delete',
       playerFolderRename: '/api/players/folders/rename',
+      leagueAverages: '/api/league/averages',
       health: '/api/health',
     },
   },
