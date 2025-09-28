@@ -8,8 +8,8 @@ from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-def fetch_data_from_pybaseball(start_year=2021, end_year=2023, min_pa=100):
-    """pybaseballを用いて2021～2023年のデータを取得し、特徴量と、全打数における各アウト・安打割合のターゲットベクトルを抽出・整形します"""
+def fetch_data_from_pybaseball(start_year=2020, end_year=2024, min_pa=100):
+    """pybaseballを用いて2020～2024年のデータを取得し、特徴量と、全打数における各アウト・安打割合のターゲットベクトルを抽出・整形します"""
     from pybaseball import batting_stats
     frames = []
     for year in start_year, end_year + 1:

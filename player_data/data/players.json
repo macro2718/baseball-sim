@@ -1122,6 +1122,202 @@
       "folders": [
         "SDP('24)"
       ]
+    },
+    {
+      "name": "Ryan Feltner('24)",
+      "pitcher_type": "SP",
+      "k_pct": 19.9,
+      "bb_pct": 7.5,
+      "hard_pct": 32.7,
+      "gb_pct": 44.9,
+      "stamina": 96,
+      "throws": "R",
+      "id": "e9b29715-6974-4fe3-8066-73fe6efb46b7",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Austin Gomber('24)",
+      "pitcher_type": "SP",
+      "k_pct": 16.7,
+      "bb_pct": 5.5,
+      "hard_pct": 39.4,
+      "gb_pct": 38.0,
+      "stamina": 96,
+      "throws": "L",
+      "id": "25a11dca-d805-4e75-bd37-d85b1fee243f",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Kyle Freeland('24)",
+      "pitcher_type": "SP",
+      "k_pct": 17.3,
+      "bb_pct": 5.3,
+      "hard_pct": 34.7,
+      "gb_pct": 40.2,
+      "stamina": 91,
+      "throws": "L",
+      "id": "52614d1b-10b2-4c67-a104-333d12b5ce78",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Cal Quantrill('24)",
+      "pitcher_type": "SP",
+      "k_pct": 16.8,
+      "bb_pct": 10.5,
+      "hard_pct": 36.7,
+      "gb_pct": 44.4,
+      "stamina": 94,
+      "throws": "R",
+      "id": "ccbf959b-ce60-40d7-9a4a-890affc000db",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Victor Vodnik('24)",
+      "pitcher_type": "RP",
+      "k_pct": 20.3,
+      "bb_pct": 11.6,
+      "hard_pct": 41.9,
+      "gb_pct": 54.4,
+      "stamina": 47,
+      "throws": "R",
+      "id": "aa6e5acd-2f8a-494d-8656-f326c1ea6bd3",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Peter Lambert('24)",
+      "pitcher_type": "RP",
+      "k_pct": 17.9,
+      "bb_pct": 10.4,
+      "hard_pct": 30.8,
+      "gb_pct": 36.5,
+      "stamina": 46,
+      "throws": "R",
+      "id": "269a13c1-adde-40e2-b589-a51f5346881b",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Anthony Molina('24)",
+      "pitcher_type": "RP",
+      "k_pct": 15.5,
+      "bb_pct": 8.3,
+      "hard_pct": 39.2,
+      "gb_pct": 41.9,
+      "stamina": 45,
+      "throws": "R",
+      "id": "eb12d750-c8d2-40bc-b6f6-61ce9b3b4a1b",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Dakota Hudson('24)",
+      "pitcher_type": "SP",
+      "k_pct": 12.1,
+      "bb_pct": 12.4,
+      "hard_pct": 36.7,
+      "gb_pct": 52.3,
+      "stamina": 88,
+      "throws": "R",
+      "id": "2433bd08-b13a-476b-8afb-32c46b2ab35c",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Noah Davis('24)",
+      "pitcher_type": "RP",
+      "k_pct": 15.6,
+      "bb_pct": 7.3,
+      "hard_pct": 32.4,
+      "gb_pct": 42.5,
+      "stamina": 42,
+      "throws": "R",
+      "id": "0ccd254c-f77d-470d-aefd-32f8290279fb",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Tyler Kinley('24)",
+      "pitcher_type": "RP",
+      "k_pct": 25.3,
+      "bb_pct": 11.6,
+      "hard_pct": 32.6,
+      "gb_pct": 37.9,
+      "stamina": 46,
+      "throws": "R",
+      "id": "1c038ba1-3cb5-4985-904d-0746c3168328",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Angel Chivilli('24)",
+      "pitcher_type": "RP",
+      "k_pct": 21.1,
+      "bb_pct": 7.5,
+      "hard_pct": 38.3,
+      "gb_pct": 50.0,
+      "stamina": 43,
+      "throws": "R",
+      "id": "20ab5a00-3895-4ee3-9292-c0b55a456690",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Jake Bird('24)",
+      "pitcher_type": "RP",
+      "k_pct": 16.8,
+      "bb_pct": 13.5,
+      "hard_pct": 33.6,
+      "gb_pct": 46.7,
+      "stamina": 44,
+      "throws": "R",
+      "id": "9bb90d7d-033a-425b-9e76-bb1161fd27e6",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Ty Blach('24)",
+      "pitcher_type": "SP",
+      "k_pct": 10.9,
+      "bb_pct": 5.5,
+      "hard_pct": 35.6,
+      "gb_pct": 40.9,
+      "stamina": 87,
+      "throws": "R",
+      "id": "bf794e26-8966-4312-a9d3-f99c017146cc",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Justin Lawrence('24)",
+      "pitcher_type": "RP",
+      "k_pct": 16.1,
+      "bb_pct": 11.8,
+      "hard_pct": 31.4,
+      "gb_pct": 53.1,
+      "stamina": 45,
+      "throws": "R",
+      "id": "f9c8eebe-5483-438d-9534-331858b990df",
+      "folders": [
+        "COL('24)"
+      ]
     }
   ],
   "batters": [
@@ -2951,6 +3147,335 @@
       "folders": [
         "SDP('24)"
       ]
+    },
+    {
+      "name": "Ezequiel Tovar('24)",
+      "k_pct": 28.8,
+      "bb_pct": 3.3,
+      "hard_pct": 36.2,
+      "gb_pct": 32.8,
+      "eligible_positions": [
+        "SS",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "7e6f51e6-47a9-4440-ab2c-d084e1ab0e95",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Brenton Doyle('24)",
+      "k_pct": 25.4,
+      "bb_pct": 7.6,
+      "hard_pct": 36.7,
+      "gb_pct": 41.0,
+      "eligible_positions": [
+        "CF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "fe056da3-b4b4-4dcf-abaa-c64a5e04d0fa",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Ryan McMahon('24)",
+      "k_pct": 28.7,
+      "bb_pct": 10.7,
+      "hard_pct": 38.9,
+      "gb_pct": 49.0,
+      "eligible_positions": [
+        "3B",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "b16f0ac5-1820-4eff-a758-de86d6c94a65",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Jacob Stallings('24)",
+      "k_pct": 23.1,
+      "bb_pct": 9.6,
+      "hard_pct": 33.3,
+      "gb_pct": 45.3,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "29b50936-1e4a-4284-854f-af9e47872740",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Brendan Rodgers('24)",
+      "k_pct": 24.5,
+      "bb_pct": 5.8,
+      "hard_pct": 29.0,
+      "gb_pct": 56.1,
+      "eligible_positions": [
+        "2B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "6f14d068-eda0-4dfb-9506-818c7f9fae87",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Sam Hilliard('24)",
+      "k_pct": 35.4,
+      "bb_pct": 8.9,
+      "hard_pct": 40.9,
+      "gb_pct": 38.6,
+      "eligible_positions": [
+        "LF",
+        "CF",
+        "RF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "27060844-3a05-4651-a9cd-301c7ebf16bc",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Michael Toglia('24)",
+      "k_pct": 32.1,
+      "bb_pct": 11.8,
+      "hard_pct": 45.1,
+      "gb_pct": 36.1,
+      "eligible_positions": [
+        "1B",
+        "RF",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "ad7630c6-1dd0-4c3e-bfff-f54fcca2c5bb",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Charlie Blackmon('24)",
+      "k_pct": 17.2,
+      "bb_pct": 8.6,
+      "hard_pct": 28.6,
+      "gb_pct": 36.6,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "ee90cc88-f55f-4a14-9aa8-ae77a7b6b852",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Aaron Schunk('24)",
+      "k_pct": 31.6,
+      "bb_pct": 4.1,
+      "hard_pct": 30.2,
+      "gb_pct": 38.7,
+      "eligible_positions": [
+        "2B",
+        "3B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "8755bd6f-2fd2-4373-8ed2-099c1ad39986",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Jake Cave('24)",
+      "k_pct": 28.3,
+      "bb_pct": 5.2,
+      "hard_pct": 32.3,
+      "gb_pct": 45.8,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "641de0b6-8fa8-4689-b4cf-e2a569b124b5",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Drew Romo('24)",
+      "k_pct": 34.0,
+      "bb_pct": 3.8,
+      "hard_pct": 21.2,
+      "gb_pct": 48.5,
+      "eligible_positions": [
+        "C",
+        "DH"
+      ],
+      "bats": "S",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "bbb3a8a7-a6ce-4a3c-ae40-8f4126f17617",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Sean Bouchard('24)",
+      "k_pct": 30.6,
+      "bb_pct": 11.1,
+      "hard_pct": 34.4,
+      "gb_pct": 48.3,
+      "eligible_positions": [
+        "RF",
+        "LF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "57d285f4-ad21-455a-b564-036b9177254c",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Alan Trejo('24)",
+      "k_pct": 22.4,
+      "bb_pct": 3.0,
+      "hard_pct": 30.6,
+      "gb_pct": 47.8,
+      "eligible_positions": [
+        "2B",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "392738e8-5fcd-4f5c-98d1-b0c9b389ce3f",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Nolan Jones('24)",
+      "k_pct": 30.6,
+      "bb_pct": 12.1,
+      "hard_pct": 33.1,
+      "gb_pct": 52.4,
+      "eligible_positions": [
+        "LF",
+        "DH"
+      ],
+      "bats": "L",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "6a7e08d6-7abe-4485-867c-a8389aa57a03",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Kris Bryant('24)",
+      "k_pct": 31.0,
+      "bb_pct": 8.4,
+      "hard_pct": 27.9,
+      "gb_pct": 37.2,
+      "eligible_positions": [
+        "DH",
+        "RF",
+        "1B"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "40fe0a59-e074-4bf7-9e2b-8faa58a6e300",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Jordan Beck('24)",
+      "k_pct": 35.3,
+      "bb_pct": 6.5,
+      "hard_pct": 39.6,
+      "gb_pct": 46.2,
+      "eligible_positions": [
+        "LF",
+        "RF",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "e226f9a6-4d20-4579-82d9-79d631901009",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Hunter Goodman('24)",
+      "k_pct": 28.6,
+      "bb_pct": 3.6,
+      "hard_pct": 34.9,
+      "gb_pct": 38.9,
+      "eligible_positions": [
+        "RF",
+        "C",
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "125e49cf-a563-4700-90e6-c9b60dc7ddda",
+      "folders": [
+        "COL('24)"
+      ]
+    },
+    {
+      "name": "Elehuris Montero('24)",
+      "k_pct": 22.7,
+      "bb_pct": 8.1,
+      "hard_pct": 32.7,
+      "gb_pct": 37.4,
+      "eligible_positions": [
+        "DH"
+      ],
+      "bats": "R",
+      "speed": 100.0,
+      "fielding_skill": 100.0,
+      "id": "52b12a20-1846-45e5-a30e-a2fdd7f74ee9",
+      "folders": [
+        "COL('24)"
+      ]
     }
   ],
   "folders": [
@@ -2960,6 +3485,7 @@
     "LAD('24)",
     "ARI('24)",
     "SFG('24)",
-    "SDP('24)"
+    "SDP('24)",
+    "COL('24)"
   ]
 }

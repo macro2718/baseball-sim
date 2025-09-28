@@ -108,6 +108,18 @@ def _build_team_contexts(team_datas: Sequence[Mapping[str, object]]) -> List[Tea
             raise ValueError("Each team configuration must be a mapping object.")
         team_config = dict(data)
         team = DataLoader.create_team(team_config, player_data=player_data)
+        # 各試合前に初期ラインナップ/ベンチへ戻せるようスナップショットを保持
+        try:
+            # 初期打順と各選手の守備位置
+            initial_lineup = list(getattr(team, "lineup", []) or [])
+            initial_positions = [getattr(p, "current_position", None) for p in initial_lineup]
+            setattr(team, "_initial_lineup", initial_lineup)
+            setattr(team, "_initial_lineup_positions", initial_positions)
+            # 初期ベンチ
+            setattr(team, "_initial_bench", list(getattr(team, "bench", []) or []))
+        except Exception:
+            # 失敗時もシミュレーション継続（復元はスキップ）
+            pass
         context = TeamContext(
             team=team,
             original_name=team_config.get("name", getattr(team, "name", "Team")),
@@ -176,6 +188,8 @@ def _initialize_league_results(
             unique_key = f"{team_name}:{getattr(pitcher, 'name', 'Pitcher')}"
             results["pitchers"][unique_key] = pitcher
             results["pitchers"].setdefault(getattr(pitcher, "name", unique_key), pitcher)
+
+        # 出力ファイル用のロスター・スナップショットは削除（未使用のため）
 
     return results
 
@@ -418,11 +432,36 @@ def reset_team_and_players(
     away_starting_pitcher=None,
 ):
     """チームと選手の状態をリセットする（投手のスタミナなど）"""
-    # 1試合ごとに退場(ejected)扱いをリセットし、シリーズ中に再登板/再出場できるようにする
-    # これを行わないと、交代した投手が以後の試合で永続的に使用不可となり、登板数が極端に偏る。
+    # 1試合ごとに退場(ejected)扱いとラインナップ/ベンチを初期状態に戻す
+    # これにより、前試合で交代・退いた野手が次試合で再出場不可になる問題を防ぐ
     for team in (home_team, away_team):
+        # 退場リストのクリア
         if hasattr(team, "ejected_players"):
             team.ejected_players = []
+        # ラインナップ/ベンチを初期スナップショットに復元（存在する場合）
+        try:
+            init_lineup = list(getattr(team, "_initial_lineup", []) or [])
+            init_positions = list(getattr(team, "_initial_lineup_positions", []) or [])
+            init_bench = list(getattr(team, "_initial_bench", []) or [])
+
+            if init_lineup and init_positions and len(init_lineup) == len(init_positions):
+                # ラインナップ復元
+                team.lineup = list(init_lineup)
+                # 守備位置マップをリセット
+                if hasattr(team, "defensive_positions"):
+                    for key in list(team.defensive_positions.keys()):
+                        team.defensive_positions[key] = None
+                # 各選手のポジションを復元
+                for player, pos in zip(init_lineup, init_positions):
+                    if pos is not None:
+                        player.current_position = pos
+                        if hasattr(team, "defensive_positions"):
+                            team.defensive_positions[pos] = player
+                # ベンチ復元
+                team.bench = list(init_bench)
+        except Exception:
+            # 復元に失敗しても致命的ではないため続行
+            pass
 
     if home_pitcher_pool is not None:
         home_team.pitchers = list(home_pitcher_pool)
@@ -922,8 +961,24 @@ def output_results(results, output_file):
                   f"{'AVG':<6} {'OBP':<5} {'SLG':<5} {'OPS':<5} {'K%':<5} {'BB%':<5}\n")
             f.write("-" * 130 + "\n")
             
-            # チーム選手の打撃成績を表示
-            for player in team.lineup:
+            # チーム選手の打撃成績を表示（ラインナップ・ベンチ・退場選手）
+            all_batters = []
+            for group in (
+                getattr(team, "lineup", []) or [],
+                getattr(team, "bench", []) or [],
+                getattr(team, "ejected_players", []) or [],
+            ):
+                for p in group:
+                    if p not in all_batters:
+                        all_batters.append(p)
+            # 投手でも打席がある者は打者成績に含める
+            try:
+                for p in getattr(team, "pitchers", []) or []:
+                    if getattr(p, "stats", None) and p.stats.get("PA", 0) > 0 and p not in all_batters:
+                        all_batters.append(p)
+            except Exception:
+                pass
+            for player in all_batters:
                 # 選手の成績を取得
                 pa = player.stats["PA"]
                 ab = player.stats["AB"]
@@ -956,8 +1011,22 @@ def output_results(results, output_file):
                   f"{'ERA':<5} {'WHIP':<5} {'K/9':<5} {'BB/9':<5} {'HR/9':<5}\n")
             f.write("-" * 120 + "\n")
             
-            # チーム選手の投手成績を表示
-            for pitcher in team.pitchers:
+            # チーム選手の投手成績を表示（退場選手・現在の投手も含む）
+            pitcher_list = []
+            # 可能な限り網羅的に収集
+            for group in (
+                getattr(team, "pitchers", []) or [],
+                [getattr(team, "current_pitcher", None)],
+                [p for p in (getattr(team, "ejected_players", []) or [])],
+            ):
+                for p in group:
+                    if p is None:
+                        continue
+                    if not hasattr(p, "pitching_stats"):
+                        continue
+                    if p not in pitcher_list:
+                        pitcher_list.append(p)
+            for pitcher in pitcher_list:
                 # 投手の成績を取得
                 ip = pitcher.pitching_stats["IP"]
                 h = pitcher.pitching_stats["H"]
@@ -980,110 +1049,6 @@ def output_results(results, output_file):
                 f.write(f"{pitcher.name:<15} {ip:<5.1f} {h:<4} {bb:<4} {so:<4} {r:<4} {er:<4} {hr:<4} "
                       f"{era:<5.2f} {whip:<5.2f} {k_per_9:<5.2f} {bb_per_9:<5.2f} {hr_per_9:<5.2f}\n")
         
-        # 全選手の成績
-        f.write("\n===== 全選手成績 =====\n")
-        
-        # 打者成績の出力
-        f.write("\n===== 打者成績 =====\n")
-        f.write(f"{'選手名':<18} {'チーム':<10} {'PA':<4} {'AB':<4} {'1B':<4} {'2B':<4} {'3B':<4} {'HR':<4} {'RBI':<4} {'BB':<4} {'K':<4} "
-              f"{'AVG':<6} {'OBP':<5} {'SLG':<5} {'OPS':<5} {'K%':<5} {'BB%':<5}\n")
-        f.write("-" * 140 + "\n")
-        
-        # チームに所属する選手をキーとして保存
-        player_team: Dict[int, str] = {}
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            for player in team.lineup:
-                player_team[id(player)] = team_name
-        
-        # すべての打者の成績を出力
-        seen_player_ids: set[int] = set()
-        for name, player in results["players"].items():
-            # 選手の成績を取得
-            pid = id(player)
-            if pid in seen_player_ids:
-                continue
-            seen_player_ids.add(pid)
-
-            pa = player.stats["PA"]
-            
-            # 打席がゼロなら表示しない
-            if pa == 0:
-                continue
-                
-            ab = player.stats["AB"]
-            singles = player.stats["1B"]
-            doubles = player.stats.get("2B", 0)
-            triples = player.stats.get("3B", 0)
-            hr = player.stats["HR"]
-            rbi = player.stats["RBI"]
-            bb = player.stats["BB"]
-            so = player.stats["SO"]
-            
-            # 指標を計算
-            avg = player.get_avg()
-            obp = player.get_obp()
-            slg = player.get_slg()
-            ops = player.get_ops()
-            
-            # K%とBB%を計算
-            k_pct = (so / pa * 100) if pa > 0 else 0
-            bb_pct = (bb / pa * 100) if pa > 0 else 0
-            
-            team_name = player_team.get(pid, "不明")
-            
-            # 打者成績を出力
-            f.write(f"{name:<20} {team_name:<10} {pa:<4} {ab:<4} {singles:<4} {doubles:<4} {triples:<4} "
-                  f"{hr:<4} {rbi:<4} {bb:<4} {so:<4} "
-                  f"{avg:.3f} {obp:.3f} {slg:.3f} {ops:.3f} {k_pct:.1f} {bb_pct:.1f}\n")
-        
-        # 投手成績の出力
-        f.write("\n===== 投手成績 =====\n")
-        f.write(f"{'選手名':<15} {'チーム':<10} {'IP':<5} {'H':<4} {'BB':<4} {'K':<4} {'R':<4} {'ER':<4} {'HR':<4} "
-              f"{'ERA':<5} {'WHIP':<5} {'K/9':<5} {'BB/9':<5} {'HR/9':<5}\n")
-        f.write("-" * 120 + "\n")
-        
-        # チームに所属する投手をキーとして保存
-        pitcher_team: Dict[int, str] = {}
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            for pitcher in team.pitchers:
-                pitcher_team[id(pitcher)] = team_name
-        
-        # すべての投手の成績を出力
-        seen_pitcher_ids: set[int] = set()
-        for name, pitcher in results["pitchers"].items():
-            # 投手の成績を取得
-            pid = id(pitcher)
-            if pid in seen_pitcher_ids:
-                continue
-            seen_pitcher_ids.add(pid)
-
-            ip = pitcher.pitching_stats["IP"]
-            
-            # 投球イニングがゼロなら表示しない
-            if ip == 0:
-                continue
-                
-            h = pitcher.pitching_stats["H"]
-            bb = pitcher.pitching_stats["BB"]
-            so = pitcher.pitching_stats["SO"]
-            r = pitcher.pitching_stats["R"]
-            er = pitcher.pitching_stats["ER"]
-            hr = pitcher.pitching_stats["HR"]
-            
-            # 指標を計算
-            era = pitcher.get_era()
-            whip = pitcher.get_whip()
-            k_per_9 = pitcher.get_k_per_9()
-            bb_per_9 = pitcher.get_bb_per_9()
-            hr_per_9 = pitcher.get_hr_per_9()
-            
-            team_name = pitcher_team.get(pid, "不明")
-            
-            # 投手成績を出力
-            f.write(f"{name:<15} {team_name:<10} {ip:<5.1f} {h:<4} {bb:<4} {so:<4} {r:<4} {er:<4} {hr:<4} "
-                  f"{era:<5.2f} {whip:<5.2f} {k_per_9:<5.2f} {bb_per_9:<5.2f} {hr_per_9:<5.2f}\n")
         
         # 投手登板数の出力（追加）
         f.write("\n===== 投手登板数 (G) =====\n")
@@ -1093,16 +1058,23 @@ def output_results(results, output_file):
         pitcher_team = {}
         for team in unique_teams:
             team_name = getattr(team, "name", "Team")
-            for pitcher in team.pitchers:
-                pitcher_team[id(pitcher)] = team_name
+            for group in (
+                getattr(team, "pitchers", []) or [],
+                [getattr(team, "current_pitcher", None)],
+                getattr(team, "ejected_players", []) or [],
+            ):
+                for pitcher in group:
+                    if pitcher is None or not hasattr(pitcher, "pitching_stats"):
+                        continue
+                    pitcher_team[id(pitcher)] = team_name
+        # 重複排除用に新しい集合を使う（直前の集計とは独立）
+        seen_pitcher_ids_g: set[int] = set()
         for name, pitcher in results["pitchers"].items():
             pid = id(pitcher)
-            if pid in seen_pitcher_ids:
+            if pid in seen_pitcher_ids_g:
                 continue
-            seen_pitcher_ids.add(pid)
+            seen_pitcher_ids_g.add(pid)
             g = int(getattr(pitcher, 'pitching_stats', {}).get('G', 0) or 0)
-            if g <= 0:
-                continue
             team_name = pitcher_team.get(pid, "不明")
             f.write(f"{name:<15} {team_name:<10} {g:<3}\n")
 

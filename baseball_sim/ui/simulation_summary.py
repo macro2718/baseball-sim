@@ -341,11 +341,19 @@ def _compute_team_pitching(team_obj: Optional[object]) -> Dict[str, Any]:
 
 
 def _build_batter_stats(team_obj: Optional[object]) -> List[Dict[str, Any]]:
+    """Build per-batter lines for the selected team.
+
+    Note:
+    - Includes players with PA=0 so that full registered hitters appear.
+    - This mirrors the text report behavior and avoids confusion when
+      bench players did not get a plate appearance.
+    """
     batters: List[Dict[str, Any]] = []
     for player in _iter_team_hitters(team_obj):
         stats = getattr(player, "stats", {}) or {}
         pa = int(stats.get("PA", 0) or 0)
-        if pa == 0:
+        # 投手で打席がない場合は打者成績から除外
+        if pa == 0 and (hasattr(player, "pitcher_type") or hasattr(player, "pitching_stats")):
             continue
         ab = int(stats.get("AB", 0) or 0)
         singles = int(stats.get("1B", 0) or 0)

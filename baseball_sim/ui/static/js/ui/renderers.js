@@ -3911,7 +3911,7 @@ function renderBattingTable(tbody, teamEntry) {
   if (!rows.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 15;
+    td.colSpan = 18;
     td.textContent = 'データがありません。';
     td.classList.add('empty');
     tr.appendChild(td);
@@ -3926,6 +3926,7 @@ function renderBattingTable(tbody, teamEntry) {
       row.pa ?? 0,
       row.ab ?? 0,
       row.hits ?? 0,
+      row.singles ?? 0,
       row.doubles ?? 0,
       row.triples ?? 0,
       row.homeRuns ?? 0,
@@ -3933,6 +3934,15 @@ function renderBattingTable(tbody, teamEntry) {
       row.rbi ?? 0,
       row.walks ?? 0,
       row.strikeouts ?? 0,
+      // K% / BB% are numeric (e.g., 12.3); display with one decimal and a % sign
+      (() => {
+        const v = Number(row.k_pct);
+        return Number.isFinite(v) ? `${v.toFixed(1)}%` : '-';
+      })(),
+      (() => {
+        const v = Number(row.bb_pct);
+        return Number.isFinite(v) ? `${v.toFixed(1)}%` : '-';
+      })(),
       formatAverageDisplay(row.avg),
       formatAverageDisplay(row.obp),
       formatAverageDisplay(row.slg),
@@ -4940,6 +4950,8 @@ export function render(data) {
             rbi: Number.isFinite(Number(batter.rbi)) ? Number(batter.rbi) : 0,
             walks: Number.isFinite(Number(batter.walks)) ? Number(batter.walks) : 0,
             strikeouts: Number.isFinite(Number(batter.strikeouts)) ? Number(batter.strikeouts) : 0,
+            k_pct: Number.isFinite(Number(batter.k_pct)) ? Number(batter.k_pct) : null,
+            bb_pct: Number.isFinite(Number(batter.bb_pct)) ? Number(batter.bb_pct) : null,
             avg: Number.isFinite(Number(batter.avg)) ? Number(batter.avg) : 0,
             obp: Number.isFinite(Number(batter.obp)) ? Number(batter.obp) : 0,
             slg: Number.isFinite(Number(batter.slg)) ? Number(batter.slg) : 0,
