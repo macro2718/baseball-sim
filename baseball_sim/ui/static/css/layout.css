@@ -609,6 +609,10 @@
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.simulation-highlights-block {
+  grid-column: 1 / -1;
+}
+
 .simulation-results-block {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 18px;
@@ -617,6 +621,45 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.simulation-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.simulation-highlight-card {
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.18) 0%, rgba(37, 99, 235, 0.1) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+}
+
+.simulation-highlight-card .label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(191, 219, 254, 0.78);
+}
+
+.simulation-highlight-card .value {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.simulation-highlight-card .meta {
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .simulation-game-list,
@@ -651,6 +694,23 @@
   border: 1px solid rgba(96, 165, 250, 0.35);
   border-radius: 12px;
   padding: 10px 12px;
+}
+
+.simulation-empty-message {
+  margin: 0;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.48);
+  border: 1px dashed rgba(96, 165, 250, 0.4);
+}
+
+.simulation-highlights .simulation-empty-message,
+.simulation-stats-cards .simulation-empty-message {
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .simulation-stats-card .label {

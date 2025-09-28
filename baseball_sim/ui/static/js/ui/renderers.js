@@ -4345,6 +4345,7 @@ function renderSimulationResults(simulationState) {
   const {
     simulationResultsSummary,
     simulationResultsMeta,
+    simulationResultsHighlights,
     simulationResultsTableBody,
     simulationGamesTableBody,
     simulationGamesStats,
@@ -4381,7 +4382,20 @@ function renderSimulationResults(simulationState) {
       tr.appendChild(td);
       simulationGamesTableBody.appendChild(tr);
     }
-    if (simulationGamesStats) simulationGamesStats.textContent = '';
+    if (simulationGamesStats) {
+      simulationGamesStats.innerHTML = '';
+      const emptyStats = document.createElement('p');
+      emptyStats.className = 'simulation-empty-message';
+      emptyStats.textContent = '集計可能な試合がまだありません。';
+      simulationGamesStats.appendChild(emptyStats);
+    }
+    if (simulationResultsHighlights) {
+      simulationResultsHighlights.innerHTML = '';
+      const emptyHighlights = document.createElement('p');
+      emptyHighlights.className = 'simulation-empty-message';
+      emptyHighlights.textContent = 'シミュレーションを実行するとハイライトが表示されます。';
+      simulationResultsHighlights.appendChild(emptyHighlights);
+    }
     if (simulationSelectedTeamSummary) simulationSelectedTeamSummary.textContent = '';
     if (simulationSelectedBattingBody) simulationSelectedBattingBody.innerHTML = '';
     if (simulationSelectedPitchingBody) simulationSelectedPitchingBody.innerHTML = '';
@@ -4397,6 +4411,30 @@ function renderSimulationResults(simulationState) {
   const mode = typeof lastRun.mode === 'string' ? lastRun.mode.toLowerCase() : '';
   const isLeague = mode === 'league' || teams.length > 2;
   const games = Array.isArray(lastRun.games) ? lastRun.games : [];
+
+  const totalGamesCount = Number.isFinite(Number(lastRun.totalGames))
+    ? Number(lastRun.totalGames)
+    : games.length;
+
+  const gameTotals = {
+    total: games.length,
+    homeWins: 0,
+    awayWins: 0,
+    draws: 0,
+    runsHome: 0,
+    runsAway: 0,
+  };
+
+  games.forEach((g) => {
+    if (g.winner === 'home') gameTotals.homeWins += 1;
+    else if (g.winner === 'away') gameTotals.awayWins += 1;
+    else gameTotals.draws += 1;
+    gameTotals.runsHome += Number(g.homeScore) || 0;
+    gameTotals.runsAway += Number(g.awayScore) || 0;
+  });
+
+  const combinedRuns = gameTotals.runsHome + gameTotals.runsAway;
+  const averageTotalRuns = gameTotals.total ? combinedRuns / gameTotals.total : null;
 
   const rolesMap = new Map();
   teams.forEach((team) => {
@@ -4468,11 +4506,7 @@ function renderSimulationResults(simulationState) {
       }
       const completedGames = Number.isFinite(Number(leagueInfo.completedGames))
         ? Number(leagueInfo.completedGames)
-        : Number.isFinite(Number(lastRun.totalGames))
-        ? Number(lastRun.totalGames)
-        : Array.isArray(lastRun.games)
-        ? lastRun.games.length
-        : 0;
+        : totalGamesCount;
       const scheduledGames = Number.isFinite(Number(leagueInfo.scheduledGames))
         ? Number(leagueInfo.scheduledGames)
         : null;
@@ -4491,19 +4525,189 @@ function renderSimulationResults(simulationState) {
         parts.push(`日程: ${completedDays ?? '-'}${totalDays ? ` / ${totalDays}` : ''}`);
       }
     } else {
-      const totalGames = Number.isFinite(Number(lastRun.totalGames))
-        ? Number(lastRun.totalGames)
-        : Array.isArray(lastRun.games)
-        ? lastRun.games.length
-        : 0;
-      if (totalGames > 0) {
-        parts.push(`${totalGames}試合をシミュレーションしました`);
+      if (totalGamesCount > 0) {
+        parts.push(`${totalGamesCount}試合をシミュレーションしました`);
       }
     }
     if (timestamp) {
       parts.push(`最終実行: ${timestamp}`);
     }
     simulationResultsMeta.textContent = parts.join(' / ');
+  }
+
+  if (simulationResultsHighlights) {
+    simulationResultsHighlights.innerHTML = '';
+    const highlightItems = [];
+    const addHighlight = (label, value, meta = '') => {
+      if (!label) return;
+      const valueText = value != null ? String(value).trim() : '';
+      if (!valueText) return;
+      const entry = {
+        label,
+        value: valueText,
+        meta: typeof meta === 'string' ? meta : '',
+      };
+      highlightItems.push(entry);
+      return entry;
+    };
+
+    if (!isLeague && gameTotals.total > 0) {
+      const awayTeamEntry = rolesMap.get('away') || null;
+      const homeTeamEntry = rolesMap.get('home') || null;
+      const awayName = awayTeamEntry?.name || 'Away';
+      const homeName = homeTeamEntry?.name || 'Home';
+      const drawLabel = gameTotals.draws ? ` / 引き分け ${gameTotals.draws}` : '';
+      addHighlight(
+        'シリーズ結果',
+        `${gameTotals.awayWins} - ${gameTotals.homeWins}`,
+        `${awayName} vs ${homeName}${drawLabel}`,
+      );
+    }
+
+    if (teams.length) {
+      const teamsByWinPct = [...teams].sort((a, b) => {
+        const recordA = a?.record || {};
+        const recordB = b?.record || {};
+        const winDiff = (recordB.winPct ?? 0) - (recordA.winPct ?? 0);
+        if (winDiff !== 0) return winDiff;
+        const winsDiff = (recordB.wins ?? 0) - (recordA.wins ?? 0);
+        if (winsDiff !== 0) return winsDiff;
+        const runDiffA = Number.isFinite(recordA.runDiff)
+          ? recordA.runDiff
+          : Number.NEGATIVE_INFINITY;
+        const runDiffB = Number.isFinite(recordB.runDiff)
+          ? recordB.runDiff
+          : Number.NEGATIVE_INFINITY;
+        if (runDiffA !== runDiffB) return runDiffB - runDiffA;
+        return (recordB.runsScored ?? 0) - (recordA.runsScored ?? 0);
+      });
+      const bestTeam = teamsByWinPct[0] || null;
+      if (bestTeam) {
+        const record = bestTeam.record || {};
+        const wins = Number.isFinite(record.wins) ? record.wins : 0;
+        const losses = Number.isFinite(record.losses) ? record.losses : 0;
+        const draws = Number.isFinite(record.draws) ? record.draws : 0;
+        const winPctDisplay = Number.isFinite(record.winPct)
+          ? formatAverageDisplay(record.winPct)
+          : null;
+        const metaParts = [`勝${wins}`, `敗${losses}`];
+        if (draws) metaParts.push(`分${draws}`);
+        if (winPctDisplay && winPctDisplay !== '-') {
+          metaParts.push(`勝率 ${winPctDisplay}`);
+        }
+        addHighlight('勝率トップ', bestTeam.name || '-', metaParts.join(' / '));
+      }
+
+      const runDiffLeader = [...teams]
+        .filter((team) => Number.isFinite(team?.record?.runDiff))
+        .sort((a, b) => (b.record.runDiff ?? Number.NEGATIVE_INFINITY)
+          - (a.record.runDiff ?? Number.NEGATIVE_INFINITY))[0] || null;
+      if (
+        runDiffLeader &&
+        Number.isFinite(runDiffLeader.record?.runDiff) &&
+        runDiffLeader.record.runDiff !== 0
+      ) {
+        addHighlight(
+          '得失点差トップ',
+          formatSignedNumber(runDiffLeader.record.runDiff),
+          runDiffLeader.name || '',
+        );
+      }
+
+      const offenseLeader = [...teams]
+        .map((team) => {
+          const record = team.record || {};
+          const wins = Number.isFinite(record.wins) ? record.wins : 0;
+          const losses = Number.isFinite(record.losses) ? record.losses : 0;
+          const draws = Number.isFinite(record.draws) ? record.draws : 0;
+          const gamesPlayed = Number.isFinite(record.games) && record.games > 0
+            ? record.games
+            : wins + losses + draws;
+          const runsScored = Number.isFinite(record.runsScored) ? record.runsScored : 0;
+          if (!gamesPlayed) return null;
+          return {
+            team,
+            runsScored,
+            perGame: runsScored / gamesPlayed,
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.perGame - a.perGame)[0] || null;
+
+      if (offenseLeader && offenseLeader.perGame > 0) {
+        const perGameDisplay = formatNumberDisplay(offenseLeader.perGame, 1);
+        const metaParts = [];
+        const leaderName = offenseLeader.team.name || '';
+        if (leaderName) metaParts.push(leaderName);
+        if (Number.isFinite(offenseLeader.runsScored)) {
+          metaParts.push(`総得点 ${offenseLeader.runsScored}`);
+        }
+        addHighlight('平均得点トップ', perGameDisplay, metaParts.join(' / '));
+      }
+    }
+
+    let totalGamesHighlight = null;
+    if (totalGamesCount > 0) {
+      const avgDisplay = Number.isFinite(averageTotalRuns)
+        ? formatNumberDisplay(averageTotalRuns, 1)
+        : null;
+      const metaParts = [];
+      if (avgDisplay && avgDisplay !== '-') {
+        metaParts.push(`平均合計得点 ${avgDisplay}`);
+      }
+      if (isLeague) {
+        const scheduled = Number.isFinite(Number(leagueInfo.scheduledGames))
+          ? Number(leagueInfo.scheduledGames)
+          : null;
+        if (scheduled && scheduled > 0) {
+          const progress = Math.round((totalGamesCount / scheduled) * 100);
+          if (Number.isFinite(progress)) {
+            metaParts.push(`進捗 ${Math.max(0, Math.min(progress, 999))}%`);
+          }
+        }
+      }
+      const metaText = metaParts.length
+        ? metaParts.join(' / ')
+        : isLeague
+        ? 'リーグ全体'
+        : 'シリーズ合計';
+      totalGamesHighlight = addHighlight('総試合数', `${totalGamesCount}`, metaText);
+    }
+
+    let itemsToRender = highlightItems.slice(0, 4);
+    if (
+      totalGamesHighlight &&
+      itemsToRender.length === 4 &&
+      !itemsToRender.includes(totalGamesHighlight)
+    ) {
+      itemsToRender = [...itemsToRender.slice(0, 3), totalGamesHighlight];
+    }
+    if (!itemsToRender.length) {
+      const emptyHighlights = document.createElement('p');
+      emptyHighlights.className = 'simulation-empty-message';
+      emptyHighlights.textContent = 'シミュレーションを実行するとハイライトが表示されます。';
+      simulationResultsHighlights.appendChild(emptyHighlights);
+    } else {
+      itemsToRender.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'simulation-highlight-card';
+        const labelEl = document.createElement('div');
+        labelEl.className = 'label';
+        labelEl.textContent = item.label;
+        const valueEl = document.createElement('div');
+        valueEl.className = 'value';
+        valueEl.textContent = item.value;
+        card.appendChild(labelEl);
+        card.appendChild(valueEl);
+        if (item.meta) {
+          const metaEl = document.createElement('div');
+          metaEl.className = 'meta';
+          metaEl.textContent = item.meta;
+          card.appendChild(metaEl);
+        }
+        simulationResultsHighlights.appendChild(card);
+      });
+    }
   }
 
   if (simulationResultsTableBody) {
@@ -4556,45 +4760,45 @@ function renderSimulationResults(simulationState) {
   }
 
   if (simulationGamesStats) {
-    const total = games.length;
-    let homeWins = 0;
-    let awayWins = 0;
-    let draws = 0;
-    let totalRunsHome = 0;
-    let totalRunsAway = 0;
-    games.forEach((g) => {
-      if (g.winner === 'home') homeWins += 1;
-      else if (g.winner === 'away') awayWins += 1;
-      else draws += 1;
-      totalRunsHome += Number(g.homeScore) || 0;
-      totalRunsAway += Number(g.awayScore) || 0;
-    });
-    const avgHome = total ? (totalRunsHome / total).toFixed(2) : '0.00';
-    const avgAway = total ? (totalRunsAway / total).toFixed(2) : '0.00';
-    const avgTotal = total ? ((totalRunsHome + totalRunsAway) / total).toFixed(2) : '0.00';
-
     simulationGamesStats.innerHTML = '';
-    const addCard = (label, value) => {
-      const card = document.createElement('div');
-      card.className = 'simulation-stats-card';
-      const labelEl = document.createElement('div');
-      labelEl.className = 'label';
-      labelEl.textContent = label;
-      const valueEl = document.createElement('div');
-      valueEl.className = 'value';
-      valueEl.textContent = String(value);
-      card.appendChild(labelEl);
-      card.appendChild(valueEl);
-      simulationGamesStats.appendChild(card);
-    };
+    if (!games.length) {
+      const emptyStats = document.createElement('p');
+      emptyStats.className = 'simulation-empty-message';
+      emptyStats.textContent = '集計可能な試合がまだありません。';
+      simulationGamesStats.appendChild(emptyStats);
+    } else {
+      const total = gameTotals.total;
+      const homeWins = gameTotals.homeWins;
+      const awayWins = gameTotals.awayWins;
+      const draws = gameTotals.draws;
+      const avgHome = total ? (gameTotals.runsHome / total).toFixed(2) : '0.00';
+      const avgAway = total ? (gameTotals.runsAway / total).toFixed(2) : '0.00';
+      const avgTotal = total
+        ? ((gameTotals.runsHome + gameTotals.runsAway) / total).toFixed(2)
+        : '0.00';
 
-    addCard('総試合数', total);
-    addCard('ホーム勝利', homeWins);
-    addCard('アウェイ勝利', awayWins);
-    if (draws) addCard('引き分け', draws);
-    addCard('平均得点 (ホーム)', avgHome);
-    addCard('平均得点 (アウェイ)', avgAway);
-    addCard('平均合計得点', avgTotal);
+      const addCard = (label, value) => {
+        const card = document.createElement('div');
+        card.className = 'simulation-stats-card';
+        const labelEl = document.createElement('div');
+        labelEl.className = 'label';
+        labelEl.textContent = label;
+        const valueEl = document.createElement('div');
+        valueEl.className = 'value';
+        valueEl.textContent = String(value);
+        card.appendChild(labelEl);
+        card.appendChild(valueEl);
+        simulationGamesStats.appendChild(card);
+      };
+
+      addCard('総試合数', total);
+      addCard('ホーム勝利', homeWins);
+      addCard('アウェイ勝利', awayWins);
+      if (draws) addCard('引き分け', draws);
+      addCard('平均得点 (ホーム)', avgHome);
+      addCard('平均得点 (アウェイ)', avgAway);
+      addCard('平均合計得点', avgTotal);
+    }
   }
 
   if (simulationSelectedTeamSummary) {
