@@ -3678,6 +3678,28 @@ function formatInningsDisplay(value) {
   return `${innings}.${remainder}`;
 }
 
+function getTeamGamesPlayed(teamEntry) {
+  if (!teamEntry) return 0;
+  const record = teamEntry.record || {};
+  const games = Number(record.games);
+  if (Number.isFinite(games) && games > 0) {
+    return games;
+  }
+  const wins = Number(record.wins);
+  const losses = Number(record.losses);
+  const draws = Number(record.draws);
+  const total =
+    (Number.isFinite(wins) ? wins : 0) +
+    (Number.isFinite(losses) ? losses : 0) +
+    (Number.isFinite(draws) ? draws : 0);
+  return total > 0 ? total : 0;
+}
+
+function formatQualificationDisplay(reached, applicable) {
+  if (!applicable) return '-';
+  return reached ? '◯' : '×';
+}
+
 function renderSimulationSetup(teamLibraryState, simulationState) {
   const {
     simulationSetupForm,
@@ -3911,13 +3933,17 @@ function renderBattingTable(tbody, teamEntry) {
   if (!rows.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 18;
+    td.colSpan = 19;
     td.textContent = 'データがありません。';
     td.classList.add('empty');
     tr.appendChild(td);
     tbody.appendChild(tr);
     return;
   }
+
+  const gamesPlayed = getTeamGamesPlayed(teamEntry);
+  const paRequirement = gamesPlayed > 0 ? Math.max(0, Math.round(gamesPlayed * 3)) : 0;
+  const qualificationApplicable = paRequirement > 0;
 
   rows.forEach((row) => {
     const tr = document.createElement('tr');
@@ -3947,6 +3973,14 @@ function renderBattingTable(tbody, teamEntry) {
       formatAverageDisplay(row.obp),
       formatAverageDisplay(row.slg),
       formatAverageDisplay(row.ops),
+      (() => {
+        const pa = Number(row.pa);
+        if (!Number.isFinite(pa)) {
+          return formatQualificationDisplay(false, qualificationApplicable);
+        }
+        const reached = qualificationApplicable ? pa >= paRequirement : false;
+        return formatQualificationDisplay(reached, qualificationApplicable);
+      })(),
     ];
     cells.forEach((value) => {
       const td = document.createElement('td');
@@ -3964,13 +3998,17 @@ function renderPitchingTable(tbody, teamEntry) {
   if (!rows.length) {
     const tr = document.createElement('tr');
     const td = document.createElement('td');
-    td.colSpan = 13;
+    td.colSpan = 14;
     td.textContent = 'データがありません。';
     td.classList.add('empty');
     tr.appendChild(td);
     tbody.appendChild(tr);
     return;
   }
+
+  const gamesPlayed = getTeamGamesPlayed(teamEntry);
+  const ipRequirementOuts = gamesPlayed > 0 ? Math.max(0, Math.round(gamesPlayed * 3)) : 0;
+  const qualificationApplicable = ipRequirementOuts > 0;
 
   rows.forEach((row) => {
     const tr = document.createElement('tr');
@@ -3988,6 +4026,15 @@ function renderPitchingTable(tbody, teamEntry) {
       formatNumberDisplay(row.whip, 2),
       formatNumberDisplay(row.kPer9, 2),
       formatNumberDisplay(row.bbPer9, 2),
+      (() => {
+        const ip = Number(row.ip);
+        if (!Number.isFinite(ip)) {
+          return formatQualificationDisplay(false, qualificationApplicable);
+        }
+        const outs = Math.round(ip * 3);
+        const reached = qualificationApplicable ? outs >= ipRequirementOuts : false;
+        return formatQualificationDisplay(reached, qualificationApplicable);
+      })(),
     ];
     cells.forEach((value) => {
       const td = document.createElement('td');
@@ -4069,8 +4116,10 @@ function pickLeader(candidates, key, opts = {}) {
   const { minKey = null, minValue = 0, reverse = false } = opts;
   const filtered = candidates.filter((p) => {
     if (minKey) {
+      const threshold = typeof minValue === 'function' ? Number(minValue(p)) : Number(minValue);
+      const required = Number.isFinite(threshold) && threshold > 0 ? threshold : 0;
       const v = Number(p[minKey]);
-      if (!Number.isFinite(v) || v < minValue) return false;
+      if (!Number.isFinite(v) || v < required) return false;
     }
     const val = Number(p[key]);
     return Number.isFinite(val);
@@ -4095,16 +4144,29 @@ function renderSimulationLeaders(lastRun) {
   const batters = teams.flatMap((t) => (Array.isArray(t.batters) ? t.batters.map((b) => ({ ...b, team: t.name })) : []));
   const pitchers = teams.flatMap((t) => (Array.isArray(t.pitchers) ? t.pitchers.map((p) => ({ ...p, team: t.name })) : []));
 
-  const minAB = 10;
-  const hitterAvg = pickLeader(batters, 'avg', { minKey: 'ab', minValue: minAB });
-  const hitterOPS = pickLeader(batters, 'ops', { minKey: 'ab', minValue: minAB });
+  const gamesByTeam = new Map();
+  teams.forEach((team) => {
+    const games = Number(team?.record?.games);
+    gamesByTeam.set(team.name, Number.isFinite(games) && games > 0 ? games : 0);
+  });
+
+  const paRequirement = (player) => {
+    const games = gamesByTeam.get(player.team) || 0;
+    return games > 0 ? games * 3 : 0;
+  };
+  const ipRequirement = (player) => {
+    const games = gamesByTeam.get(player.team) || 0;
+    return games > 0 ? games : 0;
+  };
+
+  const hitterAvg = pickLeader(batters, 'avg', { minKey: 'pa', minValue: paRequirement });
+  const hitterOPS = pickLeader(batters, 'ops', { minKey: 'pa', minValue: paRequirement });
   const hrKing = pickLeader(batters, 'homeRuns');
   const rbiKing = pickLeader(batters, 'rbi');
 
-  const minIP = 5; // 短いシムでもある程度の投球回を要求
-  const eraBest = pickLeader(pitchers, 'era', { minKey: 'ip', minValue: minIP, reverse: true });
-  const k9Best = pickLeader(pitchers, 'kPer9', { minKey: 'ip', minValue: minIP });
-  const whipBest = pickLeader(pitchers, 'whip', { minKey: 'ip', minValue: minIP, reverse: true });
+  const eraBest = pickLeader(pitchers, 'era', { minKey: 'ip', minValue: ipRequirement, reverse: true });
+  const k9Best = pickLeader(pitchers, 'kPer9', { minKey: 'ip', minValue: ipRequirement });
+  const whipBest = pickLeader(pitchers, 'whip', { minKey: 'ip', minValue: ipRequirement, reverse: true });
 
   const fmtName = (p) => `${p.name || '-'}（${p.team || '-'}）`;
   const addCard = (kind, icon, label, valueText, nameText) => {
