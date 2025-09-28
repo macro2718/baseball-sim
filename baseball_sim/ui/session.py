@@ -52,7 +52,9 @@ class WebGameSession(
             "default_games": 20,
             "limits": {"min_games": 1, "max_games": 200},
             "league": {"teams": [], "games_per_card": None, "cards_per_opponent": None},
+            "playable": {"teams": [], "selection": {"home": None, "away": None}},
         }
+        self._simulation_playable: Dict[str, Dict[str, Any]] = {}
         self._control_mode: str = "manual"
         self._user_team_key: Optional[str] = None
         self._cpu_team_key: Optional[str] = None

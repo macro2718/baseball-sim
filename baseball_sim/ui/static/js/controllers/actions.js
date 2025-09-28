@@ -173,6 +173,41 @@ export function createGameActions(render) {
     showStatus('リーグに参加するチームを2チーム以上追加してください。', 'danger');
   }
 
+  async function handleSimulationMatchStart(selection = {}, options = {}) {
+    const homeKey = typeof selection.home === 'string' ? selection.home.trim() : '';
+    const awayKey = typeof selection.away === 'string' ? selection.away.trim() : '';
+
+    if (!homeKey || !awayKey) {
+      showStatus('ホームとアウェイのチームを選択してください。', 'danger');
+      return null;
+    }
+    if (homeKey === awayKey) {
+      showStatus('ホームとアウェイには異なるチームを選んでください。', 'danger');
+      return null;
+    }
+
+    const payloadBody = { home: homeKey, away: awayKey };
+    if (options?.mode) {
+      payloadBody.mode = options.mode;
+    }
+    if (options?.userTeam) {
+      payloadBody.user_team = options.userTeam;
+    }
+
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.simulationMatchStart, {
+        method: 'POST',
+        body: JSON.stringify(payloadBody),
+      });
+      setUIView('game');
+      render(payload);
+      return payload;
+    } catch (error) {
+      handleApiError(error, render);
+      throw error;
+    }
+  }
+
   async function handleSwing() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameSwing, { method: 'POST' });
@@ -675,6 +710,7 @@ export function createGameActions(render) {
     handleClearLog,
     runSimulation: handleRunSimulation,
     startSimulation: handleSimulationStart,
+    handleSimulationMatchStart,
     handleSwing,
     handleBunt,
     handleSqueeze,

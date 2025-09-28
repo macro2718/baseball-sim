@@ -3200,6 +3200,53 @@ export function initEventListeners(actions) {
     return stateCache.matchSetup;
   }
 
+  function ensureSimulationMatchState() {
+    if (!stateCache.simulationMatch || typeof stateCache.simulationMatch !== 'object') {
+      stateCache.simulationMatch = {
+        teams: [],
+        selection: { home: null, away: null },
+        defaults: { home: null, away: null },
+        timestamp: null,
+      };
+    }
+    if (
+      !stateCache.simulationMatch.selection ||
+      typeof stateCache.simulationMatch.selection !== 'object'
+    ) {
+      stateCache.simulationMatch.selection = { home: null, away: null };
+    }
+  }
+
+  function updateSimulationMatchSelection(updates) {
+    ensureSimulationMatchState();
+    const selection = stateCache.simulationMatch.selection;
+    let changed = false;
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'home')) {
+      const rawHome = updates.home;
+      const normalizedHome =
+        rawHome === null || rawHome === undefined ? '' : String(rawHome).trim();
+      const nextHome = normalizedHome ? normalizedHome : null;
+      if ((selection.home ?? null) !== nextHome) {
+        selection.home = nextHome;
+        changed = true;
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'away')) {
+      const rawAway = updates.away;
+      const normalizedAway =
+        rawAway === null || rawAway === undefined ? '' : String(rawAway).trim();
+      const nextAway = normalizedAway ? normalizedAway : null;
+      if ((selection.away ?? null) !== nextAway) {
+        selection.away = nextAway;
+        changed = true;
+      }
+    }
+
+    return changed;
+  }
+
   function ensureTeamLibrarySelectionState() {
     if (!stateCache.teamLibrary || typeof stateCache.teamLibrary !== 'object') {
       stateCache.teamLibrary = {
@@ -3575,9 +3622,31 @@ export function initEventListeners(actions) {
         // noop
       }
       refreshView();
+      });
     });
-  });
-}
+  }
+
+  if (elements.simulationMatchModeRadios?.length) {
+    elements.simulationMatchModeRadios.forEach((radio) => {
+      radio.addEventListener('change', () => {
+        const rawValue = typeof radio.value === 'string' ? radio.value : '';
+        let value = 'manual';
+        if (rawValue === 'cpu') {
+          value = 'cpu';
+        } else if (rawValue === 'auto') {
+          value = 'auto';
+        }
+        const setup = ensureMatchSetup();
+        setup.mode = value;
+        if (value === 'cpu' && setup.userTeam !== 'home' && setup.userTeam !== 'away') {
+          setup.userTeam = 'home';
+        } else if (value !== 'cpu') {
+          setup.userTeam = 'home';
+        }
+        refreshView();
+      });
+    });
+  }
 
   if (elements.controlTeamSelect) {
     elements.controlTeamSelect.addEventListener('change', (event) => {
@@ -3803,6 +3872,64 @@ export function initEventListeners(actions) {
     elements.simulationResultsHome.addEventListener('click', () => {
       setUIView('lobby');
       refreshView();
+    });
+  }
+  if (elements.simulationPlayMatch) {
+    elements.simulationPlayMatch.addEventListener('click', () => {
+      stateCache.resetSimulationSelect = true;
+      setUIView('simulation-match');
+      refreshView();
+    });
+  }
+  if (elements.simulationMatchCancel) {
+    elements.simulationMatchCancel.addEventListener('click', () => {
+      setUIView('simulation-results');
+      refreshView();
+    });
+  }
+  if (elements.simulationMatchAwaySelect) {
+    elements.simulationMatchAwaySelect.addEventListener('change', (event) => {
+      const value = typeof event?.target?.value === 'string' ? event.target.value : '';
+      if (updateSimulationMatchSelection({ away: value })) {
+        refreshView();
+      } else if (elements.simulationMatchStart) {
+        const selection = stateCache.simulationMatch?.selection || {};
+        const ready = Boolean(selection.home && selection.away && selection.home !== selection.away);
+        elements.simulationMatchStart.disabled = !ready;
+      }
+    });
+  }
+  if (elements.simulationMatchHomeSelect) {
+    elements.simulationMatchHomeSelect.addEventListener('change', (event) => {
+      const value = typeof event?.target?.value === 'string' ? event.target.value : '';
+      if (updateSimulationMatchSelection({ home: value })) {
+        refreshView();
+      } else if (elements.simulationMatchStart) {
+        const selection = stateCache.simulationMatch?.selection || {};
+        const ready = Boolean(selection.home && selection.away && selection.home !== selection.away);
+        elements.simulationMatchStart.disabled = !ready;
+      }
+    });
+  }
+  if (elements.simulationMatchControlSelect) {
+    elements.simulationMatchControlSelect.addEventListener('change', (event) => {
+      const setup = ensureMatchSetup();
+      setup.userTeam = event.target.value === 'away' ? 'away' : 'home';
+      refreshView();
+    });
+  }
+  if (elements.simulationMatchStart) {
+    elements.simulationMatchStart.addEventListener('click', async () => {
+      const selection = stateCache.simulationMatch?.selection || {};
+      const setup = getMatchSetupOptions();
+      elements.simulationMatchStart.disabled = true;
+      try {
+        await actions.handleSimulationMatchStart(selection, setup);
+      } catch (error) {
+        // errors handled in action
+      } finally {
+        elements.simulationMatchStart.disabled = false;
+      }
     });
   }
 

@@ -23,6 +23,7 @@ def summarize_simulation_results(
     alias_map = results.get("team_aliases") or {}
 
     unique_teams = list(_iter_unique_teams(results))
+    simulation_key_map = {id(team): f"sim-team-{index + 1}" for index, team in enumerate(unique_teams)}
     league_mode = bool(league) or len(unique_teams) > 2
 
     role_map: Dict[str, str] = {}
@@ -41,6 +42,7 @@ def summarize_simulation_results(
 
     team_entries: List[Dict[str, Any]] = []
     for index, team_obj in enumerate(unique_teams):
+        simulation_key = simulation_key_map.get(id(team_obj))
         summary = _build_team_entry(
             index,
             team_obj,
@@ -50,6 +52,7 @@ def summarize_simulation_results(
             role_map,
             team_ids,
             league_mode,
+            simulation_key=simulation_key,
         )
         team_entries.append(summary)
 
@@ -150,6 +153,8 @@ def _build_team_entry(
     role_map: Mapping[str, str],
     team_ids: List[str],
     league_mode: bool,
+    *,
+    simulation_key: Optional[str] = None,
 ) -> Dict[str, Any]:
     team_name = getattr(team_obj, "name", None) or f"Team {index + 1}"
     resolved_roles = [role for role, name in role_map.items() if name == team_name]
@@ -182,6 +187,8 @@ def _build_team_entry(
         "batters": batters,
         "pitchers": pitchers,
         "rank": index + 1,
+        "simulationKey": simulation_key,
+        "simulationIndex": index,
     }
 
 

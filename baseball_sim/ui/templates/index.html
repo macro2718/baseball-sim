@@ -499,8 +499,60 @@
             </div>
 
             <div class="title-actions simulation-results-actions">
+              <button type="button" id="simulation-play-match" class="primary">この成績で試合</button>
               <button type="button" id="simulation-run-again" class="primary">条件を変更して再実行</button>
               <button type="button" id="simulation-results-home">ホームに戻る</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="simulation-match-screen" class="screen hidden">
+          <div class="title-card simulation-results-card">
+            <h2>この成績で試合</h2>
+            <p class="lobby-description">
+              シミュレーション結果のチームだけで試合を行います。同名チームは末尾の番号で区別されています。
+            </p>
+            <p id="simulation-match-hint" class="lobby-description secondary"></p>
+
+            <div class="team-selection-grid">
+              <div class="team-selection-field">
+                <label for="simulation-match-away">アウェイチーム</label>
+                <select id="simulation-match-away" class="team-select"></select>
+              </div>
+              <div class="team-selection-field">
+                <label for="simulation-match-home">ホームチーム</label>
+                <select id="simulation-match-home" class="team-select"></select>
+              </div>
+            </div>
+
+            <div class="match-mode-section">
+              <p class="match-mode-label">試合モード</p>
+              <div class="match-mode-options">
+                <label class="match-mode-option">
+                  <input type="radio" name="simulation-match-mode" value="manual" checked />
+                  <span>全操作対戦</span>
+                </label>
+                <label class="match-mode-option">
+                  <input type="radio" name="simulation-match-mode" value="cpu" />
+                  <span>CPU対戦</span>
+                </label>
+                <label class="match-mode-option">
+                  <input type="radio" name="simulation-match-mode" value="auto" />
+                  <span>全自動CPU</span>
+                </label>
+              </div>
+              <div class="team-selection-field control-team-field hidden" id="simulation-match-control-field">
+                <label for="simulation-match-control-team">自操作チーム</label>
+                <select id="simulation-match-control-team" class="team-select">
+                  <option value="home">ホーム</option>
+                  <option value="away">アウェイ</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="title-actions simulation-results-actions">
+              <button type="button" id="simulation-match-start" class="primary">試合開始</button>
+              <button type="button" id="simulation-match-cancel">結果に戻る</button>
             </div>
           </div>
         </section>

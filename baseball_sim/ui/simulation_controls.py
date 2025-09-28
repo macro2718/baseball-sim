@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import Counter, defaultdict
+from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from baseball_sim.interface.simulation import simulate_games
@@ -27,6 +29,12 @@ class SimulationControlsMixin:
             "games_per_card": None,
             "cards_per_opponent": None,
         }
+        self._simulation_state["playable"] = {
+            "teams": [],
+            "selection": {"home": None, "away": None},
+        }
+        if hasattr(self, "_simulation_playable"):
+            self._simulation_playable = {}
 
     def get_simulation_state(self) -> Dict[str, Any]:
         state = {
@@ -42,6 +50,29 @@ class SimulationControlsMixin:
             "teams": list(league_state.get("teams", [])),
             "games_per_card": league_state.get("games_per_card"),
             "cards_per_opponent": league_state.get("cards_per_opponent"),
+        }
+        playable_state = self._simulation_state.get("playable") or {}
+        teams = []
+        for entry in playable_state.get("teams", []):
+            if not isinstance(entry, Mapping):
+                continue
+            team_entry = {
+                "id": entry.get("id"),
+                "name": entry.get("name"),
+                "record": entry.get("record") or {},
+                "roles": list(entry.get("roles", [])),
+                "summary": entry.get("summary") or None,
+            }
+            if entry.get("source_id"):
+                team_entry["source_id"] = entry.get("source_id")
+            teams.append(team_entry)
+        selection = playable_state.get("selection") or {}
+        state["playable"] = {
+            "teams": teams,
+            "selection": {
+                "home": selection.get("home"),
+                "away": selection.get("away"),
+            },
         }
         return state
 
@@ -118,6 +149,18 @@ class SimulationControlsMixin:
             league_context["role_assignment"] = role_assignment
 
         return league_request, league_context
+
+    def _iter_simulation_teams(self, results: Mapping[str, Any]):
+        teams = results.get("teams") or {}
+        seen: set[int] = set()
+        for team in teams.values():
+            if team is None:
+                continue
+            identifier = id(team)
+            if identifier in seen:
+                continue
+            seen.add(identifier)
+            yield team
 
     def run_simulation(
         self, num_games: Optional[int] = None, *, league_options: Optional[Dict[str, Any]] = None
@@ -206,6 +249,130 @@ class SimulationControlsMixin:
             league=league_context,
         )
 
+        unique_sim_teams = list(self._iter_simulation_teams(results))
+        summary_lookup: Dict[str, Dict[str, Any]] = {}
+        for entry in summary.get("teams", []):
+            if isinstance(entry, Mapping):
+                key = entry.get("simulationKey")
+                if isinstance(key, str):
+                    summary_lookup[key] = entry  # type: ignore[assignment]
+
+        playable_entries: List[Dict[str, Any]] = []
+        playable_map: Dict[str, Dict[str, Any]] = {}
+        playable_records: List[Dict[str, Any]] = []
+        source_ids: List[Optional[str]] = []
+        if league_context is not None:
+            raw_ids = league_context.get("teams")
+            if isinstance(raw_ids, list):
+                source_ids = [str(team_id) if team_id is not None else None for team_id in raw_ids]
+        else:
+            source_ids = [self._away_team_id, self._home_team_id]
+
+        for index, team_obj in enumerate(unique_sim_teams):
+            sim_key = f"sim-team-{index + 1}"
+            entry = summary_lookup.get(sim_key) or {}
+            display_name = entry.get("name") if isinstance(entry.get("name"), str) else getattr(team_obj, "name", sim_key)
+            record = entry.get("record") if isinstance(entry.get("record"), Mapping) else {}
+            roles = list(entry.get("roles", [])) if isinstance(entry.get("roles"), list) else []
+            source_id: Optional[str] = None
+            if "away" in roles and self._away_team_id:
+                source_id = self._away_team_id
+            elif "home" in roles and self._home_team_id:
+                source_id = self._home_team_id
+            elif index < len(source_ids):
+                source_id = source_ids[index]
+
+            wins = int(record.get("wins", 0)) if isinstance(record, Mapping) else 0
+            losses = int(record.get("losses", 0)) if isinstance(record, Mapping) else 0
+            draws = int(record.get("draws", 0)) if isinstance(record, Mapping) else 0
+            summary_label = None
+            total = wins + losses + draws
+            if total > 0:
+                base = f"{wins}-{losses}"
+                if draws:
+                    base = f"{base}-{draws}"
+                summary_label = base
+
+            entry_payload = {
+                "id": sim_key,
+                "name": display_name,
+                "record": record or {},
+                "roles": roles,
+            }
+            if summary_label:
+                entry_payload["summary"] = summary_label
+            if source_id:
+                entry_payload["source_id"] = source_id
+            playable_entries.append(entry_payload)
+
+            team_clone = deepcopy(team_obj)
+            try:
+                setattr(team_clone, "name", display_name)
+            except Exception:
+                pass
+            playable_map[sim_key] = {
+                "team": team_clone,
+                "display_name": display_name,
+                "source_id": source_id,
+            }
+            playable_records.append(
+                {
+                    "payload": entry_payload,
+                    "map_entry": playable_map[sim_key],
+                    "base_name": display_name,
+                }
+            )
+
+        if playable_records:
+            name_counts = Counter(
+                record["base_name"] for record in playable_records if record.get("base_name")
+            )
+            duplicate_tracker: Dict[str, int] = defaultdict(int)
+            for record in playable_records:
+                payload = record["payload"]
+                map_entry = record["map_entry"]
+                base_name = record.get("base_name") or payload.get("id")
+                if not base_name:
+                    continue
+                duplicate_tracker[base_name] += 1
+                if name_counts.get(base_name, 0) > 1:
+                    suffix_index = duplicate_tracker[base_name]
+                    display_label = f"{base_name} #{suffix_index}"
+                else:
+                    display_label = base_name
+
+                payload["name"] = display_label
+                if map_entry:
+                    map_entry["display_name"] = display_label
+                    team_clone = map_entry.get("team")
+                    if team_clone is not None:
+                        try:
+                            setattr(team_clone, "name", display_label)
+                        except Exception:
+                            pass
+
+        default_selection = {"home": None, "away": None}
+        for payload in playable_entries:
+            roles = payload.get("roles") or []
+            if not default_selection["away"] and "away" in roles:
+                default_selection["away"] = payload["id"]
+            if not default_selection["home"] and "home" in roles:
+                default_selection["home"] = payload["id"]
+        candidate_ids = [entry["id"] for entry in playable_entries if entry.get("id")]
+        if not default_selection["away"] and candidate_ids:
+            default_selection["away"] = candidate_ids[0]
+        if not default_selection["home"]:
+            for candidate in candidate_ids:
+                if candidate != default_selection["away"]:
+                    default_selection["home"] = candidate
+                    break
+
+        self._simulation_state["playable"] = {
+            "teams": playable_entries,
+            "selection": default_selection,
+        }
+        self._simulation_playable = playable_map
+
         self._simulation_state["last_run"] = summary
 
         total_games = summary.get("total_games") or num_games or 0
@@ -215,5 +382,76 @@ class SimulationControlsMixin:
             message = f"{total_games}試合のシミュレーションが完了しました。"
 
         self._notifications.publish("success", message)
+
+        return self.build_state()
+
+    def start_simulation_match(
+        self,
+        *,
+        away_key: str,
+        home_key: str,
+        control_mode: Optional[str] = None,
+        user_team: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        playable_map = getattr(self, "_simulation_playable", {}) or {}
+        if not playable_map:
+            raise GameSessionError("シミュレーション結果がありません。先にシミュレーションを実行してください。")
+
+        away_selection = str(away_key or "").strip()
+        home_selection = str(home_key or "").strip()
+
+        if not away_selection or not home_selection:
+            raise GameSessionError("ホームとアウェイのチームを選択してください。")
+        if away_selection == home_selection:
+            raise GameSessionError("ホームとアウェイには異なるチームを選択してください。")
+
+        away_entry = playable_map.get(away_selection)
+        home_entry = playable_map.get(home_selection)
+        if not away_entry or not home_entry:
+            raise GameSessionError("選択したシミュレーションチームが見つかりません。")
+
+        away_template = away_entry.get("team")
+        home_template = home_entry.get("team")
+        if away_template is None or home_template is None:
+            raise GameSessionError("シミュレーションチームの読み込みに失敗しました。")
+
+        away_team = deepcopy(away_template)
+        home_team = deepcopy(home_template)
+
+        display_away = away_entry.get("display_name") or getattr(away_team, "name", away_selection)
+        display_home = home_entry.get("display_name") or getattr(home_team, "name", home_selection)
+        try:
+            setattr(away_team, "name", display_away)
+        except Exception:
+            pass
+        try:
+            setattr(home_team, "name", display_home)
+        except Exception:
+            pass
+
+        self.away_team = away_team
+        self.home_team = home_team
+        self._away_team_source = None
+        self._home_team_source = None
+        self._away_team_id = away_entry.get("source_id")
+        self._home_team_id = home_entry.get("source_id")
+
+        playable_state = self._simulation_state.get("playable") or {}
+        playable_state["selection"] = {"home": home_selection, "away": away_selection}
+        self._simulation_state["playable"] = playable_state
+
+        if hasattr(self, "_prepare_game_setup"):
+            try:
+                self._prepare_game_setup(control_mode, user_team)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        elif hasattr(self, "_configure_control_mode"):
+            try:
+                self._configure_control_mode(control_mode, user_team)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+
+        if hasattr(self, "_start_loaded_game"):
+            return self._start_loaded_game()  # type: ignore[attr-defined]
 
         return self.build_state()

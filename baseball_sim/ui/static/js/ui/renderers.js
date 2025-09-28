@@ -3629,6 +3629,7 @@ export function updateScreenVisibility() {
   const showGame = view === 'game';
   const showSimulationSetup = view === 'simulation';
   const showSimulationResults = view === 'simulation-results';
+  const showSimulationMatch = view === 'simulation-match';
 
   if (elements.lobbyScreen) {
     elements.lobbyScreen.classList.toggle('hidden', !showLobby);
@@ -3653,6 +3654,9 @@ export function updateScreenVisibility() {
   }
   if (elements.simulationResultsScreen) {
     elements.simulationResultsScreen.classList.toggle('hidden', !showSimulationResults);
+  }
+  if (elements.simulationMatchScreen) {
+    elements.simulationMatchScreen.classList.toggle('hidden', !showSimulationMatch);
   }
 }
 
@@ -4430,9 +4434,24 @@ function renderSimulationResults(simulationState) {
     simulationPlayersTeamSelect,
     simulationSelectedBattingTable,
     simulationSelectedPitchingTable,
+    simulationPlayMatch,
   } = elements;
 
   const lastRun = simulationState?.lastRun || null;
+  const playableTeams = Array.isArray(simulationState?.playable?.teams)
+    ? simulationState.playable.teams
+    : [];
+  const canPlayMatch = Boolean(lastRun && playableTeams.length >= 2);
+
+  if (simulationPlayMatch) {
+    simulationPlayMatch.classList.toggle('hidden', !lastRun);
+    simulationPlayMatch.disabled = !canPlayMatch;
+    if (!canPlayMatch && lastRun) {
+      simulationPlayMatch.title = '試合を行うには異なる2チームを選択してください。';
+    } else {
+      simulationPlayMatch.removeAttribute('title');
+    }
+  }
 
   if (!lastRun) {
     if (simulationResultsSummary) {
@@ -4886,6 +4905,139 @@ function renderSimulationResults(simulationState) {
   renderSimulationMatchupsTable(simulationMatchupsBody, games, lastRun.aliases || {});
   // タブ/セクション表示更新
   updateSimulationResultsViewUI();
+}
+
+function renderSimulationMatch(simulationState) {
+  const {
+    simulationMatchAwaySelect,
+    simulationMatchHomeSelect,
+    simulationMatchHint,
+    simulationMatchStart,
+    simulationMatchModeRadios,
+    simulationMatchControlField,
+    simulationMatchControlSelect,
+  } = elements;
+
+  const matchState = stateCache.simulationMatch || {};
+  const teams = Array.isArray(matchState.teams) ? matchState.teams : [];
+  const defaults = matchState.defaults || { home: null, away: null };
+  let selection = matchState.selection || { home: null, away: null };
+
+  const validIds = new Set(teams.map((team) => team?.id).filter(Boolean));
+  let selectedAway = validIds.has(selection.away) ? selection.away : null;
+  let selectedHome = validIds.has(selection.home) ? selection.home : null;
+
+  if (stateCache.resetSimulationSelect) {
+    selectedAway = validIds.has(defaults.away) ? defaults.away : null;
+    selectedHome = validIds.has(defaults.home) ? defaults.home : null;
+  }
+
+  if (!selectedAway && validIds.has(defaults.away)) {
+    selectedAway = defaults.away;
+  }
+  if ((!selectedHome || selectedHome === selectedAway) && validIds.has(defaults.home)) {
+    selectedHome = defaults.home !== selectedAway ? defaults.home : null;
+  }
+
+  if (!validIds.has(selectedAway)) {
+    selectedAway = null;
+  }
+  if (!validIds.has(selectedHome) || selectedHome === selectedAway) {
+    selectedHome = null;
+  }
+
+  selection = { home: selectedHome, away: selectedAway };
+  stateCache.simulationMatch.selection = selection;
+
+  const optionList = teams.map((team) => {
+    if (!team || !team.id) {
+      return null;
+    }
+    const name = team.name || team.id;
+    const summary = typeof team.summary === 'string' && team.summary ? ` (${team.summary})` : '';
+    return { value: team.id, label: `${name}${summary}` };
+  }).filter(Boolean);
+
+  if (simulationMatchAwaySelect) {
+    populateSelect(simulationMatchAwaySelect, optionList, {
+      placeholder: 'チームを選択する',
+      selected: selectedAway,
+      fallback: undefined,
+    });
+    if (!selectedAway) {
+      simulationMatchAwaySelect.value = '';
+    }
+  }
+
+  if (simulationMatchHomeSelect) {
+    populateSelect(simulationMatchHomeSelect, optionList, {
+      placeholder: 'チームを選択する',
+      selected: selectedHome,
+      fallback: undefined,
+    });
+    if (!selectedHome) {
+      simulationMatchHomeSelect.value = '';
+    }
+  }
+
+  const teamsReady = teams.length >= 2;
+  const selectionReady = Boolean(selectedAway && selectedHome && selectedAway !== selectedHome);
+  if (simulationMatchStart) {
+    simulationMatchStart.disabled = !(teamsReady && selectionReady);
+  }
+
+  if (simulationMatchHint) {
+    let hint = '';
+    if (!teams.length) {
+      hint = 'シミュレーション結果がありません。まずはシミュレーションを実行してください。';
+    } else if (teams.length < 2) {
+      hint = '試合を開始するにはもう1チーム必要です。';
+    } else if (!selectionReady) {
+      hint = '異なる2チームをホームとアウェイに選択してください。';
+    } else {
+      hint = `${teams.length}チームから選択できます。シミュレーション成績がそのまま適用されます。`;
+    }
+    simulationMatchHint.textContent = hint;
+  }
+
+  const setup = stateCache.matchSetup || { mode: 'manual', userTeam: 'home' };
+  const matchMode =
+    setup.mode === 'cpu' ? 'cpu' : setup.mode === 'auto' ? 'auto' : 'manual';
+  const selectedControlTeam = matchMode === 'cpu' && setup.userTeam === 'away' ? 'away' : 'home';
+
+  (simulationMatchModeRadios || []).forEach((radio) => {
+    if (!radio) return;
+    const rawValue = typeof radio.value === 'string' ? radio.value : '';
+    const value = rawValue === 'cpu' ? 'cpu' : rawValue === 'auto' ? 'auto' : 'manual';
+    radio.checked = value === matchMode;
+  });
+
+  if (simulationMatchControlField) {
+    const hidden = matchMode !== 'cpu';
+    simulationMatchControlField.classList.toggle('hidden', hidden);
+    simulationMatchControlField.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  }
+
+  if (simulationMatchControlSelect) {
+    const teamLookup = new Map(teams.map((team) => [team.id, team]));
+    const awayTeam = teamLookup.get(selectedAway || undefined);
+    const homeTeam = teamLookup.get(selectedHome || undefined);
+    const awayOption = simulationMatchControlSelect.querySelector('option[value="away"]');
+    const homeOption = simulationMatchControlSelect.querySelector('option[value="home"]');
+    const bothChosen = Boolean(selectedAway && selectedHome);
+    if (homeOption) {
+      homeOption.textContent = bothChosen && homeTeam?.name ? `ホーム (${homeTeam.name})` : 'ホーム';
+    }
+    if (awayOption) {
+      awayOption.textContent = bothChosen && awayTeam?.name ? `アウェイ (${awayTeam.name})` : 'アウェイ';
+    }
+    simulationMatchControlSelect.value = selectedControlTeam;
+    simulationMatchControlSelect.disabled = matchMode !== 'cpu';
+  }
+
+  if (stateCache.resetSimulationSelect) {
+    stateCache.resetSimulationSelect = false;
+  }
 }
 
 export function updateStatsPanel(state) {
@@ -5381,6 +5533,63 @@ export function render(data) {
       : null,
   };
 
+  const rawPlayable = rawSimulation.playable || {};
+  const playableTeamsRaw = Array.isArray(rawPlayable.teams) ? rawPlayable.teams : [];
+  const normalizedPlayableTeams = playableTeamsRaw
+    .map((team) => {
+      if (!team || typeof team !== 'object') return null;
+      const id = typeof team.id === 'string' ? team.id : null;
+      if (!id) return null;
+      const name = typeof team.name === 'string' && team.name ? team.name : id;
+      const summary = typeof team.summary === 'string' ? team.summary : '';
+      const record = team.record && typeof team.record === 'object' ? team.record : {};
+      const roles = Array.isArray(team.roles) ? [...team.roles] : [];
+      return { id, name, summary, record, roles };
+    })
+    .filter(Boolean);
+
+  const rawPlayableSelection =
+    rawPlayable.selection && typeof rawPlayable.selection === 'object'
+      ? rawPlayable.selection
+      : {};
+  const playableSelection = {
+    home:
+      typeof rawPlayableSelection.home === 'string' && rawPlayableSelection.home.trim()
+        ? rawPlayableSelection.home.trim()
+        : null,
+    away:
+      typeof rawPlayableSelection.away === 'string' && rawPlayableSelection.away.trim()
+        ? rawPlayableSelection.away.trim()
+        : null,
+  };
+
+  const previousTimestamp = stateCache.simulationMatch?.timestamp || null;
+  const currentTimestamp = lastRun?.timestamp || null;
+  const selectionShouldReset = stateCache.resetSimulationSelect || previousTimestamp !== currentTimestamp;
+
+  const existingSelection = stateCache.simulationMatch?.selection || { home: null, away: null };
+  const validIds = new Set(normalizedPlayableTeams.map((team) => team.id));
+  let nextSelection;
+  if (selectionShouldReset) {
+    nextSelection = { ...playableSelection };
+  } else {
+    nextSelection = {
+      home: validIds.has(existingSelection.home) ? existingSelection.home : playableSelection.home,
+      away: validIds.has(existingSelection.away) ? existingSelection.away : playableSelection.away,
+    };
+  }
+
+  stateCache.simulationMatch = {
+    teams: normalizedPlayableTeams,
+    selection: nextSelection,
+    defaults: playableSelection,
+    timestamp: currentTimestamp,
+  };
+
+  if (selectionShouldReset) {
+    stateCache.resetSimulationSelect = true;
+  }
+
   stateCache.simulation = {
     enabled: Boolean(rawSimulation.enabled),
     running: Boolean(rawSimulation.running),
@@ -5394,6 +5603,10 @@ export function render(data) {
     lastRun,
     log: simulationLog.slice(-12),
     league: leagueState,
+    playable: {
+      teams: normalizedPlayableTeams,
+      selection: playableSelection,
+    },
   };
 
   if (data.game?.active) {
@@ -5409,6 +5622,7 @@ export function render(data) {
   renderGame(data.game, data.teams, data.log, previousData?.game || null);
   renderSimulationSetup(stateCache.teamLibrary, stateCache.simulation);
   renderSimulationResults(stateCache.simulation);
+  renderSimulationMatch(stateCache.simulation);
   updateStatsPanel(data);
   updateAbilitiesPanel(data);
   updateScreenVisibility();
