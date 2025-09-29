@@ -4073,6 +4073,9 @@ function setTabActive(button, active) {
 function updateSimulationResultsViewUI() {
   const {
     simulationSummarySection,
+    simulationSeriesSection,
+    simulationMatchupsSection,
+    simulationTeamStatsSection,
     simulationGamesSection,
     simulationPlayersSection,
     simulationPlayersTabsRow,
@@ -4081,15 +4084,37 @@ function updateSimulationResultsViewUI() {
     simulationSelectedBattingTable,
     simulationSelectedPitchingTable,
   } = elements;
-  const { simulationTabSummary, simulationTabGames, simulationTabPlayers } = elements;
+  const {
+    simulationTabSummary,
+    simulationTabSeries,
+    simulationTabMatchups,
+    simulationTabTeamStats,
+    simulationTabGames,
+    simulationTabPlayers,
+  } = elements;
   const view = stateCache.simulationResultsView || 'summary';
   const showSummary = view === 'summary';
+  const showSeries = view === 'series';
+  const showMatchups = view === 'matchups';
+  const showTeamStats = view === 'teamStats';
   const showGames = view === 'games';
   const showPlayers = view === 'players';
 
   if (simulationSummarySection) {
     simulationSummarySection.classList.toggle('hidden', !showSummary);
     simulationSummarySection.setAttribute('aria-hidden', showSummary ? 'false' : 'true');
+  }
+  if (simulationSeriesSection) {
+    simulationSeriesSection.classList.toggle('hidden', !showSeries);
+    simulationSeriesSection.setAttribute('aria-hidden', showSeries ? 'false' : 'true');
+  }
+  if (simulationMatchupsSection) {
+    simulationMatchupsSection.classList.toggle('hidden', !showMatchups);
+    simulationMatchupsSection.setAttribute('aria-hidden', showMatchups ? 'false' : 'true');
+  }
+  if (simulationTeamStatsSection) {
+    simulationTeamStatsSection.classList.toggle('hidden', !showTeamStats);
+    simulationTeamStatsSection.setAttribute('aria-hidden', showTeamStats ? 'false' : 'true');
   }
   if (simulationGamesSection) {
     simulationGamesSection.classList.toggle('hidden', !showGames);
@@ -4101,6 +4126,9 @@ function updateSimulationResultsViewUI() {
   }
 
   setTabActive(simulationTabSummary, showSummary);
+  setTabActive(simulationTabSeries, showSeries);
+  setTabActive(simulationTabMatchups, showMatchups);
+  setTabActive(simulationTabTeamStats, showTeamStats);
   setTabActive(simulationTabGames, showGames);
   setTabActive(simulationTabPlayers, showPlayers);
 

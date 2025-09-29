@@ -312,6 +312,9 @@
             <div class="simulation-tabs-row">
               <div class="tab-group" role="tablist" aria-label="結果表示切替">
                 <button id="simulation-tab-summary" type="button" class="tab active" aria-pressed="true">要約</button>
+                <button id="simulation-tab-series" type="button" class="tab" aria-pressed="false">シリーズ概要</button>
+                <button id="simulation-tab-matchups" type="button" class="tab" aria-pressed="false">対戦成績</button>
+                <button id="simulation-tab-team-stats" type="button" class="tab" aria-pressed="false">チーム別統計</button>
                 <button id="simulation-tab-games" type="button" class="tab" aria-pressed="false">試合一覧</button>
                 <button id="simulation-tab-players" type="button" class="tab" aria-pressed="false">個人成績</button>
               </div>
@@ -357,8 +360,12 @@
               
             </div>
 
-            <!-- 試合一覧ビュー -->
-            <div id="simulation-games-section" class="simulation-results-grid simulation-view-section hidden" aria-hidden="true">
+            <!-- シリーズ概要ビュー -->
+            <div
+              id="simulation-series-section"
+              class="simulation-results-grid simulation-view-section hidden"
+              aria-hidden="true"
+            >
               <article class="simulation-results-block">
                 <h3>シリーズ概要</h3>
                 <div
@@ -369,7 +376,14 @@
                   <p class="simulation-empty-message">集計可能な試合がまだありません。</p>
                 </div>
               </article>
+            </div>
 
+            <!-- 対戦成績ビュー -->
+            <div
+              id="simulation-matchups-section"
+              class="simulation-results-grid simulation-view-section hidden"
+              aria-hidden="true"
+            >
               <article class="simulation-results-block">
                 <h3>対戦成績</h3>
                 <table class="simulation-table" id="simulation-matchups-table">
@@ -385,50 +399,64 @@
                   </tbody>
                 </table>
               </article>
+            </div>
 
+            <!-- チーム別統計ビュー -->
+            <div
+              id="simulation-team-stats-section"
+              class="simulation-results-grid simulation-view-section hidden"
+              aria-hidden="true"
+            >
               <article class="simulation-results-block">
                 <h3>チーム別統計</h3>
                 <div class="simulation-team-stats-wrapper">
-                <table class="simulation-table" id="simulation-team-stats-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">チーム</th>
-                      <th scope="col">AVG</th>
-                      <th scope="col">OBP</th>
-                      <th scope="col">SLG</th>
-                      <th scope="col">OPS</th>
-                      <th scope="col">得点/試合</th>
-                      <th scope="col">防御率</th>
-                      <th scope="col">WHIP</th>
-                      <th scope="col">K/9</th>
-                      <th scope="col">BB/9</th>
-                    </tr>
-                  </thead>
-                  <tbody id="simulation-team-stats-body">
-                    <tr>
-                      <td colspan="10">チーム別統計はまだありません。</td>
-                    </tr>
-                  </tbody>
-                </table>
+                  <table class="simulation-table" id="simulation-team-stats-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">チーム</th>
+                        <th scope="col">AVG</th>
+                        <th scope="col">OBP</th>
+                        <th scope="col">SLG</th>
+                        <th scope="col">OPS</th>
+                        <th scope="col">得点/試合</th>
+                        <th scope="col">防御率</th>
+                        <th scope="col">WHIP</th>
+                        <th scope="col">K/9</th>
+                        <th scope="col">BB/9</th>
+                      </tr>
+                    </thead>
+                    <tbody id="simulation-team-stats-body">
+                      <tr>
+                        <td colspan="10">チーム別統計はまだありません。</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </article>
+            </div>
 
+            <!-- 試合一覧ビュー -->
+            <div
+              id="simulation-games-section"
+              class="simulation-results-grid simulation-view-section hidden"
+              aria-hidden="true"
+            >
               <article class="simulation-results-block">
                 <h3>試合一覧</h3>
                 <div class="simulation-game-table-wrapper">
-                <table class="simulation-table" id="simulation-game-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">#</th>
-                      <th scope="col">アウェイ</th>
-                      <th scope="col">ホーム</th>
-                      <th scope="col">スコア</th>
-                      <th scope="col">イニング</th>
-                      <th scope="col">勝敗</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
+                  <table class="simulation-table" id="simulation-game-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">アウェイ</th>
+                        <th scope="col">ホーム</th>
+                        <th scope="col">スコア</th>
+                        <th scope="col">イニング</th>
+                        <th scope="col">勝敗</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
                 </div>
               </article>
             </div>

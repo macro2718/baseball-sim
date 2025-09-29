@@ -68,21 +68,22 @@ export const stateCache = {
   },
 };
 
+const SIMULATION_RESULT_VIEWS = new Set(['summary', 'series', 'matchups', 'teamStats', 'games', 'players']);
+
 export function setUIView(view) {
   if (!view) return;
   stateCache.uiView = view;
 }
 
 export function setSimulationResultsView(view) {
-  const allowed = new Set(['summary', 'games', 'players']);
-  const next = allowed.has(view) ? view : 'summary';
+  const next = SIMULATION_RESULT_VIEWS.has(view) ? view : 'summary';
   stateCache.simulationResultsView = next;
   return next;
 }
 
 export function getSimulationResultsView() {
   const v = stateCache.simulationResultsView;
-  return v === 'games' || v === 'players' ? v : 'summary';
+  return SIMULATION_RESULT_VIEWS.has(v) ? v : 'summary';
 }
 
 export function setPlayersSelectedTeamIndex(index) {
