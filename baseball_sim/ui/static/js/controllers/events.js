@@ -3765,6 +3765,24 @@ export function initEventListeners(actions) {
       refreshView();
     });
   }
+  if (elements.simulationTabSeries) {
+    elements.simulationTabSeries.addEventListener('click', () => {
+      setSimulationResultsView('series');
+      refreshView();
+    });
+  }
+  if (elements.simulationTabMatchups) {
+    elements.simulationTabMatchups.addEventListener('click', () => {
+      setSimulationResultsView('matchups');
+      refreshView();
+    });
+  }
+  if (elements.simulationTabTeamStats) {
+    elements.simulationTabTeamStats.addEventListener('click', () => {
+      setSimulationResultsView('teamStats');
+      refreshView();
+    });
+  }
   if (elements.simulationTabGames) {
     elements.simulationTabGames.addEventListener('click', () => {
       setSimulationResultsView('games');
