@@ -260,13 +260,18 @@ function computeAbilityMetricStyling(metricKey, displayValue, { invert = false }
 }
 
 export function resetAbilityColor(element) {
+  if (!element || !element.classList || !element.style) {
+    return;
+  }
   element.classList.remove('ability-colorized');
-  element.style.removeProperty('--ability-color');
-  element.style.removeProperty('--ability-intensity');
-  element.style.removeProperty('color');
-  element.style.removeProperty('text-shadow');
-  element.style.removeProperty('font-weight');
-  delete element.dataset.abilityMetric;
+  element.style.removeProperty?.('--ability-color');
+  element.style.removeProperty?.('--ability-intensity');
+  element.style.removeProperty?.('color');
+  element.style.removeProperty?.('text-shadow');
+  element.style.removeProperty?.('font-weight');
+  if (element.dataset) {
+    delete element.dataset.abilityMetric;
+  }
 }
 
 export function applyAbilityColor(
