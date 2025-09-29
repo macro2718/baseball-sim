@@ -1527,6 +1527,84 @@
       </footer>
     </div>
 
+    <div
+      class="modal hidden"
+      id="title-pitcher-modal"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-card stats-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="title-pitcher-modal-title"
+      >
+        <div class="modal-header">
+          <h3 id="title-pitcher-modal-title">先発投手の確認</h3>
+          <button
+            type="button"
+            class="modal-close"
+            data-close="title-pitcher"
+            aria-label="閉じる"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="modal-body stats-modal-body">
+          <div class="title-pitcher-summary">
+            <div class="title-pitcher-title">
+              <h4 id="title-pitcher-name">-</h4>
+              <span id="title-pitcher-role" class="title-pitcher-role"></span>
+            </div>
+            <div class="title-pitcher-chips">
+              <span class="title-pitcher-chip" id="title-pitcher-type">-</span>
+              <span class="title-pitcher-chip" id="title-pitcher-throws">-</span>
+            </div>
+            <div class="title-pitcher-quick-grid">
+              <div class="title-pitcher-quick">
+                <span class="label">現在スタミナ</span>
+                <span class="value" id="title-pitcher-current-stamina">-</span>
+              </div>
+              <div class="title-pitcher-quick">
+                <span class="label">ERA</span>
+                <span class="value" id="title-pitcher-quick-era">-.--</span>
+              </div>
+              <div class="title-pitcher-quick">
+                <span class="label">投球回</span>
+                <span class="value" id="title-pitcher-quick-ip">0.0</span>
+              </div>
+              <div class="title-pitcher-quick">
+                <span class="label">奪三振</span>
+                <span class="value" id="title-pitcher-quick-so">0</span>
+              </div>
+            </div>
+            <p class="title-pitcher-note hidden" id="title-pitcher-note"></p>
+          </div>
+          <div class="title-pitcher-panels">
+            <section class="title-pitcher-card">
+              <h5>投球成績</h5>
+              <table class="title-pitcher-table">
+                <tbody id="title-pitcher-stats"></tbody>
+              </table>
+            </section>
+            <section class="title-pitcher-card">
+              <h5>能力</h5>
+              <table class="title-pitcher-table">
+                <tbody id="title-pitcher-abilities"></tbody>
+              </table>
+            </section>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="secondary" data-close="title-pitcher">
+            キャンセル
+          </button>
+          <button type="button" class="primary" id="title-pitcher-confirm">
+            この投手を先発に設定する
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal hidden" id="team-delete-modal" aria-hidden="true">
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="team-delete-title">
         <div class="modal-header">
