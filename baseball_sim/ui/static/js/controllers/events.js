@@ -3158,7 +3158,229 @@ export function initEventListeners(actions) {
     }
   }
 
-  async function submitTitlePitcher(teamKey, button) {
+  const TITLE_PITCHER_STATS_FIELDS = [
+    { key: 'era', label: '防御率' },
+    { key: 'whip', label: 'WHIP' },
+    { key: 'ip', label: '投球回' },
+    { key: 'batters_faced', label: '対戦打者' },
+    { key: 'k', label: '奪三振' },
+    { key: 'bb', label: '与四球' },
+    { key: 'h', label: '被安打' },
+    { key: 'hr', label: '被本塁打' },
+    { key: 'er', label: '自責点' },
+  ];
+
+  const TITLE_PITCHER_ABILITY_FIELDS = [
+    { key: 'k_pct', label: '奪三振率' },
+    { key: 'bb_pct', label: '与四球率' },
+    { key: 'hard_pct', label: '被強打率' },
+    { key: 'gb_pct', label: 'ゴロ率' },
+    { key: 'stamina', label: 'スタミナ' },
+  ];
+
+  const DEFAULT_TITLE_PITCHER_CONFIRM_LABEL = 'この投手を先発に設定する';
+
+  function findPitcherRowByName(list, name) {
+    if (!Array.isArray(list)) return null;
+    const target = String(name || '').trim();
+    if (!target) return null;
+    return list.find((entry) => String(entry?.name || '').trim() === target) || null;
+  }
+
+  function setPitcherModalText(element, value, fallback = '-') {
+    if (!element) return;
+    const normalized = value != null && value !== '' ? String(value) : fallback;
+    element.textContent = normalized;
+  }
+
+  function formatPitcherNumeric(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) {
+      return '-';
+    }
+    if (Math.abs(num - Math.trunc(num)) < 1e-6) {
+      return String(Math.trunc(num));
+    }
+    return num.toFixed(1).replace(/\.0$/, '');
+  }
+
+  function renderTitlePitcherTable(body, fields, data, emptyMessage) {
+    if (!body) return;
+    body.innerHTML = '';
+    const hasValue = Array.isArray(fields)
+      ? fields.some(({ key }) => {
+          const value = data?.[key];
+          return value != null && value !== '';
+        })
+      : false;
+    if (!hasValue) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 2;
+      td.textContent = emptyMessage;
+      td.classList.add('empty');
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    fields.forEach(({ key, label }) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = label;
+      const td = document.createElement('td');
+      const value = data?.[key];
+      const display = value != null && value !== '' ? String(value) : '-';
+      td.textContent = display;
+      tr.append(th, td);
+      body.appendChild(tr);
+    });
+  }
+
+  function resetTitlePitcherModalState() {
+    setPitcherModalText(elements.titlePitcherName, '-', '-');
+    if (elements.titlePitcherRole) {
+      elements.titlePitcherRole.textContent = '';
+      elements.titlePitcherRole.classList.add('hidden');
+    }
+    setPitcherModalText(elements.titlePitcherType, '-', '-');
+    setPitcherModalText(elements.titlePitcherThrows, '-', '-');
+    setPitcherModalText(elements.titlePitcherCurrentStamina, '-', '-');
+    setPitcherModalText(elements.titlePitcherQuickEra, '-.--', '-.--');
+    setPitcherModalText(elements.titlePitcherQuickIp, '0.0', '0.0');
+    setPitcherModalText(elements.titlePitcherQuickSo, '0', '0');
+    if (elements.titlePitcherNote) {
+      elements.titlePitcherNote.textContent = '';
+      elements.titlePitcherNote.classList.add('hidden');
+    }
+    if (elements.titlePitcherStatsBody) {
+      elements.titlePitcherStatsBody.innerHTML = '';
+    }
+    if (elements.titlePitcherAbilitiesBody) {
+      elements.titlePitcherAbilitiesBody.innerHTML = '';
+    }
+    if (elements.titlePitcherConfirm) {
+      elements.titlePitcherConfirm.disabled = false;
+      elements.titlePitcherConfirm.dataset.team = '';
+      elements.titlePitcherConfirm.dataset.pitcher = '';
+      elements.titlePitcherConfirm.textContent = DEFAULT_TITLE_PITCHER_CONFIRM_LABEL;
+    }
+    stateCache.titlePitcherReview = { team: null, pitcher: null };
+  }
+
+  function populateTitlePitcherModal(teamKey, pitcherName) {
+    const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+    if (!normalizedTeam) {
+      showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
+      return false;
+    }
+
+    const normalizedName = String(pitcherName || '').trim();
+    if (!normalizedName) {
+      showStatus('先発投手を選択してください。', 'danger');
+      return false;
+    }
+
+    const teamData = stateCache.data?.teams?.[normalizedTeam];
+    if (!teamData) {
+      showStatus('チーム情報が読み込まれていません。', 'danger');
+      return false;
+    }
+
+    const pitcherEntry = findPitcherRowByName(teamData.pitchers, normalizedName);
+    const statsRowRaw = findPitcherRowByName(teamData?.stats?.pitching, normalizedName);
+    const traitsRow = findPitcherRowByName(teamData?.traits?.pitching, normalizedName);
+
+    const statsData = {};
+    if (statsRowRaw) {
+      Object.assign(statsData, statsRowRaw);
+    }
+    if (pitcherEntry?.era && !statsData.era) {
+      statsData.era = pitcherEntry.era;
+    }
+    if (pitcherEntry?.ip && !statsData.ip) {
+      statsData.ip = pitcherEntry.ip;
+    }
+    if (pitcherEntry?.so != null) {
+      if (statsData.so == null || statsData.so === '') {
+        statsData.so = pitcherEntry.so;
+      }
+      if (statsData.k == null || statsData.k === '') {
+        statsData.k = pitcherEntry.so;
+      }
+    }
+
+    const quickEra = pitcherEntry?.era || statsData.era || '-.--';
+    const quickIp = pitcherEntry?.ip || statsData.ip || '0.0';
+    const quickSo =
+      pitcherEntry?.so != null
+        ? pitcherEntry.so
+        : statsData.so != null
+        ? statsData.so
+        : statsData.k != null
+        ? statsData.k
+        : '0';
+    const currentStamina = pitcherEntry ? formatPitcherNumeric(pitcherEntry.stamina) : '-';
+    const typeLabel = traitsRow?.pitcher_type || pitcherEntry?.pitcher_type || '-';
+    const throwsLabel = traitsRow?.throws || pitcherEntry?.throws || '-';
+    const roleLabel = traitsRow?.role_label || (pitcherEntry?.is_current ? '現在の先発' : '');
+
+    setPitcherModalText(elements.titlePitcherName, normalizedName, '-');
+    if (elements.titlePitcherRole) {
+      elements.titlePitcherRole.textContent = roleLabel || '';
+      elements.titlePitcherRole.classList.toggle('hidden', !roleLabel);
+    }
+    setPitcherModalText(elements.titlePitcherType, typeLabel, '-');
+    setPitcherModalText(elements.titlePitcherThrows, throwsLabel, '-');
+    setPitcherModalText(elements.titlePitcherCurrentStamina, currentStamina, '-');
+    setPitcherModalText(elements.titlePitcherQuickEra, quickEra, '-.--');
+    setPitcherModalText(elements.titlePitcherQuickIp, quickIp, '0.0');
+    setPitcherModalText(elements.titlePitcherQuickSo, quickSo, '0');
+
+    const notes = [];
+    if (pitcherEntry?.is_current) {
+      notes.push('この投手は現在先発に設定されています。');
+    }
+    if (!pitcherEntry) {
+      notes.push('登録済みの投手データが見つかりませんでした。');
+    }
+    if (!traitsRow) {
+      notes.push('能力データが見つかりませんでした。');
+    }
+    if (!statsRowRaw) {
+      notes.push('詳細な投球成績が見つかりませんでした。');
+    }
+    if (elements.titlePitcherNote) {
+      const noteText = notes.join(' ');
+      elements.titlePitcherNote.textContent = noteText;
+      elements.titlePitcherNote.classList.toggle('hidden', !noteText);
+    }
+
+    renderTitlePitcherTable(
+      elements.titlePitcherStatsBody,
+      TITLE_PITCHER_STATS_FIELDS,
+      statsData,
+      '投球成績がありません。'
+    );
+    renderTitlePitcherTable(
+      elements.titlePitcherAbilitiesBody,
+      TITLE_PITCHER_ABILITY_FIELDS,
+      traitsRow,
+      '能力データがありません。'
+    );
+
+    if (elements.titlePitcherConfirm) {
+      elements.titlePitcherConfirm.dataset.team = normalizedTeam;
+      elements.titlePitcherConfirm.dataset.pitcher = normalizedName;
+      elements.titlePitcherConfirm.disabled = false;
+      elements.titlePitcherConfirm.textContent = `${normalizedName} を先発に設定`;
+    }
+
+    stateCache.titlePitcherReview = { team: normalizedTeam, pitcher: normalizedName };
+    return true;
+  }
+
+  function submitTitlePitcher(teamKey) {
     const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
     if (!normalizedTeam) {
       showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
@@ -3177,22 +3399,13 @@ export function initEventListeners(actions) {
       return;
     }
 
-    const originalText = button?.textContent || '';
-    if (button) {
-      button.disabled = true;
-      button.textContent = '設定中…';
+    resetTitlePitcherModalState();
+    const ready = populateTitlePitcherModal(normalizedTeam, pitcherName);
+    if (!ready) {
+      return;
     }
 
-    try {
-      await actions.handleSetStartingPitcher(normalizedTeam, pitcherName);
-    } catch (error) {
-      // Feedback is displayed by handleSetStartingPitcher/handleApiError.
-    } finally {
-      if (button) {
-        button.disabled = false;
-        button.textContent = originalText || '先発を設定';
-      }
-    }
+    openModal('title-pitcher');
   }
 
   updatePlayerRoleUI(elements.playerEditorRole?.value || 'batter');
@@ -3458,7 +3671,7 @@ export function initEventListeners(actions) {
       if (pitcherButton) {
         event.preventDefault();
         const teamKey = pitcherButton.dataset.team || '';
-        submitTitlePitcher(teamKey, pitcherButton);
+        submitTitlePitcher(teamKey);
         return;
       }
 
@@ -3678,6 +3891,36 @@ export function initEventListeners(actions) {
       openModal('team-delete');
     });
   }
+  if (elements.titlePitcherConfirm) {
+    elements.titlePitcherConfirm.addEventListener('click', async () => {
+      const teamKey = elements.titlePitcherConfirm.dataset.team || '';
+      const pitcherName = elements.titlePitcherConfirm.dataset.pitcher || '';
+      if (!teamKey || !pitcherName) {
+        showStatus('先発投手を選択してください。', 'danger');
+        return;
+      }
+
+      const originalText =
+        elements.titlePitcherConfirm.textContent || DEFAULT_TITLE_PITCHER_CONFIRM_LABEL;
+      elements.titlePitcherConfirm.disabled = true;
+      elements.titlePitcherConfirm.textContent = '設定中…';
+      let completed = false;
+      try {
+        await actions.handleSetStartingPitcher(teamKey, pitcherName);
+        completed = true;
+        resetTitlePitcherModalState();
+        closeModal('title-pitcher');
+      } catch (error) {
+        // handleSetStartingPitcher displays feedback via handleApiError.
+      } finally {
+        if (!completed && elements.titlePitcherConfirm) {
+          elements.titlePitcherConfirm.disabled = false;
+          elements.titlePitcherConfirm.textContent = originalText;
+        }
+      }
+    });
+  }
+
   if (elements.teamDeleteConfirm) {
     elements.teamDeleteConfirm.addEventListener('click', async () => {
       const select = elements.teamDeleteSelect;
@@ -5000,14 +5243,23 @@ export function initEventListeners(actions) {
 
   elements.modalCloseButtons.forEach((button) => {
     const target = button.dataset.close;
-    button.addEventListener('click', () => closeModal(target || button.closest('.modal')));
+    button.addEventListener('click', () => {
+      const resolved = resolveModal(target || button.closest('.modal'));
+      if (resolved === elements.titlePitcherModal) {
+        resetTitlePitcherModalState();
+      }
+      closeModal(resolved);
+    });
   });
 
-  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
+  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities', 'title-pitcher'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
         if (event.target === modal) {
+          if (modal === elements.titlePitcherModal) {
+            resetTitlePitcherModalState();
+          }
           closeModal(modal);
         }
       });
@@ -5033,6 +5285,14 @@ export function initEventListeners(actions) {
         elements.pinchRunBase.value = String(selected);
         const changeEvent = new Event('change', { bubbles: true });
         elements.pinchRunBase.dispatchEvent(changeEvent);
+      }
+    });
+  }
+
+  if (elements.titlePitcherModal) {
+    elements.titlePitcherModal.addEventListener('show', () => {
+      if (elements.titlePitcherConfirm) {
+        elements.titlePitcherConfirm.focus();
       }
     });
   }

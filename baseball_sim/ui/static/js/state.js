@@ -12,6 +12,7 @@ export const stateCache = {
   statsView: { team: 'away', type: 'batting' },
   abilitiesView: { team: 'away', type: 'batting' },
   uiView: 'lobby',
+  titlePitcherReview: { team: null, pitcher: null },
   // Navigation-reset flags
   resetTeamSelect: false,
   resetSimulationSelect: false,
