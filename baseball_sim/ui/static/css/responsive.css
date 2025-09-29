@@ -1,5 +1,28 @@
 /* Responsive overrides */
 @media (max-width: 600px) {
+  .match-mode-section {
+    padding: 20px 16px;
+    border-radius: 18px;
+  }
+
+  .match-mode-section::after {
+    inset: auto -30% -40% 20%;
+    height: 140px;
+  }
+
+  .match-mode-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .match-mode-options {
+    grid-template-columns: 1fr;
+  }
+
+  .match-mode-card {
+    min-height: auto;
+  }
+
   .player-builder-layout {
     grid-template-columns: 1fr;
     gap: 16px;

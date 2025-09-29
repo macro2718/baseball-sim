@@ -211,24 +211,83 @@
                 <select id="lobby-home-team" class="team-select"></select>
               </div>
             </div>
-            <div class="match-mode-section">
-              <p class="match-mode-label">試合モード</p>
+            <div
+              class="match-mode-section"
+              role="radiogroup"
+              aria-labelledby="match-mode-label"
+              aria-describedby="match-mode-help"
+            >
+              <div class="match-mode-header">
+                <p class="match-mode-label" id="match-mode-label">試合モード</p>
+                <p class="match-mode-subtitle" id="match-mode-help">
+                  プレイスタイルに合わせて操作方法を選択してください。
+                </p>
+              </div>
               <div class="match-mode-options">
                 <label class="match-mode-option">
                   <input type="radio" name="match-mode" value="manual" checked />
-                  <span>全操作対戦</span>
+                  <span class="match-mode-card">
+                    <span class="match-mode-title-row">
+                      <span class="match-mode-icon" aria-hidden="true">🕹️</span>
+                      <span class="match-mode-title">全操作対戦</span>
+                    </span>
+                    <p class="match-mode-description">
+                      攻守すべての采配をあなたが判断します。2人対戦や一括操作に最適です。
+                    </p>
+                    <div class="match-mode-meta" aria-hidden="true">
+                      <span class="match-mode-chip">両軍手動</span>
+                      <span class="match-mode-chip">細かな采配</span>
+                    </div>
+                  </span>
                 </label>
                 <label class="match-mode-option">
                   <input type="radio" name="match-mode" value="cpu" />
-                  <span>CPU対戦</span>
+                  <span class="match-mode-card">
+                    <span class="match-mode-title-row">
+                      <span class="match-mode-icon" aria-hidden="true">🤝</span>
+                      <span class="match-mode-title">CPU対戦</span>
+                    </span>
+                    <p class="match-mode-description">
+                      片方のチームだけを自分で操作し、もう一方はCPUが采配します。
+                    </p>
+                    <div class="match-mode-meta" aria-hidden="true">
+                      <span class="match-mode-chip">片側操作</span>
+                      <span class="match-mode-chip">CPUサポート</span>
+                    </div>
+                  </span>
                 </label>
                 <label class="match-mode-option">
                   <input type="radio" name="match-mode" value="auto" />
-                  <span>全自動CPU</span>
+                  <span class="match-mode-card">
+                    <span class="match-mode-title-row">
+                      <span class="match-mode-icon" aria-hidden="true">🛰️</span>
+                      <span class="match-mode-title">全自動CPU</span>
+                    </span>
+                    <p class="match-mode-description">
+                      両チームの采配をCPUに任せて観戦するモードです。リプレイ検証に最適。
+                    </p>
+                    <div class="match-mode-meta" aria-hidden="true">
+                      <span class="match-mode-chip">観戦モード</span>
+                      <span class="match-mode-chip">オート進行</span>
+                    </div>
+                  </span>
                 </label>
               </div>
-              <div class="team-selection-field control-team-field hidden" id="control-team-field">
-                <label for="control-team-select">自操作チーム</label>
+              <div
+                class="match-mode-control control-team-field hidden"
+                id="control-team-field"
+                aria-hidden="true"
+              >
+                <div class="control-team-header">
+                  <span class="control-team-icon" aria-hidden="true">🎮</span>
+                  <div class="control-team-copy">
+                    <p class="control-team-title">操作するチーム</p>
+                    <p class="control-team-description">
+                      CPU対戦を選んだ場合に、あなたが采配する側を指定します。
+                    </p>
+                  </div>
+                </div>
+                <label class="visually-hidden" for="control-team-select">自操作チーム</label>
                 <select id="control-team-select" class="team-select">
                   <option value="home">ホーム</option>
                   <option value="away">アウェイ</option>
@@ -685,24 +744,83 @@
               </div>
             </div>
 
-            <div class="match-mode-section">
-              <p class="match-mode-label">試合モード</p>
+            <div
+              class="match-mode-section"
+              role="radiogroup"
+              aria-labelledby="simulation-match-mode-label"
+              aria-describedby="simulation-match-mode-help"
+            >
+              <div class="match-mode-header">
+                <p class="match-mode-label" id="simulation-match-mode-label">試合モード</p>
+                <p class="match-mode-subtitle" id="simulation-match-mode-help">
+                  シミュレーション結果をどう操作するかを選択します。
+                </p>
+              </div>
               <div class="match-mode-options">
                 <label class="match-mode-option">
                   <input type="radio" name="simulation-match-mode" value="manual" checked />
-                  <span>全操作対戦</span>
+                  <span class="match-mode-card">
+                    <span class="match-mode-title-row">
+                      <span class="match-mode-icon" aria-hidden="true">🕹️</span>
+                      <span class="match-mode-title">全操作対戦</span>
+                    </span>
+                    <p class="match-mode-description">
+                      すべての采配を自分で行うモードです。結果の裏付けをプレイで体感できます。
+                    </p>
+                    <div class="match-mode-meta" aria-hidden="true">
+                      <span class="match-mode-chip">両軍手動</span>
+                      <span class="match-mode-chip">練習向け</span>
+                    </div>
+                  </span>
                 </label>
                 <label class="match-mode-option">
                   <input type="radio" name="simulation-match-mode" value="cpu" />
-                  <span>CPU対戦</span>
+                  <span class="match-mode-card">
+                    <span class="match-mode-title-row">
+                      <span class="match-mode-icon" aria-hidden="true">🤝</span>
+                      <span class="match-mode-title">CPU対戦</span>
+                    </span>
+                    <p class="match-mode-description">
+                      CPUに片側を任せつつ、自分の采配でシミュレーション結果を再検証します。
+                    </p>
+                    <div class="match-mode-meta" aria-hidden="true">
+                      <span class="match-mode-chip">片側操作</span>
+                      <span class="match-mode-chip">CPUサポート</span>
+                    </div>
+                  </span>
                 </label>
                 <label class="match-mode-option">
                   <input type="radio" name="simulation-match-mode" value="auto" />
-                  <span>全自動CPU</span>
+                  <span class="match-mode-card">
+                    <span class="match-mode-title-row">
+                      <span class="match-mode-icon" aria-hidden="true">🛰️</span>
+                      <span class="match-mode-title">全自動CPU</span>
+                    </span>
+                    <p class="match-mode-description">
+                      収集したデータを完全自動で再現します。観戦しながら結果を比較できます。
+                    </p>
+                    <div class="match-mode-meta" aria-hidden="true">
+                      <span class="match-mode-chip">観戦モード</span>
+                      <span class="match-mode-chip">オート進行</span>
+                    </div>
+                  </span>
                 </label>
               </div>
-              <div class="team-selection-field control-team-field hidden" id="simulation-match-control-field">
-                <label for="simulation-match-control-team">自操作チーム</label>
+              <div
+                class="match-mode-control control-team-field hidden"
+                id="simulation-match-control-field"
+                aria-hidden="true"
+              >
+                <div class="control-team-header">
+                  <span class="control-team-icon" aria-hidden="true">🎮</span>
+                  <div class="control-team-copy">
+                    <p class="control-team-title">操作するチーム</p>
+                    <p class="control-team-description">
+                      CPU対戦では、どちらのチームを手動で操作するかを指定できます。
+                    </p>
+                  </div>
+                </div>
+                <label class="visually-hidden" for="simulation-match-control-team">自操作チーム</label>
                 <select id="simulation-match-control-team" class="team-select">
                   <option value="home">ホーム</option>
                   <option value="away">アウェイ</option>
