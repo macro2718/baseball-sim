@@ -26,6 +26,8 @@ import {
   getPlayersSelectedTeamIndex,
   setPlayersSelectedTeamIndex,
   getSimulationRankingsState,
+  setSimulationRankingsScope,
+  resetSimulationRankingsOverride,
 } from '../state.js';
 import {
   escapeHtml,
@@ -4612,6 +4614,20 @@ function renderSimulationMatchupsTable(tbody, games, aliases) {
   });
 }
 
+function getNumericValue(source, ...keys) {
+  if (!source) return null;
+  for (let i = 0; i < keys.length; i += 1) {
+    const key = keys[i];
+    if (key && Object.prototype.hasOwnProperty.call(source, key)) {
+      const value = Number(source[key]);
+      if (Number.isFinite(value)) {
+        return value;
+      }
+    }
+  }
+  return null;
+}
+
 function buildBattingRankingRows(teams) {
   const rows = [];
   teams.forEach((team) => {
@@ -4623,25 +4639,24 @@ function buildBattingRankingRows(teams) {
     const batters = Array.isArray(team.batters) ? team.batters : [];
     batters.forEach((player) => {
       if (!player) return;
-      const paValue = Number(player.pa);
-      const pa = Number.isFinite(paValue) ? paValue : 0;
+      const pa = getNumericValue(player, 'pa', 'PA') ?? 0;
       const row = {
         name: player.name || '',
         team: teamName,
         pa,
-        ab: Number.isFinite(Number(player.ab)) ? Number(player.ab) : 0,
-        hits: Number.isFinite(Number(player.hits)) ? Number(player.hits) : 0,
-        homeRuns: Number.isFinite(Number(player.homeRuns)) ? Number(player.homeRuns) : 0,
-        runs: Number.isFinite(Number(player.runs)) ? Number(player.runs) : 0,
-        rbi: Number.isFinite(Number(player.rbi)) ? Number(player.rbi) : 0,
-        walks: Number.isFinite(Number(player.walks)) ? Number(player.walks) : 0,
-        strikeouts: Number.isFinite(Number(player.strikeouts)) ? Number(player.strikeouts) : 0,
-        avg: Number.isFinite(Number(player.avg)) ? Number(player.avg) : null,
-        obp: Number.isFinite(Number(player.obp)) ? Number(player.obp) : null,
-        slg: Number.isFinite(Number(player.slg)) ? Number(player.slg) : null,
-        ops: Number.isFinite(Number(player.ops)) ? Number(player.ops) : null,
-        k_pct: Number.isFinite(Number(player.k_pct)) ? Number(player.k_pct) : null,
-        bb_pct: Number.isFinite(Number(player.bb_pct)) ? Number(player.bb_pct) : null,
+        ab: getNumericValue(player, 'ab', 'AB') ?? 0,
+        hits: getNumericValue(player, 'hits', 'H') ?? 0,
+        homeRuns: getNumericValue(player, 'homeRuns', 'home_runs', 'HR') ?? 0,
+        runs: getNumericValue(player, 'runs', 'R') ?? 0,
+        rbi: getNumericValue(player, 'rbi', 'RBI') ?? 0,
+        walks: getNumericValue(player, 'walks', 'BB') ?? 0,
+        strikeouts: getNumericValue(player, 'strikeouts', 'SO', 'K') ?? 0,
+        avg: getNumericValue(player, 'avg') ?? null,
+        obp: getNumericValue(player, 'obp') ?? null,
+        slg: getNumericValue(player, 'slg') ?? null,
+        ops: getNumericValue(player, 'ops') ?? null,
+        k_pct: getNumericValue(player, 'k_pct', 'kPct') ?? null,
+        bb_pct: getNumericValue(player, 'bb_pct', 'bbPct') ?? null,
       };
       row.qualApplicable = qualificationApplicable;
       row.qualified = qualificationApplicable ? pa >= paRequirement : true;
@@ -4663,24 +4678,23 @@ function buildPitchingRankingRows(teams) {
     const pitchers = Array.isArray(team.pitchers) ? team.pitchers : [];
     pitchers.forEach((player) => {
       if (!player) return;
-      const ipValue = Number(player.ip);
-      const ip = Number.isFinite(ipValue) ? ipValue : 0;
+      const ip = getNumericValue(player, 'ip', 'IP') ?? 0;
       const outs = Math.round(ip * 3);
       const row = {
         name: player.name || '',
         team: teamName,
-        appearances: Number.isFinite(Number(player.appearances)) ? Number(player.appearances) : 0,
+        appearances: getNumericValue(player, 'appearances', 'G') ?? 0,
         ip,
-        hits: Number.isFinite(Number(player.hits)) ? Number(player.hits) : 0,
-        runs: Number.isFinite(Number(player.runs)) ? Number(player.runs) : 0,
-        earnedRuns: Number.isFinite(Number(player.earnedRuns)) ? Number(player.earnedRuns) : 0,
-        walks: Number.isFinite(Number(player.walks)) ? Number(player.walks) : 0,
-        strikeouts: Number.isFinite(Number(player.strikeouts)) ? Number(player.strikeouts) : 0,
-        homeRuns: Number.isFinite(Number(player.homeRuns)) ? Number(player.homeRuns) : 0,
-        era: Number.isFinite(Number(player.era)) ? Number(player.era) : null,
-        whip: Number.isFinite(Number(player.whip)) ? Number(player.whip) : null,
-        kPer9: Number.isFinite(Number(player.kPer9)) ? Number(player.kPer9) : null,
-        bbPer9: Number.isFinite(Number(player.bbPer9)) ? Number(player.bbPer9) : null,
+        hits: getNumericValue(player, 'hits', 'H') ?? 0,
+        runs: getNumericValue(player, 'runs', 'R') ?? 0,
+        earnedRuns: getNumericValue(player, 'earnedRuns', 'earned_runs', 'ER') ?? 0,
+        walks: getNumericValue(player, 'walks', 'BB') ?? 0,
+        strikeouts: getNumericValue(player, 'strikeouts', 'SO', 'K') ?? 0,
+        homeRuns: getNumericValue(player, 'homeRuns', 'home_runs', 'HR') ?? 0,
+        era: getNumericValue(player, 'era') ?? null,
+        whip: getNumericValue(player, 'whip') ?? null,
+        kPer9: getNumericValue(player, 'kPer9', 'k_per_9') ?? null,
+        bbPer9: getNumericValue(player, 'bbPer9', 'bb_per_9') ?? null,
       };
       row.qualApplicable = qualificationApplicable;
       row.qualified = qualificationApplicable ? outs >= ipRequirementOuts : true;
@@ -4752,7 +4766,7 @@ function renderSimulationRankings(lastRun) {
     return;
   }
 
-  const state = getSimulationRankingsState();
+  let state = getSimulationRankingsState();
   const columns = state.type === 'pitching' ? PITCHING_RANKING_COLUMNS : BATTING_RANKING_COLUMNS;
   const sortableColumns = columns.filter((column) => column.sortable);
   const availableSortKeys = new Set(sortableColumns.map((column) => column.sortKey));
@@ -4762,20 +4776,6 @@ function renderSimulationRankings(lastRun) {
   let sortDir = state.sortDir === 'asc' || state.sortDir === 'desc'
     ? state.sortDir
     : sortableColumns.find((column) => column.sortKey === sortKey)?.defaultDir || 'desc';
-
-  (simulationRankingsTypeButtons || []).forEach((button) => {
-    const type = button.dataset.rankingsType === 'pitching' ? 'pitching' : 'batting';
-    const active = type === state.type;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-
-  (simulationRankingsScopeButtons || []).forEach((button) => {
-    const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
-    const active = scope === state.scope;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
 
   simulationRankingsHead.innerHTML = '';
   columns.forEach((column) => {
@@ -4800,7 +4800,36 @@ function renderSimulationRankings(lastRun) {
     rows = state.type === 'pitching' ? buildPitchingRankingRows(teams) : buildBattingRankingRows(teams);
   }
 
-  const filteredRows = state.scope === 'qualified' ? rows.filter((row) => row.qualified) : rows.slice();
+  let filteredRows = state.scope === 'qualified' ? rows.filter((row) => row.qualified) : rows.slice();
+
+  const shouldFallbackToAll =
+    state.scope === 'qualified' && !state.userOverride && filteredRows.length === 0 && rows.length > 0;
+
+  if (shouldFallbackToAll) {
+    setSimulationRankingsScope('all', false);
+    state = getSimulationRankingsState();
+    filteredRows = rows.slice();
+    sortKey = availableSortKeys.has(state.sortKey)
+      ? state.sortKey
+      : sortableColumns[0]?.sortKey || null;
+    sortDir = state.sortDir === 'asc' || state.sortDir === 'desc'
+      ? state.sortDir
+      : sortableColumns.find((column) => column.sortKey === sortKey)?.defaultDir || 'desc';
+  }
+
+  (simulationRankingsTypeButtons || []).forEach((button) => {
+    const type = button.dataset.rankingsType === 'pitching' ? 'pitching' : 'batting';
+    const active = type === state.type;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  (simulationRankingsScopeButtons || []).forEach((button) => {
+    const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
+    const active = scope === state.scope;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
 
   if (sortKey) {
     const sortColumn = columns.find((column) => column.sortKey === sortKey);
@@ -4883,8 +4912,12 @@ function renderSimulationRankings(lastRun) {
     } else if (rows.length && !filteredRows.length && state.scope === 'qualified') {
       message = '規定到達者がいません。';
     }
+    if (shouldFallbackToAll) {
+      message = '規定到達者がいなかったため、全選手を表示しています。';
+    }
     simulationRankingsEmpty.textContent = message;
-    simulationRankingsEmpty.classList.toggle('hidden', filteredRows.length > 0);
+    const hideMessage = filteredRows.length > 0 && !shouldFallbackToAll;
+    simulationRankingsEmpty.classList.toggle('hidden', hideMessage);
   }
 }
 
@@ -5780,6 +5813,7 @@ export function updateAbilitiesPanel(state) {
 export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;
+  const previousSimulation = stateCache.simulation || {};
 
   const controlState = normalizeControlState(data?.game?.control);
   stateCache.gameControl = controlState;
@@ -5993,6 +6027,12 @@ export function render(data) {
       aliases,
       roles,
     };
+  }
+
+  const previousLastRunTimestamp = previousSimulation?.lastRun?.timestamp || null;
+  const currentLastRunTimestamp = lastRun?.timestamp || null;
+  if (previousLastRunTimestamp !== currentLastRunTimestamp) {
+    resetSimulationRankingsOverride();
   }
 
   const rawLeagueState = rawSimulation.league || {};
