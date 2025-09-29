@@ -18,7 +18,13 @@ export const stateCache = {
   simulationResultsView: 'summary',
   playersSelectedTeamIndex: 0,
   playersTypeView: 'batting',
-  simulationRankings: { type: 'batting', scope: 'qualified', sortKey: 'ops', sortDir: 'desc' },
+  simulationRankings: {
+    type: 'batting',
+    scope: 'qualified',
+    sortKey: 'ops',
+    sortDir: 'desc',
+    userOverride: false,
+  },
   matchSetup: { mode: 'manual', userTeam: 'home' },
   gameControl: {
     mode: 'manual',
@@ -130,6 +136,7 @@ function ensureSimulationRankingsState() {
       scope: 'qualified',
       sortKey: 'ops',
       sortDir: 'desc',
+      userOverride: false,
     };
   }
   return stateCache.simulationRankings;
@@ -180,7 +187,7 @@ export function getSimulationRankingsState() {
   const defaults = RANKING_DEFAULTS[type];
   const sortKey = allowed.has(state.sortKey) ? state.sortKey : defaults.sortKey;
   const sortDir = state.sortDir === 'asc' || state.sortDir === 'desc' ? state.sortDir : defaults.sortDir;
-  return { type, scope, sortKey, sortDir };
+  return { type, scope, sortKey, sortDir, userOverride: Boolean(state.userOverride) };
 }
 
 export function setSimulationRankingsType(type) {
@@ -191,13 +198,15 @@ export function setSimulationRankingsType(type) {
     const defaults = RANKING_DEFAULTS[normalized];
     state.sortKey = defaults.sortKey;
     state.sortDir = defaults.sortDir;
+    state.userOverride = false;
   }
   return getSimulationRankingsState();
 }
 
-export function setSimulationRankingsScope(scope) {
+export function setSimulationRankingsScope(scope, userOverride = false) {
   const state = ensureSimulationRankingsState();
   state.scope = scope === 'all' ? 'all' : 'qualified';
+  state.userOverride = Boolean(userOverride);
   return getSimulationRankingsState();
 }
 
@@ -216,6 +225,12 @@ export function setSimulationRankingsSort(sortKey, direction) {
   } else if (state.sortDir !== 'asc' && state.sortDir !== 'desc') {
     state.sortDir = defaults.sortDir;
   }
+  return getSimulationRankingsState();
+}
+
+export function resetSimulationRankingsOverride() {
+  const state = ensureSimulationRankingsState();
+  state.userOverride = false;
   return getSimulationRankingsState();
 }
 

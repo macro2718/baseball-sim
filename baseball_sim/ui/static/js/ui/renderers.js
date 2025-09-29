@@ -26,6 +26,8 @@ import {
   getPlayersSelectedTeamIndex,
   setPlayersSelectedTeamIndex,
   getSimulationRankingsState,
+  setSimulationRankingsScope,
+  resetSimulationRankingsOverride,
 } from '../state.js';
 import {
   escapeHtml,
@@ -4764,7 +4766,7 @@ function renderSimulationRankings(lastRun) {
     return;
   }
 
-  const state = getSimulationRankingsState();
+  let state = getSimulationRankingsState();
   const columns = state.type === 'pitching' ? PITCHING_RANKING_COLUMNS : BATTING_RANKING_COLUMNS;
   const sortableColumns = columns.filter((column) => column.sortable);
   const availableSortKeys = new Set(sortableColumns.map((column) => column.sortKey));
@@ -4774,20 +4776,6 @@ function renderSimulationRankings(lastRun) {
   let sortDir = state.sortDir === 'asc' || state.sortDir === 'desc'
     ? state.sortDir
     : sortableColumns.find((column) => column.sortKey === sortKey)?.defaultDir || 'desc';
-
-  (simulationRankingsTypeButtons || []).forEach((button) => {
-    const type = button.dataset.rankingsType === 'pitching' ? 'pitching' : 'batting';
-    const active = type === state.type;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-
-  (simulationRankingsScopeButtons || []).forEach((button) => {
-    const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
-    const active = scope === state.scope;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
 
   simulationRankingsHead.innerHTML = '';
   columns.forEach((column) => {
@@ -4812,7 +4800,36 @@ function renderSimulationRankings(lastRun) {
     rows = state.type === 'pitching' ? buildPitchingRankingRows(teams) : buildBattingRankingRows(teams);
   }
 
-  const filteredRows = state.scope === 'qualified' ? rows.filter((row) => row.qualified) : rows.slice();
+  let filteredRows = state.scope === 'qualified' ? rows.filter((row) => row.qualified) : rows.slice();
+
+  const shouldFallbackToAll =
+    state.scope === 'qualified' && !state.userOverride && filteredRows.length === 0 && rows.length > 0;
+
+  if (shouldFallbackToAll) {
+    setSimulationRankingsScope('all', false);
+    state = getSimulationRankingsState();
+    filteredRows = rows.slice();
+    sortKey = availableSortKeys.has(state.sortKey)
+      ? state.sortKey
+      : sortableColumns[0]?.sortKey || null;
+    sortDir = state.sortDir === 'asc' || state.sortDir === 'desc'
+      ? state.sortDir
+      : sortableColumns.find((column) => column.sortKey === sortKey)?.defaultDir || 'desc';
+  }
+
+  (simulationRankingsTypeButtons || []).forEach((button) => {
+    const type = button.dataset.rankingsType === 'pitching' ? 'pitching' : 'batting';
+    const active = type === state.type;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  (simulationRankingsScopeButtons || []).forEach((button) => {
+    const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
+    const active = scope === state.scope;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
 
   if (sortKey) {
     const sortColumn = columns.find((column) => column.sortKey === sortKey);
@@ -4895,8 +4912,12 @@ function renderSimulationRankings(lastRun) {
     } else if (rows.length && !filteredRows.length && state.scope === 'qualified') {
       message = '規定到達者がいません。';
     }
+    if (shouldFallbackToAll) {
+      message = '規定到達者がいなかったため、全選手を表示しています。';
+    }
     simulationRankingsEmpty.textContent = message;
-    simulationRankingsEmpty.classList.toggle('hidden', filteredRows.length > 0);
+    const hideMessage = filteredRows.length > 0 && !shouldFallbackToAll;
+    simulationRankingsEmpty.classList.toggle('hidden', hideMessage);
   }
 }
 
@@ -5792,6 +5813,7 @@ export function updateAbilitiesPanel(state) {
 export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;
+  const previousSimulation = stateCache.simulation || {};
 
   const controlState = normalizeControlState(data?.game?.control);
   stateCache.gameControl = controlState;
@@ -6005,6 +6027,12 @@ export function render(data) {
       aliases,
       roles,
     };
+  }
+
+  const previousLastRunTimestamp = previousSimulation?.lastRun?.timestamp || null;
+  const currentLastRunTimestamp = lastRun?.timestamp || null;
+  if (previousLastRunTimestamp !== currentLastRunTimestamp) {
+    resetSimulationRankingsOverride();
   }
 
   const rawLeagueState = rawSimulation.league || {};

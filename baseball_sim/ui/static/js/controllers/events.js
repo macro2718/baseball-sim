@@ -3821,7 +3821,7 @@ export function initEventListeners(actions) {
     elements.simulationRankingsScopeButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
-        setSimulationRankingsScope(scope);
+        setSimulationRankingsScope(scope, true);
         refreshView();
       });
     });
