@@ -1,37 +1,25 @@
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import train_test_split
-from pybaseball import batting_stats
-import joblib
 import os
 
+import joblib
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+from prediction_models.data_utils import FEATURE_COLUMNS, fetch_batting_data
+
+TARGET_COLUMNS = ["1B_rate", "2B_rate", "3B_rate", "HR_rate", "OTH_rate"]
+
+
 def fetch_data_from_pybaseball(start_year=2020, end_year=2024, min_pa=100):
-    """pybaseballを用いて2021～2023年のデータを取得し、NN版と同じ特徴量・ターゲット列を返す"""
-    from pybaseball import batting_stats
-    frames = []
-    for year in range(start_year, end_year + 1):
-        df = batting_stats(year)
-        df['year'] = year
-        frames.append(df)
-    data = pd.concat(frames, ignore_index=True)
-    data = data[data['PA'] >= min_pa].reset_index(drop=True)
-    if '1B' not in data.columns:
-        data['1B'] = data['H'] - (data['2B'] + data['3B'] + data['HR'])
-    required = ['K%', 'BB%', 'Hard%', 'GB%', 'PA', 'SO', 'BB', '1B', '2B', '3B', 'HR']
-    data = data.dropna(subset=required).reset_index(drop=True)
-    data['SO_rate']  = data['SO']  / data['PA'].replace(0,1)
-    data['BB_rate']  = data['BB']  / data['PA'].replace(0,1)
-    data['1B_rate']  = data['1B']  / data['PA'].replace(0,1)
-    data['2B_rate']  = data['2B']  / data['PA'].replace(0,1)
-    data['3B_rate']  = data['3B']  / data['PA'].replace(0,1)
-    data['HR_rate']  = data['HR']  / data['PA'].replace(0,1)
-    data['OTH_rate'] = (data['PA'] - (data[['SO','BB','1B','2B','3B','HR']].sum(axis=1))) / data['PA'].replace(0,1)
-    cols = ['year','Name','Team','PA','K%','BB%','Hard%','GB%',
-            'SO_rate','BB_rate','1B_rate','2B_rate','3B_rate','HR_rate','OTH_rate']
-    existing = [c for c in cols if c in data.columns]
-    return data[existing]
+    """pybaseballを用いてデータを取得し、線形モデル用の特徴量を返す"""
+
+    data = fetch_batting_data(start_year=start_year, end_year=end_year, min_pa=min_pa)
+    available_columns = [
+        column
+        for column in ["year", "Name", "Team", "PA", *FEATURE_COLUMNS, *TARGET_COLUMNS]
+        if column in data.columns
+    ]
+    return data[available_columns]
 
 def train_model(data, min_pa=100):
     """
@@ -50,8 +38,8 @@ def train_model(data, min_pa=100):
     filtered_data = data[data['PA'] >= min_pa]
     print(f"PA >= {min_pa}の選手のみ使用: {len(filtered_data)}人（元の{len(data)}人から）")
     
-    features = ['K%', 'BB%', 'Hard%', 'GB%']
-    target = ['1B_rate', '2B_rate', '3B_rate', 'HR_rate', 'OTH_rate']
+    features = FEATURE_COLUMNS
+    target = TARGET_COLUMNS
     X = filtered_data[features]
     y = filtered_data[target]
     
@@ -100,7 +88,7 @@ def predict(model, sample):
     X_new = pd.DataFrame([sample])
     return model.predict(X_new)[0]
 
-def predict_multiple(model, samples_df, features):
+def predict_multiple(model, samples_df, features=FEATURE_COLUMNS):
     """
     複数の選手データに対して予測を行います。
     
@@ -142,8 +130,8 @@ if __name__ == "__main__":
     data = fetch_data_from_pybaseball()
     print(f"データ取得完了。{len(data)}人の選手データを取得しました。")
     # 欠損値除去
-    features = ['K%','BB%','Hard%','GB%']
-    target   = ['1B_rate','2B_rate','3B_rate','HR_rate','OTH_rate']
+    features = FEATURE_COLUMNS
+    target = TARGET_COLUMNS
     data = data.dropna(subset=features+target).reset_index(drop=True)
     # モデル学習
     model_info = train_model(data)
