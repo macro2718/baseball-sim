@@ -1040,29 +1040,10 @@ class RunnerEngine:
         return runs
 
     def _handle_infield_flyout(self, batter) -> int:
-        """内野フライ時の処理。基本的には走者は進塁せず、稀にダブルプレーが発生する。"""
+        """内野フライ時の処理。走者は進塁せず、ダブルプレーは発生しない。"""
 
         if self.game_state.outs >= OUTS_PER_INNING:
             return 0
 
-        bases = self.game_state.bases
-        outs_available = max(0, OUTS_PER_INNING - (self.game_state.outs + 1))
-        if outs_available <= 0:
-            return 0
-
-        lead_runner_index = None
-        for base_index in range(2, -1, -1):
-            if bases[base_index] is not None:
-                lead_runner_index = base_index
-                break
-
-        if lead_runner_index is None:
-            return 0
-
-        double_play_probabilities = {2: 0.02, 1: 0.04, 0: 0.05}
-        double_play_probability = double_play_probabilities.get(lead_runner_index, 0.0)
-        if random.random() < double_play_probability:
-            clear_base(bases, lead_runner_index)
-            self.game_state.add_out()
-
+        # 内野フライでは走者の動きや追加アウトは発生させない
         return 0
