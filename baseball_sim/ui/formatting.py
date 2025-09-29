@@ -82,13 +82,18 @@ def count_hits(team) -> int:
     if not team:
         return 0
 
+    baseline = getattr(team, "_scoreboard_hit_baseline", None) or {}
     total = 0
     for player in getattr(team, "lineup", []):
         stats = getattr(player, "stats", {}) or {}
-        singles = stats.get("1B", 0)
-        doubles = stats.get("2B", 0)
-        triples = stats.get("3B", 0)
-        homers = stats.get("HR", 0)
-        total += singles + doubles + triples + homers
+        singles = int(stats.get("1B", 0) or 0)
+        doubles = int(stats.get("2B", 0) or 0)
+        triples = int(stats.get("3B", 0) or 0)
+        homers = int(stats.get("HR", 0) or 0)
+        hits = singles + doubles + triples + homers
+        hits -= int(baseline.get(id(player), 0) or 0)
+        if hits < 0:
+            hits = 0
+        total += hits
     return int(total)
 

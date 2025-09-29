@@ -6,11 +6,70 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from baseball_sim.interface.simulation import simulate_games
+from baseball_sim.interface.simulation import reset_team_and_players, simulate_games
 from baseball_sim.data.team_library import TeamLibraryError
 
 from .exceptions import GameSessionError
 from .simulation_summary import summarize_simulation_results
+
+
+def _collect_pitcher_pool(team) -> list:
+    """Reconstruct the available pitcher pool from the team's current state."""
+
+    if not team:
+        return []
+
+    pool: list = []
+    seen: set[int] = set()
+
+    def add_pitcher(candidate) -> None:
+        if candidate is None or not hasattr(candidate, "pitcher_type"):
+            return
+        identifier = id(candidate)
+        if identifier in seen:
+            return
+        seen.add(identifier)
+        pool.append(candidate)
+
+    for attr in ("pitchers", "ejected_players", "pitcher_rotation"):
+        collection = getattr(team, attr, None) or []
+        for candidate in collection:
+            add_pitcher(candidate)
+
+    add_pitcher(getattr(team, "current_pitcher", None))
+
+    return pool
+
+
+def _record_hit_baseline(team) -> None:
+    """Capture the current hit totals for all hitters on the roster."""
+
+    if not team:
+        return
+
+    baseline: Dict[int, int] = {}
+
+    def snapshot(collection) -> None:
+        for player in collection or []:
+            if player is None:
+                continue
+            stats = getattr(player, "stats", None)
+            if not isinstance(stats, dict):
+                continue
+            singles = int(stats.get("1B", 0) or 0)
+            doubles = int(stats.get("2B", 0) or 0)
+            triples = int(stats.get("3B", 0) or 0)
+            homers = int(stats.get("HR", 0) or 0)
+            baseline[id(player)] = singles + doubles + triples + homers
+
+    snapshot(getattr(team, "lineup", None))
+    snapshot(getattr(team, "bench", None))
+
+    try:
+        setattr(team, "_scoreboard_hit_baseline", baseline)
+    except Exception:
+        # Fallback for objects that prevent attribute assignment.
+        pass
 
 
 class SimulationControlsMixin:
@@ -439,6 +498,18 @@ class SimulationControlsMixin:
         playable_state = self._simulation_state.get("playable") or {}
         playable_state["selection"] = {"home": home_selection, "away": away_selection}
         self._simulation_state["playable"] = playable_state
+
+        home_pitcher_pool = _collect_pitcher_pool(home_team)
+        away_pitcher_pool = _collect_pitcher_pool(away_team)
+
+        reset_team_and_players(
+            home_team,
+            away_team,
+            home_pitcher_pool=home_pitcher_pool,
+            away_pitcher_pool=away_pitcher_pool,
+        )
+        _record_hit_baseline(home_team)
+        _record_hit_baseline(away_team)
 
         if hasattr(self, "_prepare_game_setup"):
             try:
