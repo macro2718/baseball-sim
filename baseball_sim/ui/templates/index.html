@@ -1146,24 +1146,49 @@
                     <p>タグの追加、名称変更、削除を行います。</p>
                   </div>
                   <div class="player-tags-control-grid">
-                    <div class="form-field tag-create-group">
-                      <label for="player-editor-new-folder" class="visually-hidden">新規タグ</label>
-                      <input id="player-editor-new-folder" type="text" placeholder="新しいタグ名" autocomplete="off" />
-                      <button id="player-editor-add-folder" type="button">タグを追加</button>
-                    </div>
+                    <section class="tag-editor-panel">
+                      <header class="tag-editor-header">
+                        <span class="tag-editor-icon" aria-hidden="true">➕</span>
+                        <div class="tag-editor-meta">
+                          <h4>新しいタグを作成</h4>
+                          <p>頻出する属性をタグ化して素早くフィルタリングできます。</p>
+                        </div>
+                      </header>
+                      <div class="form-field tag-create-group">
+                        <label for="player-editor-new-folder" class="visually-hidden">新規タグ</label>
+                        <input id="player-editor-new-folder" type="text" placeholder="新しいタグ名" autocomplete="off" />
+                        <button id="player-editor-add-folder" type="button">タグを追加</button>
+                      </div>
+                      <p class="tag-helper-text">Enterキーでも作成できます。チーム内の役割やスカウティングメモに活用しましょう。</p>
+                    </section>
 
-                    <div class="tag-manage-group">
-                      <div class="form-field manage-row">
-                        <label for="player-folder-manage-select" class="visually-hidden">対象タグ</label>
-                        <select id="player-folder-manage-select"></select>
+                    <section class="tag-editor-panel">
+                      <header class="tag-editor-header">
+                        <span class="tag-editor-icon" aria-hidden="true">🛠️</span>
+                        <div class="tag-editor-meta">
+                          <h4>既存タグを整理</h4>
+                          <p>対象を選んで名称変更や削除を行います。</p>
+                        </div>
+                      </header>
+                      <div class="tag-manage-group">
+                        <div class="form-field manage-row">
+                          <label for="player-folder-manage-select" class="visually-hidden">対象タグ</label>
+                          <select id="player-folder-manage-select"></select>
+                        </div>
+                        <div class="tag-manage-stack">
+                          <div class="form-field manage-row">
+                            <label for="player-folder-rename-input" class="visually-hidden">新しい名称</label>
+                            <input id="player-folder-rename-input" type="text" placeholder="新しい名称" autocomplete="off" />
+                            <button id="player-folder-rename" type="button">名称変更</button>
+                          </div>
+                          <p class="tag-helper-text">読みやすい名前に整えると、選手リストでの検索性が向上します。</p>
+                        </div>
+                        <div class="tag-danger-zone" role="group" aria-label="タグを削除">
+                          <p class="tag-helper-text">削除すると紐付いた選手は自動的に「タグなし」に移動します。</p>
+                          <button id="player-folder-delete" type="button" class="danger subtle">タグを削除</button>
+                        </div>
                       </div>
-                      <div class="form-field manage-row">
-                        <label for="player-folder-rename-input" class="visually-hidden">新しい名称</label>
-                        <input id="player-folder-rename-input" type="text" placeholder="新しい名称" autocomplete="off" />
-                        <button id="player-folder-rename" type="button">名称変更</button>
-                        <button id="player-folder-delete" type="button" class="danger">削除</button>
-                      </div>
-                    </div>
+                    </section>
                   </div>
                 </div>
               </form>

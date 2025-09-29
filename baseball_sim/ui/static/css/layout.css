@@ -1783,6 +1783,72 @@
   }
 }
 
+.player-tags-control-grid .tag-editor-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+  overflow: hidden;
+}
+
+.tag-editor-panel::before {
+  content: '';
+  position: absolute;
+  inset: -40% -60% auto -40%;
+  height: 160px;
+  background: radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 60%);
+  opacity: 0.65;
+  pointer-events: none;
+  transform: rotate(8deg);
+}
+
+.tag-editor-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.tag-editor-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 20px;
+}
+
+.tag-editor-meta h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.tag-editor-meta p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.tag-helper-text {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(203, 213, 225, 0.7);
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
+}
+
 .tag-create-group {
   display: flex;
   align-items: center;
@@ -1800,6 +1866,12 @@
   gap: 10px;
 }
 
+.tag-manage-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .tag-manage-group .manage-row {
   display: flex;
   align-items: center;
@@ -1814,6 +1886,41 @@
 
 .tag-manage-group .manage-row button {
   white-space: nowrap;
+}
+
+.tag-danger-zone {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.1), rgba(127, 29, 29, 0.12));
+}
+
+.tag-danger-zone .tag-helper-text {
+  color: rgba(248, 180, 180, 0.85);
+}
+
+.tag-danger-zone button {
+  align-self: flex-start;
+}
+
+.tag-editor-panel .form-field,
+.tag-editor-panel .tag-manage-group {
+  position: relative;
+  z-index: 1;
+}
+
+.tag-editor-panel:focus-within {
+  border-color: rgba(96, 165, 250, 0.4);
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.18);
+}
+
+.tag-editor-panel:focus-within::before {
+  opacity: 0.85;
 }
 
 .player-editor-form .form-field {
@@ -2474,6 +2581,13 @@ button.danger {
     inset 0 -6px 16px rgba(2, 6, 23, 0.22);
 }
 
+button.danger.subtle {
+  background: rgba(248, 113, 113, 0.16);
+  color: rgba(255, 241, 242, 0.95);
+  border: 1px solid rgba(248, 113, 113, 0.38);
+  box-shadow: none;
+}
+
 button:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.01);
   background: rgba(13, 19, 37, 0.78);
@@ -2507,6 +2621,12 @@ button.danger:hover:not(:disabled) {
     0 26px 52px rgba(127, 29, 29, 0.55),
     0 0 24px rgba(248, 113, 113, 0.35),
     inset 0 -6px 16px rgba(2, 6, 23, 0.22);
+}
+
+button.danger.subtle:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.24);
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18);
 }
 
 button:disabled {
