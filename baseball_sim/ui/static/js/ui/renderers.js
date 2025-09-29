@@ -3887,6 +3887,12 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
     simulationLeagueAdd,
     simulationLeagueClear,
     simulationLeagueList,
+    simulationLeagueBalance,
+    simulationLeagueCount,
+    simulationSeriesStructure,
+    simulationGamesPerCardSummary,
+    simulationGamesPerTeamSummary,
+    simulationTotalGamesSummary,
     simulationGamesPerCardInput,
     simulationCardsPerOpponentInput,
     simulationStartButton,
@@ -3924,6 +3930,15 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
   const schedule = getSimulationSchedule();
   const scheduleDefaults = getSimulationScheduleDefaults();
 
+  const gamesPerCardValue =
+    Number.isFinite(schedule.gamesPerCard) && schedule.gamesPerCard > 0
+      ? schedule.gamesPerCard
+      : scheduleDefaults.gamesPerCard || 1;
+  const cardsPerOpponentValue =
+    Number.isFinite(schedule.cardsPerOpponent) && schedule.cardsPerOpponent > 0
+      ? schedule.cardsPerOpponent
+      : scheduleDefaults.cardsPerOpponent || 1;
+
   if (simulationLeagueSelect) {
     populateSelect(simulationLeagueSelect, options, {
       placeholder: 'チームを選択する',
@@ -3943,8 +3958,51 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
   const currentTeams = getSimulationLeagueTeams().filter((teamId) => optionMap.has(teamId));
   setSimulationLeagueTeams(currentTeams);
 
-  const hasTeams = currentTeams.length >= 2;
-  const evenTeamCount = currentTeams.length % 2 === 0;
+  const teamCount = currentTeams.length;
+  const hasTeams = teamCount >= 2;
+  const evenTeamCount = teamCount % 2 === 0;
+  const opponentsPerTeam = Math.max(teamCount - 1, 0);
+  const pairingCount = teamCount >= 2 ? (teamCount * opponentsPerTeam) / 2 : 0;
+  const gamesPerOpponent = gamesPerCardValue * cardsPerOpponentValue;
+  const totalCards = pairingCount * cardsPerOpponentValue;
+  const gamesPerTeam = opponentsPerTeam > 0 ? gamesPerOpponent * opponentsPerTeam : 0;
+  const totalGames = pairingCount > 0 ? gamesPerOpponent * pairingCount : 0;
+  const formatCount = (value, suffix = '') =>
+    Number.isFinite(value) && value > 0
+      ? `${Math.round(value).toLocaleString('ja-JP')}${suffix}`
+      : '--';
+
+  if (simulationLeagueCount) {
+    simulationLeagueCount.textContent = teamCount.toLocaleString('ja-JP');
+  }
+  if (simulationSeriesStructure) {
+    simulationSeriesStructure.textContent = formatCount(totalCards, 'カード');
+  }
+  if (simulationGamesPerCardSummary) {
+    simulationGamesPerCardSummary.textContent = `${gamesPerCardValue.toLocaleString('ja-JP')}試合 × ${cardsPerOpponentValue.toLocaleString('ja-JP')}カード`;
+  }
+  if (simulationGamesPerTeamSummary) {
+    simulationGamesPerTeamSummary.textContent = formatCount(gamesPerTeam, '試合');
+  }
+  if (simulationTotalGamesSummary) {
+    simulationTotalGamesSummary.textContent = formatCount(totalGames, '試合');
+  }
+  if (simulationLeagueBalance) {
+    let balanceMessage = '0チーム';
+    let balanceState = 'neutral';
+    if (teamCount === 1) {
+      balanceMessage = '1チーム（追加してください）';
+      balanceState = 'odd';
+    } else if (teamCount >= 2 && evenTeamCount) {
+      balanceMessage = '偶数チームでバランス良好';
+      balanceState = 'even';
+    } else if (teamCount >= 2) {
+      balanceMessage = '奇数チーム（1チーム追加が必要）';
+      balanceState = 'odd';
+    }
+    simulationLeagueBalance.textContent = balanceMessage;
+    simulationLeagueBalance.dataset.state = balanceState;
+  }
 
   if (simulationLeagueList) {
     simulationLeagueList.innerHTML = '';
@@ -3986,7 +4044,7 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
     simulationGamesPerCardInput.min = '1';
     simulationGamesPerCardInput.max = '20';
     const focused = document.activeElement === simulationGamesPerCardInput;
-    const value = schedule.gamesPerCard || scheduleDefaults.gamesPerCard || 1;
+    const value = gamesPerCardValue || 1;
     if (!focused) {
       simulationGamesPerCardInput.value = String(value);
     }
@@ -3997,7 +4055,7 @@ function renderSimulationSetup(teamLibraryState, simulationState) {
     simulationCardsPerOpponentInput.min = '1';
     simulationCardsPerOpponentInput.max = '100';
     const focused = document.activeElement === simulationCardsPerOpponentInput;
-    const value = schedule.cardsPerOpponent || scheduleDefaults.cardsPerOpponent || 1;
+    const value = cardsPerOpponentValue || 1;
     if (!focused) {
       simulationCardsPerOpponentInput.value = String(value);
     }
