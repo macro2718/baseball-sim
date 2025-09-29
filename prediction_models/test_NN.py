@@ -39,8 +39,8 @@ model.eval()
 # 10年分データでOPS散布図の作成
 # =============================
 try:
-    print("\nデータ取得中 (2015-2024)...")
-    data = fetch_data_from_pybaseball(start_year=2015, end_year=2024, min_pa=100)
+    print("\nデータ取得中 (2022-2024)...")
+    data = fetch_data_from_pybaseball(start_year=2022, end_year=2024, min_pa=100)
     print(f"取得件数: {len(data)}")
 
     def _to_frac(x):

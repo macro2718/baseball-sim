@@ -1,0 +1,75 @@
+{
+  "name": "COL('24)",
+  "lineup": [
+    {
+      "name": "Charlie Blackmon('24)",
+      "position": "DH"
+    },
+    {
+      "name": "Ezequiel Tovar('24)",
+      "position": "SS"
+    },
+    {
+      "name": "Ryan McMahon('24)",
+      "position": "3B"
+    },
+    {
+      "name": "Jacob Stallings('24)",
+      "position": "C"
+    },
+    {
+      "name": "Kris Bryant('24)",
+      "position": "RF"
+    },
+    {
+      "name": "Nolan Jones('24)",
+      "position": "LF"
+    },
+    {
+      "name": "Brendan Rodgers('24)",
+      "position": "2B"
+    },
+    {
+      "name": "Michael Toglia('24)",
+      "position": "1B"
+    },
+    {
+      "name": "Brenton Doyle('24)",
+      "position": "CF"
+    }
+  ],
+  "pitchers": [
+    "Kyle Freeland('24)",
+    "Cal Quantrill('24)",
+    "Austin Gomber('24)",
+    "Ryan Feltner('24)",
+    "Dakota Hudson('24)",
+    "Ty Blach('24)",
+    "Victor Vodnik('24)",
+    "Justin Lawrence('24)",
+    "Jake Bird('24)",
+    "Angel Chivilli('24)",
+    "Tyler Kinley('24)",
+    "Noah Davis('24)",
+    "Anthony Molina('24)",
+    "Peter Lambert('24)"
+  ],
+  "bench": [
+    "Hunter Goodman('24)",
+    "Elehuris Montero('24)",
+    "Jordan Beck('24)",
+    "Alan Trejo('24)",
+    "Sean Bouchard('24)",
+    "Drew Romo('24)",
+    "Jake Cave('24)",
+    "Aaron Schunk('24)",
+    "Sam Hilliard('24)"
+  ],
+  "rotation": [
+    "Kyle Freeland('24)",
+    "Cal Quantrill('24)",
+    "Austin Gomber('24)",
+    "Ryan Feltner('24)",
+    "Dakota Hudson('24)"
+  ]
+}

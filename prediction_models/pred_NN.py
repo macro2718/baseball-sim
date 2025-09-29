@@ -9,8 +9,8 @@ from sklearn.metrics import mean_squared_error
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-def fetch_data_from_pybaseball(start_year=2015, end_year=2024, min_pa=100):
-    """pybaseballを用いて2014～2024年のデータを取得し、特徴量と、全打数における各アウト・安打割合のターゲットベクトルを抽出・整形します"""
+def fetch_data_from_pybaseball(start_year=2022, end_year=2024, min_pa=100):
+    """pybaseballを用いて2022～2024年のデータを取得し、特徴量と、全打数における各アウト・安打割合のターゲットベクトルを抽出・整形します"""
     from pybaseball import batting_stats
     frames = []
     for year in range(start_year, end_year + 1):
@@ -53,10 +53,10 @@ def fetch_data_from_pybaseball(start_year=2015, end_year=2024, min_pa=100):
 class Net(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(input_dim, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, output_dim)
-    
+        self.fc1 = nn.Linear(input_dim, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, output_dim)
+
     def forward(self, x):
         x = torch.relu(self.fc1(x))
         x = torch.relu(self.fc2(x))
@@ -92,8 +92,8 @@ def train_model(data):
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
-    epochs = 2000
-    batch_size = 64
+    epochs = 1000
+    batch_size = 32
     # --- 重み付きサンプリング（正規分布を仮定）---
     # 学習特徴量 X_train について多変量正規分布 N(μ, Σ) を仮定し、
     # サンプル重みを w_i ∝ 1 / pdf(x_i) で定義（平均1に正規化、上位分位でクリップ）。
@@ -112,8 +112,8 @@ def train_model(data):
     # 1/pdf に比例する重み（相対値で十分なので平均0化してexp）
     weights = np.exp(-(log_pdf - log_pdf.mean())).astype(np.float32)
     # 外れ値による極端な重みを抑える（上位5%でクリップ）
-    cap = np.quantile(weights, 0.999)
-    weights = np.minimum(weights, cap)
+    # cap = np.quantile(weights, 0.999)
+    # weights = np.minimum(weights, cap)
     # 平均を1に正規化
     weights = weights / (weights.mean() + 1e-8)
 

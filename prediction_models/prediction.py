@@ -19,11 +19,11 @@ if nn is not None:
     class Net(nn.Module):
         """Simple feed-forward network used for probability prediction."""
 
-        def __init__(self, input_dim: int = 4, output_dim: int = 5) -> None:
+        def __init__(self, input_dim: int = 4, output_dim: int = 4) -> None:
             super().__init__()
-            self.fc1 = nn.Linear(input_dim, 128)
-            self.fc2 = nn.Linear(128, 64)
-            self.fc3 = nn.Linear(64, output_dim)
+            self.fc1 = nn.Linear(input_dim, 64)
+            self.fc2 = nn.Linear(64, 32)
+            self.fc3 = nn.Linear(32, output_dim)
 
         def forward(self, x):  # type: ignore[override]
             x = torch.relu(self.fc1(x))
