@@ -84,10 +84,7 @@ class StatsCalculator:
     def calculate_ops(obp, slg):
         """OPS計算（統一処理）"""
         return obp + slg
-    
-    @staticmethod
-    # Removed unused calculate_babip
-    
+
     @staticmethod
     def calculate_k_per_9(strikeouts, innings_pitched):
         """K/9計算（統一処理）"""
