@@ -1508,6 +1508,67 @@
   z-index: 1;
 }
 
+.simulation-rankings-table-wrapper {
+  max-height: 360px;
+  overflow: auto;
+  border-radius: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.simulation-rankings-table {
+  min-width: 960px;
+}
+
+.simulation-rankings-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.ranking-sort-button {
+  appearance: none;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ranking-sort-button:focus-visible {
+  outline: 2px solid rgba(191, 219, 254, 0.8);
+  outline-offset: 2px;
+}
+
+.ranking-sort-button::after {
+  content: '↕';
+  font-size: 11px;
+  opacity: 0.35;
+}
+
+.ranking-sort-button[data-sort-direction='asc']::after {
+  content: '▲';
+  opacity: 0.85;
+}
+
+.ranking-sort-button[data-sort-direction='desc']::after {
+  content: '▼';
+  opacity: 0.85;
+}
+
+.ranking-sort-button.active {
+  color: var(--accent);
+}
+
+.ranking-sort-button.active::after {
+  opacity: 1;
+}
+
 .simulation-table tbody td,
 .simulation-table tbody th {
   padding: 10px 12px;

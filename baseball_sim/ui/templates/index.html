@@ -317,6 +317,7 @@
                 <button id="simulation-tab-team-stats" type="button" class="tab" aria-pressed="false">チーム別統計</button>
                 <button id="simulation-tab-games" type="button" class="tab" aria-pressed="false">試合一覧</button>
                 <button id="simulation-tab-players" type="button" class="tab" aria-pressed="false">個人成績</button>
+                <button id="simulation-tab-rankings" type="button" class="tab" aria-pressed="false">ランキング</button>
               </div>
             </div>
 
@@ -482,9 +483,9 @@
                 <div class="simulation-team-tables">
                   <div class="simulation-player-table" id="simulation-selected-batting-table">
                     <h4>打者成績</h4>
-                    <table class="simulation-player-stats">
-                      <thead>
-                        <tr>
+                <table class="simulation-player-stats">
+                  <thead>
+                    <tr>
                           <th>選手</th>
                           <th>PA</th>
                           <th>AB</th>
@@ -535,7 +536,70 @@
                   </div>
                 </div>
               </section>
-              </div>
+            </div>
+            <div
+              id="simulation-rankings-section"
+              class="simulation-results-grid simulation-view-section hidden"
+              aria-hidden="true"
+            >
+              <article class="simulation-results-block">
+                <header class="simulation-results-block-header simulation-rankings-header">
+                  <h3 class="simulation-results-title">全体ランキング</h3>
+                  <div class="simulation-rankings-controls">
+                    <div class="chip-toggle-group" role="group" aria-label="種別">
+                      <button
+                        type="button"
+                        class="chip-toggle"
+                        data-rankings-type="batting"
+                        aria-pressed="true"
+                      >
+                        野手
+                      </button>
+                      <button
+                        type="button"
+                        class="chip-toggle"
+                        data-rankings-type="pitching"
+                        aria-pressed="false"
+                      >
+                        投手
+                      </button>
+                    </div>
+                    <div class="chip-toggle-group" role="group" aria-label="対象">
+                      <button
+                        type="button"
+                        class="chip-toggle"
+                        data-rankings-scope="qualified"
+                        aria-pressed="true"
+                      >
+                        規定到達のみ
+                      </button>
+                      <button
+                        type="button"
+                        class="chip-toggle"
+                        data-rankings-scope="all"
+                        aria-pressed="false"
+                      >
+                        規定未到達を含む
+                      </button>
+                    </div>
+                  </div>
+                </header>
+                <p class="simulation-rankings-note">
+                  規定到達条件: 打者はチーム試合数×3打席、投手はチーム試合数×3アウト。
+                </p>
+                <div class="simulation-rankings-table-wrapper">
+                  <table class="simulation-table simulation-rankings-table" id="simulation-rankings-table">
+                    <thead>
+                      <tr id="simulation-rankings-head"></tr>
+                    </thead>
+                    <tbody id="simulation-rankings-body"></tbody>
+                  </table>
+                </div>
+                <p id="simulation-rankings-empty" class="simulation-empty-message hidden">
+                  表示できる選手がいません。
+                </p>
+              </article>
+            </div>
             </div>
 
             <div class="title-actions simulation-results-actions">

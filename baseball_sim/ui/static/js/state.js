@@ -18,6 +18,7 @@ export const stateCache = {
   simulationResultsView: 'summary',
   playersSelectedTeamIndex: 0,
   playersTypeView: 'batting',
+  simulationRankings: { type: 'batting', scope: 'qualified', sortKey: 'ops', sortDir: 'desc' },
   matchSetup: { mode: 'manual', userTeam: 'home' },
   gameControl: {
     mode: 'manual',
@@ -68,7 +69,71 @@ export const stateCache = {
   },
 };
 
-const SIMULATION_RESULT_VIEWS = new Set(['summary', 'series', 'matchups', 'teamStats', 'games', 'players']);
+const SIMULATION_RESULT_VIEWS = new Set([
+  'summary',
+  'series',
+  'matchups',
+  'teamStats',
+  'games',
+  'players',
+  'rankings',
+]);
+
+const RANKING_SORT_KEYS = {
+  batting: new Set([
+    'name',
+    'team',
+    'pa',
+    'ab',
+    'hits',
+    'homeRuns',
+    'runs',
+    'rbi',
+    'walks',
+    'strikeouts',
+    'avg',
+    'obp',
+    'slg',
+    'ops',
+    'k_pct',
+    'bb_pct',
+    'qualified',
+  ]),
+  pitching: new Set([
+    'name',
+    'team',
+    'appearances',
+    'ip',
+    'hits',
+    'runs',
+    'earnedRuns',
+    'walks',
+    'strikeouts',
+    'homeRuns',
+    'era',
+    'whip',
+    'kPer9',
+    'bbPer9',
+    'qualified',
+  ]),
+};
+
+const RANKING_DEFAULTS = {
+  batting: { sortKey: 'ops', sortDir: 'desc' },
+  pitching: { sortKey: 'era', sortDir: 'asc' },
+};
+
+function ensureSimulationRankingsState() {
+  if (!stateCache.simulationRankings || typeof stateCache.simulationRankings !== 'object') {
+    stateCache.simulationRankings = {
+      type: 'batting',
+      scope: 'qualified',
+      sortKey: 'ops',
+      sortDir: 'desc',
+    };
+  }
+  return stateCache.simulationRankings;
+}
 
 export function setUIView(view) {
   if (!view) return;
@@ -105,6 +170,53 @@ export function setPlayersTypeView(type) {
 
 export function getPlayersTypeView() {
   return stateCache.playersTypeView === 'pitching' ? 'pitching' : 'batting';
+}
+
+export function getSimulationRankingsState() {
+  const state = ensureSimulationRankingsState();
+  const type = state.type === 'pitching' ? 'pitching' : 'batting';
+  const scope = state.scope === 'all' ? 'all' : 'qualified';
+  const allowed = RANKING_SORT_KEYS[type];
+  const defaults = RANKING_DEFAULTS[type];
+  const sortKey = allowed.has(state.sortKey) ? state.sortKey : defaults.sortKey;
+  const sortDir = state.sortDir === 'asc' || state.sortDir === 'desc' ? state.sortDir : defaults.sortDir;
+  return { type, scope, sortKey, sortDir };
+}
+
+export function setSimulationRankingsType(type) {
+  const state = ensureSimulationRankingsState();
+  const normalized = type === 'pitching' ? 'pitching' : 'batting';
+  if (state.type !== normalized) {
+    state.type = normalized;
+    const defaults = RANKING_DEFAULTS[normalized];
+    state.sortKey = defaults.sortKey;
+    state.sortDir = defaults.sortDir;
+  }
+  return getSimulationRankingsState();
+}
+
+export function setSimulationRankingsScope(scope) {
+  const state = ensureSimulationRankingsState();
+  state.scope = scope === 'all' ? 'all' : 'qualified';
+  return getSimulationRankingsState();
+}
+
+export function setSimulationRankingsSort(sortKey, direction) {
+  const state = ensureSimulationRankingsState();
+  const type = state.type === 'pitching' ? 'pitching' : 'batting';
+  const allowed = RANKING_SORT_KEYS[type];
+  const defaults = RANKING_DEFAULTS[type];
+  if (typeof sortKey === 'string' && allowed.has(sortKey)) {
+    state.sortKey = sortKey;
+  } else if (!allowed.has(state.sortKey)) {
+    state.sortKey = defaults.sortKey;
+  }
+  if (direction === 'asc' || direction === 'desc') {
+    state.sortDir = direction;
+  } else if (state.sortDir !== 'asc' && state.sortDir !== 'desc') {
+    state.sortDir = defaults.sortDir;
+  }
+  return getSimulationRankingsState();
 }
 
 export function getUIView() {

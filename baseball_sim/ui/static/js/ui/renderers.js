@@ -25,6 +25,7 @@ import {
   primeSimulationSetup,
   getPlayersSelectedTeamIndex,
   setPlayersSelectedTeamIndex,
+  getSimulationRankingsState,
 } from '../state.js';
 import {
   escapeHtml,
@@ -53,6 +54,8 @@ import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
 import { updateFieldResultDisplay, resetFieldResultDisplay } from './fieldResultDisplay.js';
 import { hideOffenseMenu, hideDefenseMenu } from './menus.js';
 import { updateOverlayEvents } from './overlayEvents.js';
+
+const JAPANESE_COLLATOR = new Intl.Collator('ja-JP', { numeric: true, sensitivity: 'base' });
 
 function setInsightsVisibility(visible) {
   const { insightGrid } = elements;
@@ -3714,6 +3717,162 @@ function formatQualificationDisplay(reached, applicable) {
   return reached ? '◯' : '×';
 }
 
+function formatPercentageDisplay(value, digits = 1) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '-';
+  return `${num.toFixed(digits)}%`;
+}
+
+const BATTING_RANKING_COLUMNS = [
+  { key: 'rank', label: '順位', sortable: false },
+  { key: 'name', label: '選手', sortable: true, sortKey: 'name', defaultDir: 'asc', type: 'string', cellClass: 'player-col' },
+  { key: 'team', label: 'チーム', sortable: true, sortKey: 'team', defaultDir: 'asc', type: 'string', cellClass: 'player-col' },
+  { key: 'pa', label: 'PA', sortable: true, sortKey: 'pa', defaultDir: 'desc', type: 'number' },
+  { key: 'ab', label: 'AB', sortable: true, sortKey: 'ab', defaultDir: 'desc', type: 'number' },
+  { key: 'hits', label: 'H', sortable: true, sortKey: 'hits', defaultDir: 'desc', type: 'number' },
+  { key: 'avg', label: 'AVG', sortable: true, sortKey: 'avg', defaultDir: 'desc', type: 'number', formatter: (row) => formatAverageDisplay(row.avg) },
+  { key: 'obp', label: 'OBP', sortable: true, sortKey: 'obp', defaultDir: 'desc', type: 'number', formatter: (row) => formatAverageDisplay(row.obp) },
+  { key: 'slg', label: 'SLG', sortable: true, sortKey: 'slg', defaultDir: 'desc', type: 'number', formatter: (row) => formatAverageDisplay(row.slg) },
+  { key: 'ops', label: 'OPS', sortable: true, sortKey: 'ops', defaultDir: 'desc', type: 'number', formatter: (row) => formatAverageDisplay(row.ops) },
+  { key: 'homeRuns', label: 'HR', sortable: true, sortKey: 'homeRuns', defaultDir: 'desc', type: 'number' },
+  { key: 'rbi', label: 'RBI', sortable: true, sortKey: 'rbi', defaultDir: 'desc', type: 'number' },
+  { key: 'runs', label: 'R', sortable: true, sortKey: 'runs', defaultDir: 'desc', type: 'number' },
+  { key: 'walks', label: 'BB', sortable: true, sortKey: 'walks', defaultDir: 'desc', type: 'number' },
+  { key: 'strikeouts', label: 'SO', sortable: true, sortKey: 'strikeouts', defaultDir: 'desc', type: 'number' },
+  { key: 'k_pct', label: 'K%', sortable: true, sortKey: 'k_pct', defaultDir: 'desc', type: 'number', formatter: (row) => formatPercentageDisplay(row.k_pct) },
+  { key: 'bb_pct', label: 'BB%', sortable: true, sortKey: 'bb_pct', defaultDir: 'desc', type: 'number', formatter: (row) => formatPercentageDisplay(row.bb_pct) },
+  {
+    key: 'qualified',
+    label: '規定',
+    sortable: true,
+    sortKey: 'qualified',
+    defaultDir: 'desc',
+    type: 'boolean',
+    formatter: (row) => formatQualificationDisplay(row.qualified && row.qualApplicable, row.qualApplicable),
+  },
+];
+
+const PITCHING_RANKING_COLUMNS = [
+  { key: 'rank', label: '順位', sortable: false },
+  { key: 'name', label: '選手', sortable: true, sortKey: 'name', defaultDir: 'asc', type: 'string', cellClass: 'player-col' },
+  { key: 'team', label: 'チーム', sortable: true, sortKey: 'team', defaultDir: 'asc', type: 'string', cellClass: 'player-col' },
+  {
+    key: 'appearances',
+    label: '登板',
+    sortable: true,
+    sortKey: 'appearances',
+    defaultDir: 'desc',
+    type: 'number',
+  },
+  {
+    key: 'ip',
+    label: '投球回',
+    sortable: true,
+    sortKey: 'ip',
+    defaultDir: 'desc',
+    type: 'number',
+    formatter: (row) => formatInningsDisplay(row.ip),
+  },
+  {
+    key: 'era',
+    label: 'ERA',
+    sortable: true,
+    sortKey: 'era',
+    defaultDir: 'asc',
+    type: 'number',
+    formatter: (row) => formatNumberDisplay(row.era, 2),
+  },
+  {
+    key: 'whip',
+    label: 'WHIP',
+    sortable: true,
+    sortKey: 'whip',
+    defaultDir: 'asc',
+    type: 'number',
+    formatter: (row) => formatNumberDisplay(row.whip, 2),
+  },
+  {
+    key: 'kPer9',
+    label: 'K/9',
+    sortable: true,
+    sortKey: 'kPer9',
+    defaultDir: 'desc',
+    type: 'number',
+    formatter: (row) => formatNumberDisplay(row.kPer9, 2),
+  },
+  {
+    key: 'bbPer9',
+    label: 'BB/9',
+    sortable: true,
+    sortKey: 'bbPer9',
+    defaultDir: 'asc',
+    type: 'number',
+    formatter: (row) => formatNumberDisplay(row.bbPer9, 2),
+  },
+  {
+    key: 'strikeouts',
+    label: '奪三振',
+    sortable: true,
+    sortKey: 'strikeouts',
+    defaultDir: 'desc',
+    type: 'number',
+  },
+  {
+    key: 'walks',
+    label: '与四球',
+    sortable: true,
+    sortKey: 'walks',
+    defaultDir: 'asc',
+    type: 'number',
+  },
+  {
+    key: 'hits',
+    label: '被安打',
+    sortable: true,
+    sortKey: 'hits',
+    defaultDir: 'asc',
+    type: 'number',
+  },
+  {
+    key: 'runs',
+    label: '失点',
+    sortable: true,
+    sortKey: 'runs',
+    defaultDir: 'asc',
+    type: 'number',
+  },
+  {
+    key: 'earnedRuns',
+    label: '自責',
+    sortable: true,
+    sortKey: 'earnedRuns',
+    defaultDir: 'asc',
+    type: 'number',
+  },
+  {
+    key: 'homeRuns',
+    label: '被本塁打',
+    sortable: true,
+    sortKey: 'homeRuns',
+    defaultDir: 'asc',
+    type: 'number',
+  },
+  {
+    key: 'qualified',
+    label: '規定',
+    sortable: true,
+    sortKey: 'qualified',
+    defaultDir: 'desc',
+    type: 'boolean',
+    formatter: (row) => formatQualificationDisplay(row.qualified && row.qualApplicable, row.qualApplicable),
+  },
+];
+
+const RANKING_ZERO_PARTICIPATION_COLUMNS = {
+  batting: new Set(['avg', 'obp', 'slg', 'ops', 'k_pct', 'bb_pct']),
+  pitching: new Set(['era', 'whip', 'kPer9', 'bbPer9']),
+};
+
 function renderSimulationSetup(teamLibraryState, simulationState) {
   const {
     simulationSetupForm,
@@ -4078,6 +4237,7 @@ function updateSimulationResultsViewUI() {
     simulationTeamStatsSection,
     simulationGamesSection,
     simulationPlayersSection,
+    simulationRankingsSection,
     simulationPlayersTabsRow,
     simulationPlayersTypeBatting,
     simulationPlayersTypePitching,
@@ -4091,6 +4251,7 @@ function updateSimulationResultsViewUI() {
     simulationTabTeamStats,
     simulationTabGames,
     simulationTabPlayers,
+    simulationTabRankings,
   } = elements;
   const view = stateCache.simulationResultsView || 'summary';
   const showSummary = view === 'summary';
@@ -4099,6 +4260,7 @@ function updateSimulationResultsViewUI() {
   const showTeamStats = view === 'teamStats';
   const showGames = view === 'games';
   const showPlayers = view === 'players';
+  const showRankings = view === 'rankings';
 
   if (simulationSummarySection) {
     simulationSummarySection.classList.toggle('hidden', !showSummary);
@@ -4124,6 +4286,10 @@ function updateSimulationResultsViewUI() {
     simulationPlayersSection.classList.toggle('hidden', !showPlayers);
     simulationPlayersSection.setAttribute('aria-hidden', showPlayers ? 'false' : 'true');
   }
+  if (simulationRankingsSection) {
+    simulationRankingsSection.classList.toggle('hidden', !showRankings);
+    simulationRankingsSection.setAttribute('aria-hidden', showRankings ? 'false' : 'true');
+  }
 
   setTabActive(simulationTabSummary, showSummary);
   setTabActive(simulationTabSeries, showSeries);
@@ -4131,6 +4297,7 @@ function updateSimulationResultsViewUI() {
   setTabActive(simulationTabTeamStats, showTeamStats);
   setTabActive(simulationTabGames, showGames);
   setTabActive(simulationTabPlayers, showPlayers);
+  setTabActive(simulationTabRankings, showRankings);
 
   // 個人成績サブタブの表示/切替
   if (simulationPlayersTabsRow) {
@@ -4445,6 +4612,282 @@ function renderSimulationMatchupsTable(tbody, games, aliases) {
   });
 }
 
+function buildBattingRankingRows(teams) {
+  const rows = [];
+  teams.forEach((team) => {
+    if (!team) return;
+    const teamName = team.name || team.key || 'Team';
+    const gamesPlayed = getTeamGamesPlayed(team);
+    const paRequirement = gamesPlayed > 0 ? Math.max(0, Math.round(gamesPlayed * 3)) : 0;
+    const qualificationApplicable = paRequirement > 0;
+    const batters = Array.isArray(team.batters) ? team.batters : [];
+    batters.forEach((player) => {
+      if (!player) return;
+      const paValue = Number(player.pa);
+      const pa = Number.isFinite(paValue) ? paValue : 0;
+      const row = {
+        name: player.name || '',
+        team: teamName,
+        pa,
+        ab: Number.isFinite(Number(player.ab)) ? Number(player.ab) : 0,
+        hits: Number.isFinite(Number(player.hits)) ? Number(player.hits) : 0,
+        homeRuns: Number.isFinite(Number(player.homeRuns)) ? Number(player.homeRuns) : 0,
+        runs: Number.isFinite(Number(player.runs)) ? Number(player.runs) : 0,
+        rbi: Number.isFinite(Number(player.rbi)) ? Number(player.rbi) : 0,
+        walks: Number.isFinite(Number(player.walks)) ? Number(player.walks) : 0,
+        strikeouts: Number.isFinite(Number(player.strikeouts)) ? Number(player.strikeouts) : 0,
+        avg: Number.isFinite(Number(player.avg)) ? Number(player.avg) : null,
+        obp: Number.isFinite(Number(player.obp)) ? Number(player.obp) : null,
+        slg: Number.isFinite(Number(player.slg)) ? Number(player.slg) : null,
+        ops: Number.isFinite(Number(player.ops)) ? Number(player.ops) : null,
+        k_pct: Number.isFinite(Number(player.k_pct)) ? Number(player.k_pct) : null,
+        bb_pct: Number.isFinite(Number(player.bb_pct)) ? Number(player.bb_pct) : null,
+      };
+      row.qualApplicable = qualificationApplicable;
+      row.qualified = qualificationApplicable ? pa >= paRequirement : true;
+      row.workload = pa;
+      rows.push(row);
+    });
+  });
+  return rows;
+}
+
+function buildPitchingRankingRows(teams) {
+  const rows = [];
+  teams.forEach((team) => {
+    if (!team) return;
+    const teamName = team.name || team.key || 'Team';
+    const gamesPlayed = getTeamGamesPlayed(team);
+    const ipRequirementOuts = gamesPlayed > 0 ? Math.max(0, Math.round(gamesPlayed * 3)) : 0;
+    const qualificationApplicable = ipRequirementOuts > 0;
+    const pitchers = Array.isArray(team.pitchers) ? team.pitchers : [];
+    pitchers.forEach((player) => {
+      if (!player) return;
+      const ipValue = Number(player.ip);
+      const ip = Number.isFinite(ipValue) ? ipValue : 0;
+      const outs = Math.round(ip * 3);
+      const row = {
+        name: player.name || '',
+        team: teamName,
+        appearances: Number.isFinite(Number(player.appearances)) ? Number(player.appearances) : 0,
+        ip,
+        hits: Number.isFinite(Number(player.hits)) ? Number(player.hits) : 0,
+        runs: Number.isFinite(Number(player.runs)) ? Number(player.runs) : 0,
+        earnedRuns: Number.isFinite(Number(player.earnedRuns)) ? Number(player.earnedRuns) : 0,
+        walks: Number.isFinite(Number(player.walks)) ? Number(player.walks) : 0,
+        strikeouts: Number.isFinite(Number(player.strikeouts)) ? Number(player.strikeouts) : 0,
+        homeRuns: Number.isFinite(Number(player.homeRuns)) ? Number(player.homeRuns) : 0,
+        era: Number.isFinite(Number(player.era)) ? Number(player.era) : null,
+        whip: Number.isFinite(Number(player.whip)) ? Number(player.whip) : null,
+        kPer9: Number.isFinite(Number(player.kPer9)) ? Number(player.kPer9) : null,
+        bbPer9: Number.isFinite(Number(player.bbPer9)) ? Number(player.bbPer9) : null,
+      };
+      row.qualApplicable = qualificationApplicable;
+      row.qualified = qualificationApplicable ? outs >= ipRequirementOuts : true;
+      row.workload = outs;
+      rows.push(row);
+    });
+  });
+  return rows;
+}
+
+function sortRankingRows(rows, column, sortKey, direction, type, scope) {
+  if (!rows.length || !sortKey) return;
+  const columnType = column?.type || 'number';
+  const zeroSet = RANKING_ZERO_PARTICIPATION_COLUMNS[type] || new Set();
+  const dir = direction === 'asc' ? 'asc' : 'desc';
+  const multiplier = dir === 'asc' ? 1 : -1;
+
+  rows.sort((a, b) => {
+    if (scope === 'all' && zeroSet.has(sortKey)) {
+      const aWork = Number(a.workload);
+      const bWork = Number(b.workload);
+      const aZero = !Number.isFinite(aWork) || aWork <= 0;
+      const bZero = !Number.isFinite(bWork) || bWork <= 0;
+      if (aZero !== bZero) {
+        return aZero ? 1 : -1;
+      }
+    }
+
+    let comparison = 0;
+    if (columnType === 'string') {
+      const aValue = typeof a[sortKey] === 'string' ? a[sortKey] : '';
+      const bValue = typeof b[sortKey] === 'string' ? b[sortKey] : '';
+      comparison = JAPANESE_COLLATOR.compare(aValue, bValue);
+    } else if (columnType === 'boolean') {
+      const aValue = a[sortKey] ? 1 : 0;
+      const bValue = b[sortKey] ? 1 : 0;
+      comparison = aValue - bValue;
+    } else {
+      const aRaw = Number(a[sortKey]);
+      const bRaw = Number(b[sortKey]);
+      const fallback = dir === 'asc' ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+      const aValue = Number.isFinite(aRaw) ? aRaw : fallback;
+      const bValue = Number.isFinite(bRaw) ? bRaw : fallback;
+      comparison = aValue - bValue;
+    }
+
+    if (comparison !== 0) {
+      return comparison * multiplier;
+    }
+
+    const teamCompare = JAPANESE_COLLATOR.compare(a.team || '', b.team || '');
+    if (teamCompare !== 0) {
+      return teamCompare;
+    }
+    return JAPANESE_COLLATOR.compare(a.name || '', b.name || '');
+  });
+}
+
+function renderSimulationRankings(lastRun) {
+  const {
+    simulationRankingsHead,
+    simulationRankingsBody,
+    simulationRankingsEmpty,
+    simulationRankingsTypeButtons,
+    simulationRankingsScopeButtons,
+  } = elements;
+
+  if (!simulationRankingsHead || !simulationRankingsBody) {
+    return;
+  }
+
+  const state = getSimulationRankingsState();
+  const columns = state.type === 'pitching' ? PITCHING_RANKING_COLUMNS : BATTING_RANKING_COLUMNS;
+  const sortableColumns = columns.filter((column) => column.sortable);
+  const availableSortKeys = new Set(sortableColumns.map((column) => column.sortKey));
+  let sortKey = availableSortKeys.has(state.sortKey)
+    ? state.sortKey
+    : sortableColumns[0]?.sortKey || null;
+  let sortDir = state.sortDir === 'asc' || state.sortDir === 'desc'
+    ? state.sortDir
+    : sortableColumns.find((column) => column.sortKey === sortKey)?.defaultDir || 'desc';
+
+  (simulationRankingsTypeButtons || []).forEach((button) => {
+    const type = button.dataset.rankingsType === 'pitching' ? 'pitching' : 'batting';
+    const active = type === state.type;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  (simulationRankingsScopeButtons || []).forEach((button) => {
+    const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
+    const active = scope === state.scope;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  simulationRankingsHead.innerHTML = '';
+  columns.forEach((column) => {
+    const th = document.createElement('th');
+    if (column.sortable) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ranking-sort-button';
+      btn.dataset.rankingsSort = column.sortKey;
+      btn.dataset.rankingsDefault = column.defaultDir || 'desc';
+      btn.textContent = column.label;
+      th.appendChild(btn);
+    } else {
+      th.textContent = column.label;
+    }
+    simulationRankingsHead.appendChild(th);
+  });
+
+  const teams = Array.isArray(lastRun?.teams) ? lastRun.teams : [];
+  let rows = [];
+  if (teams.length) {
+    rows = state.type === 'pitching' ? buildPitchingRankingRows(teams) : buildBattingRankingRows(teams);
+  }
+
+  const filteredRows = state.scope === 'qualified' ? rows.filter((row) => row.qualified) : rows.slice();
+
+  if (sortKey) {
+    const sortColumn = columns.find((column) => column.sortKey === sortKey);
+    if (sortColumn) {
+      const fallbackDir = sortColumn.defaultDir || 'desc';
+      const direction = sortDir === 'asc' || sortDir === 'desc' ? sortDir : fallbackDir;
+      sortRankingRows(filteredRows, sortColumn, sortKey, direction, state.type, state.scope);
+      filteredRows.forEach((row, index) => {
+        row.rank = index + 1;
+      });
+      Array.from(simulationRankingsHead.children).forEach((th) => {
+        const btn = th.querySelector('button[data-rankings-sort]');
+        if (!btn) {
+          th.removeAttribute('aria-sort');
+          return;
+        }
+        const key = btn.dataset.rankingsSort;
+        if (key === sortKey) {
+          btn.classList.add('active');
+          btn.dataset.sortDirection = direction;
+          th.setAttribute('aria-sort', direction === 'asc' ? 'ascending' : 'descending');
+        } else {
+          btn.classList.remove('active');
+          btn.removeAttribute('data-sort-direction');
+          th.removeAttribute('aria-sort');
+        }
+      });
+    } else {
+      filteredRows.forEach((row, index) => {
+        row.rank = index + 1;
+      });
+    }
+  } else {
+    filteredRows.forEach((row, index) => {
+      row.rank = index + 1;
+    });
+    Array.from(simulationRankingsHead.children).forEach((th) => {
+      const btn = th.querySelector('button[data-rankings-sort]');
+      if (btn) {
+        btn.classList.remove('active');
+        btn.removeAttribute('data-sort-direction');
+      }
+      th.removeAttribute('aria-sort');
+    });
+  }
+
+  simulationRankingsBody.innerHTML = '';
+  if (filteredRows.length) {
+    filteredRows.forEach((row) => {
+      const tr = document.createElement('tr');
+      columns.forEach((column) => {
+        const cell = document.createElement('td');
+        let display = '-';
+        if (column.key === 'rank') {
+          display = row.rank != null ? String(row.rank) : '-';
+        } else if (typeof column.formatter === 'function') {
+          display = column.formatter(row);
+        } else {
+          const value = row[column.key];
+          if (value !== null && value !== undefined && value !== '') {
+            display = String(value);
+          }
+        }
+        if (column.cellClass) {
+          cell.classList.add(column.cellClass);
+        } else if (column.key === 'name' || column.key === 'team') {
+          cell.classList.add('player-col');
+        }
+        cell.textContent = display;
+        tr.appendChild(cell);
+      });
+      simulationRankingsBody.appendChild(tr);
+    });
+  }
+
+  if (simulationRankingsEmpty) {
+    let message = '表示できる選手がいません。';
+    if (!lastRun) {
+      message = 'シミュレーション結果がまだありません。';
+    } else if (rows.length && !filteredRows.length && state.scope === 'qualified') {
+      message = '規定到達者がいません。';
+    }
+    simulationRankingsEmpty.textContent = message;
+    simulationRankingsEmpty.classList.toggle('hidden', filteredRows.length > 0);
+  }
+}
+
 function renderSimulationResults(simulationState) {
   const {
     simulationResultsSummary,
@@ -4521,6 +4964,7 @@ function renderSimulationResults(simulationState) {
     if (simulationPlayersTeamSelect) simulationPlayersTeamSelect.innerHTML = '';
     renderSimulationTeamStatsTable(simulationTeamStatsBody, []);
     renderSimulationMatchupsTable(simulationMatchupsBody, [], {});
+    renderSimulationRankings(null);
     updateSimulationResultsViewUI();
     return;
   }
@@ -4931,6 +5375,7 @@ function renderSimulationResults(simulationState) {
   renderSimulationLeaders(lastRun);
   renderSimulationTeamStatsTable(simulationTeamStatsBody, teams);
   renderSimulationMatchupsTable(simulationMatchupsBody, games, lastRun.aliases || {});
+  renderSimulationRankings(lastRun);
   // タブ/セクション表示更新
   updateSimulationResultsViewUI();
 }
