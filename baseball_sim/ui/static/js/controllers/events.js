@@ -7,6 +7,10 @@ import {
   setSimulationResultsView,
   setPlayersSelectedTeamIndex,
   setPlayersTypeView,
+  getSimulationRankingsState,
+  setSimulationRankingsType,
+  setSimulationRankingsScope,
+  setSimulationRankingsSort,
   addSimulationLeagueTeam,
   removeSimulationLeagueTeamAt,
   clearSimulationLeagueTeams,
@@ -3793,6 +3797,51 @@ export function initEventListeners(actions) {
     elements.simulationTabPlayers.addEventListener('click', () => {
       setSimulationResultsView('players');
       setPlayersTypeView('batting');
+      refreshView();
+    });
+  }
+  if (elements.simulationTabRankings) {
+    elements.simulationTabRankings.addEventListener('click', () => {
+      setSimulationResultsView('rankings');
+      refreshView();
+    });
+  }
+
+  if (elements.simulationRankingsTypeButtons?.length) {
+    elements.simulationRankingsTypeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const type = button.dataset.rankingsType === 'pitching' ? 'pitching' : 'batting';
+        setSimulationRankingsType(type);
+        refreshView();
+      });
+    });
+  }
+
+  if (elements.simulationRankingsScopeButtons?.length) {
+    elements.simulationRankingsScopeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const scope = button.dataset.rankingsScope === 'all' ? 'all' : 'qualified';
+        setSimulationRankingsScope(scope);
+        refreshView();
+      });
+    });
+  }
+
+  if (elements.simulationRankingsHead) {
+    elements.simulationRankingsHead.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-rankings-sort]');
+      if (!button || !elements.simulationRankingsHead.contains(button)) {
+        return;
+      }
+      event.preventDefault();
+      const sortKey = button.dataset.rankingsSort || '';
+      const defaultDir = button.dataset.rankingsDefault === 'asc' ? 'asc' : 'desc';
+      const state = getSimulationRankingsState();
+      let nextDir = defaultDir;
+      if (state.sortKey === sortKey) {
+        nextDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+      }
+      setSimulationRankingsSort(sortKey, nextDir);
       refreshView();
     });
   }
