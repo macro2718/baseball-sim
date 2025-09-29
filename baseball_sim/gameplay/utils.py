@@ -673,31 +673,10 @@ class RunnerEngine:
         # 三塁走者の処理（状況に応じてホーム突入を判断）
         third_runner = bases[2]
         if third_runner is not None:
-            runner_speed = getattr(third_runner, "speed", AVERAGE_SPEED)
-            forced_home = bases[1] is not None
-
-            # 強制進塁が無い場合のみ「突入しない」選択肢が生じる
-            attempt_probability = 0.85 * (runner_speed / AVERAGE_SPEED)
-            attempt_probability = max(0.5, min(0.95, attempt_probability))
-
-            if forced_home or random.random() < attempt_probability:
-                success_probability = 0.75 * (runner_speed / AVERAGE_SPEED)
-                success_probability = max(0.4, min(0.98, success_probability))
-
-                if random.random() < success_probability:
-                    runs += score_runner(bases, 2)
-                else:
-                    if forced_home:
-                        clear_base(bases, 2)
-                        self.game_state.add_out()
-                    else:
-                        out_probability = 0.45 * (AVERAGE_SPEED / runner_speed)
-                        out_probability = max(0.25, min(0.7, out_probability))
-                        if random.random() < out_probability:
-                            clear_base(bases, 2)
-                            self.game_state.add_out()
+            runs += score_runner(bases, 2)
 
         # 二塁走者の処理（既存ロジック踏襲。走者でなく batter.speed を参照していた挙動を保持）
+        second_runner_out_at_home = False
         if bases[1] is not None:
             run_probability = 0.65
             run_probability *= (batter.speed / AVERAGE_SPEED)
@@ -711,6 +690,7 @@ class RunnerEngine:
                 else:
                     clear_base(bases, 1)
                     self.game_state.add_out()
+                    second_runner_out_at_home = True
             else:
                 move_runner(bases, 1, 2)
 
@@ -723,7 +703,9 @@ class RunnerEngine:
                 runner_speed = getattr(runner, "speed", getattr(batter, "speed", AVERAGE_SPEED))
                 success_probability = 0.7 * (runner_speed / AVERAGE_SPEED)
                 success_probability = max(0.25, min(0.9, success_probability))
-                if random.random() < success_probability:
+                if second_runner_out_at_home:
+                    move_runner(bases, 0, 2)
+                elif random.random() < success_probability:
                     move_runner(bases, 0, 2)
                 else:
                     clear_base(bases, 0)
