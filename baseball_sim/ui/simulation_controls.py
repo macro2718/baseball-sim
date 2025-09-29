@@ -6,11 +6,67 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from baseball_sim.interface.simulation import simulate_games
+from baseball_sim.interface.simulation import reset_team_and_players, simulate_games
 from baseball_sim.data.team_library import TeamLibraryError
 
 from .exceptions import GameSessionError
 from .simulation_summary import summarize_simulation_results
+
+
+def _collect_pitcher_pool(team) -> list:
+    """Reconstruct the available pitcher pool from the team's current state."""
+
+    if not team:
+        return []
+
+    pool: list = []
+    seen: set[int] = set()
+
+    def add_pitcher(candidate) -> None:
+        if candidate is None or not hasattr(candidate, "pitcher_type"):
+            return
+        identifier = id(candidate)
+        if identifier in seen:
+            return
+        seen.add(identifier)
+        pool.append(candidate)
+
+    for attr in ("pitchers", "ejected_players", "pitcher_rotation"):
+        collection = getattr(team, attr, None) or []
+        for candidate in collection:
+            add_pitcher(candidate)
+
+    add_pitcher(getattr(team, "current_pitcher", None))
+
+    return pool
+
+
+def _reset_team_statistics(team) -> None:
+    """Reset per-game statistics for all players on the given team."""
+
+    if not team:
+        return
+
+    seen_players: set[int] = set()
+    for attr in ("lineup", "bench", "pitchers"):
+        collection = getattr(team, attr, None) or []
+        for player in collection:
+            if player is None:
+                continue
+            identifier = id(player)
+            if identifier in seen_players:
+                continue
+            seen_players.add(identifier)
+
+            stats = getattr(player, "stats", None)
+            if isinstance(stats, dict):
+                for key in list(stats.keys()):
+                    stats[key] = 0
+
+            pitching_stats = getattr(player, "pitching_stats", None)
+            if isinstance(pitching_stats, dict):
+                for key in list(pitching_stats.keys()):
+                    pitching_stats[key] = 0
 
 
 class SimulationControlsMixin:
@@ -439,6 +495,18 @@ class SimulationControlsMixin:
         playable_state = self._simulation_state.get("playable") or {}
         playable_state["selection"] = {"home": home_selection, "away": away_selection}
         self._simulation_state["playable"] = playable_state
+
+        home_pitcher_pool = _collect_pitcher_pool(home_team)
+        away_pitcher_pool = _collect_pitcher_pool(away_team)
+
+        reset_team_and_players(
+            home_team,
+            away_team,
+            home_pitcher_pool=home_pitcher_pool,
+            away_pitcher_pool=away_pitcher_pool,
+        )
+        _reset_team_statistics(home_team)
+        _reset_team_statistics(away_team)
 
         if hasattr(self, "_prepare_game_setup"):
             try:
