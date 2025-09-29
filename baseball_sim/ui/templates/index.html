@@ -244,49 +244,104 @@
         </section>
 
         <section id="simulation-setup-screen" class="screen hidden">
-          <div class="title-card simulation-card">
-            <h2>シミュレーション設定</h2>
-            <p class="lobby-description">シミュレーションするチームと試合数を選択してください。</p>
+          <div class="title-card simulation-card simulation-setup-card">
+            <div class="simulation-card-header">
+              <h2>シミュレーション設定</h2>
+              <p class="lobby-description">シミュレーションするチームと試合数を選択してください。</p>
+            </div>
             <form id="simulation-setup-form" class="simulation-setup-form">
-              <div class="form-grid">
-                <div class="form-field full">
-                  <label for="simulation-league-team">リーグにチームを追加</label>
-                  <div class="league-picker">
-                    <select id="simulation-league-team" class="team-select"></select>
-                    <button type="button" id="simulation-league-add" class="primary">追加</button>
-                    <button type="button" id="simulation-league-clear" class="ghost">リセット</button>
+              <div class="simulation-setup-body">
+                <section class="setup-panel">
+                  <header class="setup-panel-header">
+                    <span class="step-badge">STEP 1</span>
+                    <div>
+                      <h3>リーグを編成</h3>
+                      <p>参加チームは偶数で設定すると自動日程が組みやすくなります。</p>
+                    </div>
+                  </header>
+                  <div class="setup-panel-card">
+                    <div class="form-field">
+                      <label for="simulation-league-team">リーグにチームを追加</label>
+                      <div class="league-picker">
+                        <select id="simulation-league-team" class="team-select"></select>
+                        <button type="button" id="simulation-league-add" class="primary">追加</button>
+                        <button type="button" id="simulation-league-clear" class="ghost">リセット</button>
+                      </div>
+                      <p class="form-hint">リーグに参加させるチームを順番に追加してください。</p>
+                    </div>
+                    <div class="form-field">
+                      <label for="simulation-league-list">リーグ構成</label>
+                      <ul id="simulation-league-list" class="league-team-list" aria-live="polite"></ul>
+                      <div class="league-summary" aria-live="polite">
+                        <span class="league-balance" id="simulation-league-balance">0チーム</span>
+                        <div class="summary-chip">
+                          <span class="summary-label">参加チーム</span>
+                          <span class="summary-value" id="simulation-league-count">0</span>
+                        </div>
+                        <div class="summary-chip">
+                          <span class="summary-label">想定カード数</span>
+                          <span class="summary-value" id="simulation-series-structure">--</span>
+                        </div>
+                      </div>
+                      <p class="form-hint">各チームの削除ボタンでリストから除外できます。</p>
+                    </div>
                   </div>
-                  <p class="form-hint">リーグに参加させるチームを順番に追加してください。</p>
-                </div>
-                <div class="form-field full">
-                  <label for="simulation-league-list">リーグ構成</label>
-                  <ul id="simulation-league-list" class="league-team-list" aria-live="polite"></ul>
-                  <p class="form-hint">各チームの削除ボタンでリストから除外できます。</p>
-                </div>
-                <div class="form-field">
-                  <label for="simulation-games-per-card">1カードあたりの試合数</label>
-                  <input
-                    type="number"
-                    id="simulation-games-per-card"
-                    name="simulation-games-per-card"
-                    min="1"
-                    max="20"
-                    value="3"
-                    inputmode="numeric"
-                  />
-                </div>
-                <div class="form-field">
-                  <label for="simulation-cards-per-opponent">対戦カード数</label>
-                  <input
-                    type="number"
-                    id="simulation-cards-per-opponent"
-                    name="simulation-cards-per-opponent"
-                    min="1"
-                    max="10"
-                    value="1"
-                    inputmode="numeric"
-                  />
-                </div>
+                </section>
+
+                <section class="setup-panel">
+                  <header class="setup-panel-header">
+                    <span class="step-badge">STEP 2</span>
+                    <div>
+                      <h3>シリーズ条件を決める</h3>
+                      <p>カードあたりの試合数とカードの繰り返し回数を設定してください。</p>
+                    </div>
+                  </header>
+                  <div class="setup-panel-card">
+                    <div class="schedule-grid">
+                      <div class="form-field">
+                        <label for="simulation-games-per-card">1カードあたりの試合数</label>
+                        <input
+                          type="number"
+                          id="simulation-games-per-card"
+                          name="simulation-games-per-card"
+                          min="1"
+                          max="20"
+                          value="3"
+                          inputmode="numeric"
+                        />
+                        <p class="form-hint">同じカード内で消化する試合数です。</p>
+                      </div>
+                      <div class="form-field">
+                        <label for="simulation-cards-per-opponent">対戦カード数</label>
+                        <input
+                          type="number"
+                          id="simulation-cards-per-opponent"
+                          name="simulation-cards-per-opponent"
+                          min="1"
+                          max="10"
+                          value="1"
+                          inputmode="numeric"
+                        />
+                        <p class="form-hint">同じ対戦カードを何度繰り返すかを指定します。</p>
+                      </div>
+                    </div>
+                    <div class="schedule-summary" aria-live="polite">
+                      <div class="summary-chip">
+                        <span class="summary-label">カード設定</span>
+                        <span class="summary-value" id="simulation-games-per-card-summary">--</span>
+                      </div>
+                      <div class="summary-chip">
+                        <span class="summary-label">1チームの総試合数</span>
+                        <span class="summary-value" id="simulation-games-per-team">--</span>
+                      </div>
+                      <div class="summary-chip">
+                        <span class="summary-label">リーグ総試合数</span>
+                        <span class="summary-value" id="simulation-total-games">--</span>
+                      </div>
+                    </div>
+                    <p class="schedule-note">チーム数やカード設定を変更すると自動で試合数が更新されます。</p>
+                  </div>
+                </section>
               </div>
               <p class="form-feedback info" id="simulation-setup-feedback">
                 2チーム以上を追加し、カード設定を入力してください。
