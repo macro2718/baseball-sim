@@ -162,13 +162,22 @@
 /* Lobby grouped layout */
 .lobby-groups {
   display: grid;
-  grid-template-columns: 1fr; /* 縦積み */
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
   margin-top: 18px;
+}
+
+@media (min-width: 1024px) {
+  .lobby-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
 }
 
 .action-group {
   position: relative;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border-strong);
   border-radius: 18px;
   background: linear-gradient(145deg, rgba(7, 12, 28, 0.86), rgba(26, 39, 72, 0.52));
@@ -209,13 +218,16 @@
 
 .group-grid {
   display: grid;
-  grid-template-columns: 1fr; /* 基本は縦に並べる */
-  gap: 12px;
-  padding: 10px 12px 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px 14px 16px;
+  flex: 1;
 }
 
-@media (min-width: 1200px) {
-  /* 画面が広くても縦並びを維持。必要ならここで2列にできる */
+@media (min-width: 720px) {
+  .group-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
 }
 
 .team-selection-grid {
@@ -1909,6 +1921,7 @@
   background: linear-gradient(150deg, rgba(7, 12, 28, 0.9), rgba(26, 39, 72, 0.52));
   box-shadow: 0 24px 56px rgba(5, 12, 30, 0.5);
   min-height: 160px;
+  height: 100%;
   overflow: hidden;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   will-change: transform, box-shadow;
@@ -1976,7 +1989,6 @@
 }
 
 .action-card button {
-  margin-top: auto;
   width: 100%;
 }
 
@@ -1985,19 +1997,47 @@
   background: linear-gradient(150deg, rgba(30, 27, 27, 0.85), rgba(67, 14, 14, 0.5));
 }
 
-/* Button group inside category cards */
+/* Button layout inside lobby cards */
+.action-card .action-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .action-card .action-buttons {
   display: flex;
-  flex-direction: column; /* 縦にボタンを並べる */
+  flex-direction: column;
   gap: 10px;
-  margin-top: auto;
+  width: 100%;
 }
 
 .action-card .action-buttons button {
   margin-top: 0;
 }
 
-/* もともとの横並び切替は不要になったため削除 */
+@media (min-width: 900px) {
+  .action-card .action-footer {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .action-card .action-buttons {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .action-card .action-buttons button {
+    flex: 1 1 140px;
+    width: auto;
+  }
+
+  .action-card .action-buttons button:only-child {
+    flex: 0 0 auto;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .action-card,
