@@ -1,6 +1,8 @@
 """Neural network based batting outcome prediction."""
 
 import os
+import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +15,17 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import WeightedRandomSampler
 from tqdm import tqdm
 
-from prediction_models.data_utils import FEATURE_COLUMNS, fetch_batting_data
+# Make imports resilient when running the script directly from the repository root
+# or when the package isn't installed. This mirrors how packages like pytest
+# allow running modules directly.
+try:
+    from prediction_models.data_utils import FEATURE_COLUMNS, fetch_batting_data
+except ModuleNotFoundError:
+    # Add repo root (parent of prediction_models) to sys.path and retry
+    repo_root = Path(__file__).resolve().parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    from prediction_models.data_utils import FEATURE_COLUMNS, fetch_batting_data
 
 TARGET_COLUMNS = ["1B_rate", "2B_rate", "3B_rate", "HR_rate"]
 
