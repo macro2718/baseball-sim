@@ -67,6 +67,16 @@
   pointer-events: none;
 }
 
+.scoreboard::after {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
 .scoreboard p {
   margin: 0;
   color: var(--text-muted);
@@ -98,6 +108,18 @@
   text-align: left;
 }
 
+.score-table thead th:nth-last-child(-n + 3) {
+  background: rgba(96, 165, 250, 0.24);
+  color: var(--text-strong);
+  box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.18);
+}
+
+.score-table thead th.current-inning {
+  background: rgba(96, 165, 250, 0.32);
+  color: var(--text-strong);
+  box-shadow: inset 0 -2px 0 rgba(148, 163, 184, 0.28);
+}
+
 .score-table tbody tr {
   border-bottom: 1px solid rgba(125, 211, 252, 0.1);
   transition: transform 0.2s ease, background 0.2s ease;
@@ -107,17 +129,13 @@
   border-bottom: none;
 }
 
-.score-table tbody tr:hover {
-  background: rgba(96, 165, 250, 0.1);
-  transform: translateY(-2px);
-}
-
 .score-table td {
   padding: 10px 12px;
   text-align: center;
   font-family: var(--font-mono);
   font-size: 14px;
   letter-spacing: 0.04em;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .score-table td.team-name {
@@ -126,10 +144,46 @@
   color: var(--accent);
   font-family: var(--font-heading);
   letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 
 .score-table td:nth-last-child(-n + 3) {
   font-weight: 600;
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.score-table td.total-col,
+.score-table th.total-col {
+  letter-spacing: 0.1em;
+}
+
+.score-table tbody tr:nth-child(even) td:not(:nth-last-child(-n + 3)) {
+  background: rgba(96, 165, 250, 0.06);
+}
+
+.score-table tbody tr:hover {
+  transform: translateY(-2px);
+}
+
+.score-table tbody tr:hover td:not(:nth-last-child(-n + 3)) {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.score-table tbody tr:hover td:nth-last-child(-n + 3) {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.score-table td.current-inning,
+.score-table th.current-inning {
+  background: rgba(96, 165, 250, 0.26);
+  color: var(--text-strong);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.3);
+}
+
+.score-table tbody tr:hover td.current-inning {
+  background: rgba(96, 165, 250, 0.32);
 }
 
 .situation-panel {
@@ -1752,42 +1806,55 @@
 .log-entry {
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(8, 13, 28, 0.82);
-  border-left: 4px solid transparent;
+  background: rgba(8, 13, 28, 0.9);
+  border-left: 4px solid rgba(125, 211, 252, 0.35);
   line-height: 1.55;
+  color: var(--text);
   box-shadow:
     inset 0 0 0 1px rgba(125, 211, 252, 0.08),
     0 12px 24px rgba(5, 12, 30, 0.25);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.log-entry:hover {
+  transform: translateY(-1px);
+  background: rgba(9, 16, 34, 0.92);
 }
 
 .log-entry.info {
   border-color: rgba(148, 163, 184, 0.6);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.18), rgba(8, 13, 28, 0.88));
 }
 
 .log-entry.success {
-  border-color: var(--success);
-  color: var(--success);
+  border-color: rgba(52, 211, 153, 0.7);
+  color: var(--text-strong);
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.55), rgba(8, 13, 28, 0.88));
 }
 
 .log-entry.danger {
-  border-color: var(--danger);
-  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.75);
+  color: var(--text-strong);
+  background: linear-gradient(135deg, rgba(67, 13, 13, 0.58), rgba(8, 13, 28, 0.88));
 }
 
 .log-entry.warning {
-  border-color: var(--warning);
-  color: var(--warning);
+  border-color: rgba(250, 204, 21, 0.7);
+  color: var(--text-strong);
+  background: linear-gradient(135deg, rgba(113, 63, 18, 0.55), rgba(8, 13, 28, 0.88));
 }
 
 .log-entry.highlight {
-  border-color: var(--highlight);
-  color: var(--highlight);
+  border-color: rgba(192, 132, 252, 0.7);
+  color: var(--text-strong);
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.5), rgba(8, 13, 28, 0.88));
 }
 
 .log-entry.header {
   border-color: var(--accent);
-  color: var(--accent-muted);
+  color: var(--accent);
   font-weight: 700;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(8, 13, 28, 0.9));
 }
 
 .bench-section {

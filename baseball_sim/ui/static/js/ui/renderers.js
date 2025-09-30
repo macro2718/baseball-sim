@@ -2237,9 +2237,14 @@ function updateScoreboard(gameState, teams) {
 
   let html = '<table class="score-table"><thead><tr><th class="team-col">Team</th>';
   for (let i = 0; i < innings; i += 1) {
-    html += `<th>${i + 1}</th>`;
+    const headerClasses = [];
+    if (currentInningIndex !== null && i === currentInningIndex) {
+      headerClasses.push('current-inning');
+    }
+    const classAttr = headerClasses.length ? ` class="${headerClasses.join(' ')}"` : '';
+    html += `<th${classAttr}>${i + 1}</th>`;
   }
-  html += '<th>R</th><th>H</th><th>E</th></tr></thead><tbody>';
+  html += '<th class="total-col">R</th><th class="total-col">H</th><th class="total-col">E</th></tr></thead><tbody>';
 
   const renderRow = (teamKey) => {
     const teamName = teams[teamKey]?.name || (teamKey === 'home' ? 'Home' : 'Away');
@@ -2259,9 +2264,14 @@ function updateScoreboard(gameState, teams) {
           displayValue = '';
         }
       }
-      row += `<td>${displayValue}</td>`;
+      const cellClasses = [];
+      if (currentInningIndex !== null && i === currentInningIndex) {
+        cellClasses.push('current-inning');
+      }
+      const classAttr = cellClasses.length ? ` class="${cellClasses.join(' ')}"` : '';
+      row += `<td${classAttr}>${displayValue}</td>`;
     }
-    row += `<td>${totalRuns}</td><td>${totalHits}</td><td>${totalErrors}</td></tr>`;
+    row += `<td class="total-col">${totalRuns}</td><td class="total-col">${totalHits}</td><td class="total-col">${totalErrors}</td></tr>`;
     return row;
   };
 
