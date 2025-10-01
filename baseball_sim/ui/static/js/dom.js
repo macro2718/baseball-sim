@@ -1,6 +1,7 @@
 // Centralised DOM element references used throughout the UI.
 
 export const elements = {
+  appShell: document.querySelector('.app-shell'),
   lobbyScreen: document.getElementById('lobby-screen'),
   teamSelectScreen: document.getElementById('team-select-screen'),
   titleScreen: document.getElementById('title-screen'),

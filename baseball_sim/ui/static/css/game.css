@@ -186,6 +186,50 @@
   background: rgba(96, 165, 250, 0.32);
 }
 
+.screen.analytics-lock {
+  position: relative;
+}
+
+.screen.analytics-lock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.78));
+  backdrop-filter: blur(2px);
+  opacity: 0.9;
+  border-radius: 24px;
+  z-index: 200;
+  pointer-events: auto;
+}
+
+.screen.analytics-lock::after {
+  content: 'CPU解析中…';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 18px 32px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.92);
+  color: var(--text-strong);
+  font-family: var(--font-heading);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  box-shadow: 0 28px 48px rgba(2, 6, 23, 0.45);
+  z-index: 201;
+  pointer-events: none;
+}
+
+.screen.analytics-lock > * {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(1px);
+  opacity: 0.6;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
 .situation-panel {
   display: flex;
   align-items: center;
