@@ -58,7 +58,7 @@ requirements.txt は最小構成（Flask のみ）です。予測モデルや学
 
 ## シミュレーションの一括実行（スクリプトから）
 - 例: `python -c "from baseball_sim.interface.simulation import simulate_games; simulate_games(num_games=20)"`
-- 結果は `simulation_results/` 配下に保存されます。
+- 結果は戻り値として返されるため、必要に応じて任意の形式で保存してください。
 - リーグ戦モード: `simulate_games(league_options={"teams": [...], "games_per_card": 3, "cards_per_opponent": 2})`
   - `teams` には `player_data/teams.json` と同形式の辞書をリストで渡します（同一チームを複数回指定可能）。
   - チーム数は偶数である必要があります。1カードあたりの試合数（c）、カードの繰り返し回数（d）を設定すると、
