@@ -1,7 +1,5 @@
-import os
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
 from baseball_sim.config import get_project_paths, setup_project_environment
@@ -145,8 +143,6 @@ def _initialize_league_results(
         "games": [],
         "team_stats": {},
         "teams": {},
-        "players": {},
-        "pitchers": {},
         "meta": {},
         "team_aliases": {},
     }
@@ -171,26 +167,7 @@ def _initialize_league_results(
                 results["teams"][alias_name] = team
                 results["team_aliases"][alias_name] = team_name
 
-        # 選手・投手をチームごとに格納（同名選手の衝突を避ける）
-        for collection in (
-            getattr(team, "lineup", []) or [],
-            getattr(team, "bench", []) or [],
-        ):
-            for player in collection:
-                if player is None:
-                    continue
-                unique_key = f"{team_name}:{getattr(player, 'name', 'Player')}"
-                results["players"][unique_key] = player
-                results["players"].setdefault(getattr(player, "name", unique_key), player)
-
-        for pitcher in ctx.pitcher_pool:
-            if pitcher is None:
-                continue
-            unique_key = f"{team_name}:{getattr(pitcher, 'name', 'Pitcher')}"
-            results["pitchers"][unique_key] = pitcher
-            results["pitchers"].setdefault(getattr(pitcher, "name", unique_key), pitcher)
-
-        # 出力ファイル用のロスター・スナップショットは削除（未使用のため）
+        # 以前はファイル出力用に追加データを保持していたが、現在は不要のため収集しない
 
     return results
 
@@ -348,25 +325,11 @@ def simulate_games(
     save_to_file=True,
     league_options: Optional[Mapping[str, object]] = None,
 ):
-    """試合を複数日程でシミュレートし、結果を返す"""
+    """試合を複数日程でシミュレートし、結果を返す
 
-    # 出力ファイルの設定
-    output_path = None
-    if save_to_file:
-        if output_file is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            project_root = get_project_paths().project_root
-            output_dir = os.path.join(project_root, "simulation_results")
-            os.makedirs(output_dir, exist_ok=True)
-            output_path = os.path.join(output_dir, f"simulation_results_{timestamp}.txt")
-        else:
-            output_path = output_file
-
-        message = f"Results will be saved to {output_path}."
-        if message_callback:
-            message_callback(message)
-        else:
-            print(message)
+    `output_file` および `save_to_file` は互換性維持のために残されているが、
+    現在はファイルへの書き出しは行わない。
+    """
 
     # リーグ構成を決定
     if league_options is not None:
@@ -405,16 +368,7 @@ def simulate_games(
         role_assignment=role_assignment,
     )
 
-    # 結果をファイルに出力
-    if save_to_file and output_path:
-        output_results(results, output_path)
-
-    results["output_file"] = output_path
-
-    if save_to_file and output_path:
-        completion_message = f"Simulation complete. Results will be saved to {output_path}."
-    else:
-        completion_message = "Simulation complete."
+    completion_message = "Simulation complete."
 
     if message_callback:
         message_callback(completion_message)
@@ -733,354 +687,3 @@ def update_statistics(results, game, game_result):
             results["team_stats"][alias] = home_stats
         elif target == away_name:
             results["team_stats"][alias] = away_stats
-
-def output_results(results, output_file):
-    """シミュレーション結果をファイルに出力する"""
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write("===== シミュレーション結果 =====\n\n")
-
-        meta = results.get("meta", {})
-        if meta:
-            f.write("===== リーグ情報 =====\n")
-            if "total_teams" in meta:
-                f.write(f"チーム数: {meta['total_teams']}\n")
-            if "games_per_card" in meta and "cards_per_opponent" in meta:
-                f.write(
-                    f"1カードあたりの試合数: {meta['games_per_card']} / 対戦カード回数: {meta['cards_per_opponent']}\n"
-                )
-            if "completed_days" in meta or "total_days" in meta:
-                f.write(
-                    f"総日数: {meta.get('completed_days', meta.get('total_days', 0))}"
-                    f" / 予定日数: {meta.get('total_days', meta.get('completed_days', 0))}\n"
-                )
-            if "completed_games" in meta or "scheduled_games" in meta:
-                f.write(
-                    f"総試合数: {meta.get('completed_games', meta.get('scheduled_games', 0))}"
-                    f" / 予定試合数: {meta.get('scheduled_games', meta.get('completed_games', 0))}\n"
-                )
-            f.write("\n")
-
-        unique_teams = list(_iter_unique_teams(results))
-        
-        # チーム成績の基本出力
-        f.write("===== チーム成績 =====\n")
-        f.write(f"{'チーム名':<15} {'試合':<5} {'勝':<5} {'負':<5} {'分':<5} {'得点':<5} {'失点':<5} {'勝率':<5}\n")
-        f.write("-" * 60 + "\n")
-
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            stats = results.get("team_stats", {}).get(team_name)
-            if not stats:
-                continue
-            games_played = int(
-                stats.get("games")
-                or (stats.get("wins", 0) + stats.get("losses", 0) + stats.get("draws", 0))
-            )
-            win_pct = stats.get("wins", 0) / games_played if games_played > 0 else 0
-
-            f.write(
-                f"{team_name:<15} {games_played:<5} {stats.get('wins', 0):<5} {stats.get('losses', 0):<5} {stats.get('draws', 0):<5} "
-                f"{stats.get('runs_scored', 0):<5} {stats.get('runs_allowed', 0):<5} {win_pct:.3f}\n"
-            )
-
-        # チーム打撃成績の出力
-        f.write("\n===== チーム打撃成績 =====\n")
-        f.write(f"{'チーム名':<15} {'打率':<5} {'OBP':<5} {'SLG':<5} {'OPS':<5} {'1B計':<5} {'2B計':<5} {'3B計':<5} {'HR計':<5} "
-               f"{'三振':<5} {'四球':<5}\n")
-        f.write("-" * 80 + "\n")
-        
-        # チーム打撃成績を計算して出力
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            # チーム打撃成績の集計
-            team_pa = 0
-            team_ab = 0
-            team_hits = 0
-            team_bb = 0
-            team_hr = 0
-            team_so = 0
-            team_singles = 0
-            team_doubles = 0
-            team_triples = 0
-            
-            # チーム全体の打撃成績を集計
-            for player in team.lineup:
-                team_pa += player.stats["PA"]
-                team_ab += player.stats["AB"]
-                team_singles += player.stats["1B"]
-                team_doubles += player.stats.get("2B", 0)
-                team_triples += player.stats.get("3B", 0)
-                team_hr += player.stats["HR"]
-                team_hits += player.stats["1B"] + player.stats["2B"] + player.stats["3B"] + player.stats["HR"]
-                team_bb += player.stats["BB"]
-                team_so += player.stats["SO"]
-                
-            # チーム打率計算
-            team_avg = team_hits / team_ab if team_ab > 0 else 0
-            
-            # チーム出塁率計算（PA未集計のため、OBP = (H + BB) / (AB + BB) と等価の簡略式を使用）
-            team_obp = StatsCalculator.calculate_obp(team_hits, team_bb, team_ab)
-            
-            # チーム長打率計算（修正版）
-            singles = team_hits - team_doubles - team_triples - team_hr
-            total_bases = singles + (team_doubles * 2) + (team_triples * 3) + (team_hr * 4)
-            team_slg = total_bases / team_ab if team_ab > 0 else 0
-            
-            # チームOPS計算
-            team_ops = team_obp + team_slg
-            
-            # チーム打撃成績の出力
-            f.write(f"{team_name:<15} {team_avg:.3f} {team_obp:.3f} {team_slg:.3f} {team_ops:.3f} "
-                   f"{team_singles:<5} {team_doubles:<5} {team_triples:<5} {team_hr:<5} "
-                   f"{team_so:<5} {team_bb:<5}\n")
-        
-        # チーム投手成績の出力
-        f.write("\n===== チーム投手成績 =====\n")
-        f.write(f"{'チーム名':<15} {'防御率':<6} {'WHIP':<6} {'K/9':<6} {'BB/9':<6}\n")
-        f.write("-" * 60 + "\n")
-        
-        # チーム投手成績を計算して出力
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            # チーム投手成績の集計
-            team_ip = 0
-            team_h = 0
-            team_bb_allowed = 0
-            team_so_pitched = 0
-            team_er = 0
-            
-            # チーム全体の投手成績を集計
-            for pitcher in team.pitchers:
-                team_ip += pitcher.pitching_stats["IP"]
-                team_h += pitcher.pitching_stats["H"]
-                team_bb_allowed += pitcher.pitching_stats["BB"]
-                team_so_pitched += pitcher.pitching_stats["SO"]
-                team_er += pitcher.pitching_stats["ER"]
-            
-            # チーム防御率計算
-            team_era = (team_er * 9) / team_ip if team_ip > 0 else 0
-            
-            # チームWHIP計算
-            team_whip = (team_h + team_bb_allowed) / team_ip if team_ip > 0 else 0
-            
-            # チームK/9計算
-            team_k_per_9 = (team_so_pitched * 9) / team_ip if team_ip > 0 else 0
-            
-            # チームBB/9計算
-            team_bb_per_9 = (team_bb_allowed * 9) / team_ip if team_ip > 0 else 0
-            
-            # チーム投手成績の出力
-            f.write(f"{team_name:<15} {team_era:<6.2f} {team_whip:<6.2f} {team_k_per_9:<6.2f} {team_bb_per_9:<6.2f}\n")
-
-        # チームごとの選手成績の出力
-        f.write("\n===== チーム詳細成績 =====\n")
-        f.write(f"{'チーム名':<15} {'打率':<4} {'OBP':<5} {'SLG':<4} {'OPS':<4} {'1B計':<4} {'2B計':<4} {'3B計':<5} {'HR計':<4} "
-               f"{'三振':<3} {'四球':<3} {'防御率':<3} {'WHIP':<3} {'K/9':<3} {'BB/9':<5}\n")
-        f.write("-" * 120 + "\n")
-        
-        # チーム詳細成績を計算して出力
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            # チーム打撃成績の集計
-            team_pa = 0
-            team_ab = 0
-            team_hits = 0
-            team_bb = 0
-            team_hr = 0
-            team_so = 0
-            team_singles = 0
-            team_doubles = 0
-            team_triples = 0
-            
-            # チーム全体の打撃成績を集計
-            for player in team.lineup:
-                team_pa += player.stats["PA"]
-                team_ab += player.stats["AB"]
-                team_singles += player.stats["1B"]
-                team_doubles += player.stats.get("2B", 0)
-                team_triples += player.stats.get("3B", 0)
-                team_hr += player.stats["HR"]
-                team_hits += player.stats["1B"] + player.stats["2B"] + player.stats["3B"] + player.stats["HR"]
-                team_bb += player.stats["BB"]
-                team_so += player.stats["SO"]
-                
-            # チーム打率計算
-            team_avg = team_hits / team_ab if team_ab > 0 else 0
-            
-            # チーム出塁率計算（簡略式）
-            team_obp = StatsCalculator.calculate_obp(team_hits, team_bb, team_ab)
-            
-            # チーム長打率計算（修正版）
-            singles = team_hits - team_doubles - team_triples - team_hr
-            total_bases = singles + (team_doubles * 2) + (team_triples * 3) + (team_hr * 4)
-            team_slg = total_bases / team_ab if team_ab > 0 else 0
-            
-            # チームOPS計算
-            team_ops = team_obp + team_slg
-            
-            # チーム投手成績の集計
-            team_ip = 0
-            team_h = 0
-            team_bb_allowed = 0
-            team_so_pitched = 0
-            team_er = 0
-            
-            # チーム全体の投手成績を集計
-            for pitcher in team.pitchers:
-                team_ip += pitcher.pitching_stats["IP"]
-                team_h += pitcher.pitching_stats["H"]
-                team_bb_allowed += pitcher.pitching_stats["BB"]
-                team_so_pitched += pitcher.pitching_stats["SO"]
-                team_er += pitcher.pitching_stats["ER"]
-            
-            # チーム防御率計算
-            team_era = (team_er * 9) / team_ip if team_ip > 0 else 0
-            
-            # チームWHIP計算
-            team_whip = (team_h + team_bb_allowed) / team_ip if team_ip > 0 else 0
-            
-            # チームK/9計算
-            team_k_per_9 = (team_so_pitched * 9) / team_ip if team_ip > 0 else 0
-            
-            # チームBB/9計算
-            team_bb_per_9 = (team_bb_allowed * 9) / team_ip if team_ip > 0 else 0
-            
-            # チーム詳細成績の出力（ヒット種類ごとの合計を追加）
-            f.write(f"{team_name:<17} {team_avg:.3f} {team_obp:.3f} {team_slg:.3f} {team_ops:.3f} "
-                   f"{team_singles:<5} {team_doubles:<5} {team_triples:<5} {team_hr:<5} "
-                   f"{team_so:<5} {team_bb:<5} "
-                   f"{team_era:.2f} {team_whip:.2f} {team_k_per_9:.2f} {team_bb_per_9:.2f}\n")
-        
-        # チームごとの選手成績の出力
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            f.write(f"\n===== {team_name} 選手成績 =====\n")
-            
-            # 打者成績
-            f.write("\n【打者成績】\n")
-            f.write(f"{'選手名':<18} {'PA':<4} {'AB':<4} {'1B':<4} {'2B':<4} {'3B':<4} {'HR':<4} {'RBI':<4} {'BB':<4} {'K':<4} "
-                  f"{'AVG':<6} {'OBP':<5} {'SLG':<5} {'OPS':<5} {'K%':<5} {'BB%':<5}\n")
-            f.write("-" * 130 + "\n")
-            
-            # チーム選手の打撃成績を表示（ラインナップ・ベンチ・退場選手）
-            all_batters = []
-            for group in (
-                getattr(team, "lineup", []) or [],
-                getattr(team, "bench", []) or [],
-                getattr(team, "ejected_players", []) or [],
-            ):
-                for p in group:
-                    if p not in all_batters:
-                        all_batters.append(p)
-            # 投手でも打席がある者は打者成績に含める
-            try:
-                for p in getattr(team, "pitchers", []) or []:
-                    if getattr(p, "stats", None) and p.stats.get("PA", 0) > 0 and p not in all_batters:
-                        all_batters.append(p)
-            except Exception:
-                pass
-            for player in all_batters:
-                # 選手の成績を取得
-                pa = player.stats["PA"]
-                ab = player.stats["AB"]
-                singles = player.stats["1B"]
-                doubles = player.stats.get("2B", 0)
-                triples = player.stats.get("3B", 0)
-                hr = player.stats["HR"]
-                rbi = player.stats["RBI"]
-                bb = player.stats["BB"]
-                so = player.stats["SO"]
-                
-                # 指標を計算
-                avg = player.get_avg()
-                obp = player.get_obp()
-                slg = player.get_slg()
-                ops = player.get_ops()
-                
-                # K%とBB%を計算
-                k_pct = (so / pa * 100) if pa > 0 else 0
-                bb_pct = (bb / pa * 100) if pa > 0 else 0
-                
-                # 打者成績を出力
-                f.write(f"{player.name:<20} {pa:<4} {ab:<4} {singles:<4} {doubles:<4} {triples:<4} "
-                      f"{hr:<4} {rbi:<4} {bb:<4} {so:<4} "
-                      f"{avg:.3f} {obp:.3f} {slg:.3f} {ops:.3f} {k_pct:.1f} {bb_pct:.1f}\n")
-            
-            # 投手成績
-            f.write("\n【投手成績】\n")
-            f.write(f"{'選手名':<15} {'IP':<5} {'H':<4} {'BB':<4} {'K':<4} {'R':<4} {'ER':<4} {'HR':<4} "
-                  f"{'ERA':<5} {'WHIP':<5} {'K/9':<5} {'BB/9':<5} {'HR/9':<5}\n")
-            f.write("-" * 120 + "\n")
-            
-            # チーム選手の投手成績を表示（退場選手・現在の投手も含む）
-            pitcher_list = []
-            # 可能な限り網羅的に収集
-            for group in (
-                getattr(team, "pitchers", []) or [],
-                [getattr(team, "current_pitcher", None)],
-                [p for p in (getattr(team, "ejected_players", []) or [])],
-            ):
-                for p in group:
-                    if p is None:
-                        continue
-                    if not hasattr(p, "pitching_stats"):
-                        continue
-                    if p not in pitcher_list:
-                        pitcher_list.append(p)
-            for pitcher in pitcher_list:
-                # 投手の成績を取得
-                ip = pitcher.pitching_stats["IP"]
-                h = pitcher.pitching_stats["H"]
-                bb = pitcher.pitching_stats["BB"]
-                so = pitcher.pitching_stats["SO"]
-                r = pitcher.pitching_stats["R"]
-                er = pitcher.pitching_stats["ER"]
-                hr = pitcher.pitching_stats["HR"]
-                
-                # 指標を計算
-                era = pitcher.get_era()
-                whip = pitcher.get_whip()
-                k_per_9 = pitcher.get_k_per_9()
-                bb_per_9 = pitcher.get_bb_per_9()
-                
-                # HR/9を計算
-                hr_per_9 = (hr * 9) / ip if ip > 0 else 0
-                
-                # 投手成績を出力
-                f.write(f"{pitcher.name:<15} {ip:<5.1f} {h:<4} {bb:<4} {so:<4} {r:<4} {er:<4} {hr:<4} "
-                      f"{era:<5.2f} {whip:<5.2f} {k_per_9:<5.2f} {bb_per_9:<5.2f} {hr_per_9:<5.2f}\n")
-        
-        
-        # 投手登板数の出力（追加）
-        f.write("\n===== 投手登板数 (G) =====\n")
-        f.write(f"{'選手名':<15} {'チーム':<10} {'G':<3}\n")
-        f.write("-" * 36 + "\n")
-        # チームに所属する投手をキーとして保存（再利用）
-        pitcher_team = {}
-        for team in unique_teams:
-            team_name = getattr(team, "name", "Team")
-            for group in (
-                getattr(team, "pitchers", []) or [],
-                [getattr(team, "current_pitcher", None)],
-                getattr(team, "ejected_players", []) or [],
-            ):
-                for pitcher in group:
-                    if pitcher is None or not hasattr(pitcher, "pitching_stats"):
-                        continue
-                    pitcher_team[id(pitcher)] = team_name
-        # 重複排除用に新しい集合を使う（直前の集計とは独立）
-        seen_pitcher_ids_g: set[int] = set()
-        for name, pitcher in results["pitchers"].items():
-            pid = id(pitcher)
-            if pid in seen_pitcher_ids_g:
-                continue
-            seen_pitcher_ids_g.add(pid)
-            g = int(getattr(pitcher, 'pitching_stats', {}).get('G', 0) or 0)
-            team_name = pitcher_team.get(pid, "不明")
-            f.write(f"{name:<15} {team_name:<10} {g:<3}\n")
-
-        # 各試合の結果サマリー
-        f.write("\n===== 試合結果サマリー =====\n")
-        for i, game in enumerate(results["games"], 1):
-            f.write(f"試合 {i}: {game['away_team']} {game['away_score']} - {game['home_score']} {game['home_team']} "
-                  f"({game['innings']}回)\n")
