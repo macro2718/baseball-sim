@@ -77,6 +77,9 @@ class TeamManagementMixin:
             raise GameSessionError("Teams could not be loaded from the data files.")
 
         self.game_state = GameState(self.home_team, self.away_team)
+        reset_analytics = getattr(self, "_reset_live_analytics", None)
+        if callable(reset_analytics):
+            reset_analytics()
         self._log.clear()
         self._game_over_announced = False
         self._action_block_reason = None
@@ -147,6 +150,9 @@ class TeamManagementMixin:
         """Exit the current game and return to the title screen."""
 
         self.game_state = None
+        reset_analytics = getattr(self, "_reset_live_analytics", None)
+        if callable(reset_analytics):
+            reset_analytics()
         self._game_over_announced = False
         self._action_block_reason = None
         self._notifications.publish("info", "Game closed. Return to title screen.")
@@ -169,6 +175,9 @@ class TeamManagementMixin:
         self._action_block_reason = None
         self._notifications.publish("info", "Team data reloaded.")
         self._clear_simulation_results()
+        reset_analytics = getattr(self, "_reset_live_analytics", None)
+        if callable(reset_analytics):
+            reset_analytics()
         return self.build_state()
 
     def _resolve_team_key(self, team_key: str) -> Tuple[object, str]:

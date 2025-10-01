@@ -177,6 +177,13 @@ class SessionStateBuilder:
             except Exception:
                 control_state = {}
 
+        analytics_state: Dict[str, object] = {}
+        if hasattr(self._session, "get_analytics_state"):
+            try:
+                analytics_state = self._session.get_analytics_state()
+            except Exception:
+                analytics_state = {}
+
         game_state = self._session.game_state
         if not game_state:
             return (
@@ -194,6 +201,7 @@ class SessionStateBuilder:
                     "max_innings": 9,
                     "control": control_state,
                     "overlays": [],
+                    "analytics": analytics_state,
                 },
                 action_block_reason,
             )
@@ -364,6 +372,7 @@ class SessionStateBuilder:
                 },
                 "overlays": list(overlays or []),
                 "control": control_state,
+                "analytics": analytics_state,
             },
             action_block_reason,
         )

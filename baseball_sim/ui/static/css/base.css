@@ -140,6 +140,17 @@ a:focus-visible {
   z-index: 1;
 }
 
+.app-shell.analytics-pending {
+  cursor: progress;
+}
+
+.app-shell.analytics-pending button,
+.app-shell.analytics-pending [role='button'],
+.app-shell.analytics-pending .action-card,
+.app-shell.analytics-pending .insight-card {
+  cursor: progress;
+}
+
 .app-header {
   position: relative;
   padding: 36px clamp(24px, 6vw, 60px) 32px;

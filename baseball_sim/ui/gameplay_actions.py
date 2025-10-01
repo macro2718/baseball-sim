@@ -93,6 +93,9 @@ class GameplayActionsMixin:
             return self.build_state()
 
         self._action_block_reason = None
+        invalidate = getattr(self, "_invalidate_live_analytics", None)
+        if callable(invalidate):
+            invalidate()
 
         batter = self.game_state.batting_team.current_batter
         pitcher = self.game_state.fielding_team.current_pitcher
@@ -157,6 +160,9 @@ class GameplayActionsMixin:
             return self.build_state()
 
         self._action_block_reason = None
+        invalidate = getattr(self, "_invalidate_live_analytics", None)
+        if callable(invalidate):
+            invalidate()
 
         batter = self.game_state.batting_team.current_batter
         pitcher = self.game_state.fielding_team.current_pitcher
@@ -233,6 +239,9 @@ class GameplayActionsMixin:
             return self.build_state()
 
         self._action_block_reason = None
+        invalidate = getattr(self, "_invalidate_live_analytics", None)
+        if callable(invalidate):
+            invalidate()
 
         batter = self.game_state.batting_team.current_batter
         pitcher = self.game_state.fielding_team.current_pitcher
@@ -307,6 +316,9 @@ class GameplayActionsMixin:
             return self.build_state()
 
         self._action_block_reason = None
+        invalidate = getattr(self, "_invalidate_live_analytics", None)
+        if callable(invalidate):
+            invalidate()
 
         prev_inning = self.game_state.inning
         prev_half = self.game_state.is_top_inning
@@ -361,6 +373,10 @@ class GameplayActionsMixin:
                 self._overlays.publish("pinch_hit", message)
             except Exception:
                 pass
+        if success:
+            invalidate = getattr(self, "_invalidate_live_analytics", None)
+            if callable(invalidate):
+                invalidate()
         return self.build_state()
 
     def execute_pinch_run(self, base_index: int, bench_index: int) -> Dict[str, Any]:
@@ -407,6 +423,9 @@ class GameplayActionsMixin:
             message = (
                 f"{new_runner.name} pinch runs for {original_name} on {label}. {result_message}"
             )
+            invalidate = getattr(self, "_invalidate_live_analytics", None)
+            if callable(invalidate):
+                invalidate()
 
         self._notifications.publish("success" if success else "danger", message)
         variant = "highlight" if success else "danger"
@@ -452,6 +471,9 @@ class GameplayActionsMixin:
         variant = "highlight" if success else "danger"
         self._log.append(message, variant=variant)
         if success:
+            invalidate = getattr(self, "_invalidate_live_analytics", None)
+            if callable(invalidate):
+                invalidate()
             self._refresh_defense_status()
             if hasattr(self, "_overlays"):
                 try:
@@ -477,6 +499,9 @@ class GameplayActionsMixin:
         variant = "highlight" if success else "danger"
         self._log.append(message, variant=variant)
         if success:
+            invalidate = getattr(self, "_invalidate_live_analytics", None)
+            if callable(invalidate):
+                invalidate()
             self._refresh_defense_status()
             if hasattr(self, "_overlays"):
                 try:
@@ -508,6 +533,9 @@ class GameplayActionsMixin:
             return self.build_state()
 
         self._action_block_reason = None
+        invalidate = getattr(self, "_invalidate_live_analytics", None)
+        if callable(invalidate):
+            invalidate()
 
         offense_key = "home" if self.game_state.batting_team is self.home_team else "away"
         if getattr(self, "_control_mode", "manual") == "auto":

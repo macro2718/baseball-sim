@@ -69,6 +69,58 @@ function setInsightsVisibility(visible) {
   }
 }
 
+function normalizeAnalyticsState(rawAnalytics) {
+  const base = {
+    running: false,
+    samples: 0,
+    sequence: null,
+    offense: null,
+    timestamp: null,
+    result: null,
+  };
+
+  if (!rawAnalytics || typeof rawAnalytics !== 'object') {
+    return base;
+  }
+
+  base.running = Boolean(rawAnalytics.running);
+  const sampleValue = Number(rawAnalytics.samples);
+  if (Number.isFinite(sampleValue) && sampleValue >= 0) {
+    base.samples = sampleValue;
+  }
+  if (rawAnalytics.offense === 'home' || rawAnalytics.offense === 'away') {
+    base.offense = rawAnalytics.offense;
+  }
+  const sequenceValue = Number(rawAnalytics.sequence);
+  if (Number.isFinite(sequenceValue)) {
+    base.sequence = sequenceValue;
+  }
+  if (rawAnalytics.timestamp !== undefined) {
+    base.timestamp = rawAnalytics.timestamp;
+  }
+  if (rawAnalytics.result && typeof rawAnalytics.result === 'object') {
+    const expectedRuns = Number(rawAnalytics.result.expected_runs);
+    const scoreProbability = Number(rawAnalytics.result.score_probability);
+    const winProbability = Number(rawAnalytics.result.home_win_probability);
+    base.result = {
+      expected_runs: Number.isFinite(expectedRuns) ? expectedRuns : null,
+      score_probability: Number.isFinite(scoreProbability) ? scoreProbability : null,
+      home_win_probability: Number.isFinite(winProbability) ? winProbability : null,
+      home_wins: Number.isFinite(Number(rawAnalytics.result.home_wins))
+        ? Number(rawAnalytics.result.home_wins)
+        : 0,
+      away_wins: Number.isFinite(Number(rawAnalytics.result.away_wins))
+        ? Number(rawAnalytics.result.away_wins)
+        : 0,
+      ties: Number.isFinite(Number(rawAnalytics.result.ties))
+        ? Number(rawAnalytics.result.ties)
+        : 0,
+    };
+  }
+
+  return base;
+}
+
 function formatSimulationTimestamp(timestamp) {
   if (!timestamp) return '';
   try {
@@ -2326,17 +2378,70 @@ function updateAnalyticsPanel(gameState) {
     0,
   );
   const outs = Math.min(Math.max(numberOrZero(gameState.outs), 0), 3);
-  const baseWeights = [0.55, 0.7, 0.9];
-  const baseThreatScore = bases.reduce((scoreAcc, base, index) => {
-    if (base && base.occupied) {
-      return scoreAcc + (baseWeights[index] ?? 0.45);
-    }
-    return scoreAcc;
-  }, 0);
-  const remainingOutsFactor = Math.max(0, (3 - outs) / 3);
-  const inningRunExpectancy = Math.max(0, 0.15 + baseThreatScore + remainingOutsFactor * 0.8);
 
-  setInsightText(elements.insightInningRunExpectancy, inningRunExpectancy.toFixed(2));
+  const analyticsRaw =
+    (gameState.analytics && typeof gameState.analytics === 'object'
+      ? gameState.analytics
+      : null) || stateCache.analytics || {};
+  const analytics = normalizeAnalyticsState(analyticsRaw);
+  const analyticsRunning = Boolean(analytics.running) || Boolean(stateCache.analyticsPending);
+  const samples = Number.isFinite(Number(analytics.samples)) ? Number(analytics.samples) : 0;
+  const offenseKey = analytics.offense || gameState.offense || null;
+  const offenseLabel = offenseKey === 'home' ? 'ホーム' : offenseKey === 'away' ? 'アウェイ' : '--';
+  const result = analytics.result && typeof analytics.result === 'object' ? analytics.result : null;
+
+  if (analyticsRunning) {
+    setInsightText(elements.insightInningRunExpectancy, '計算中…');
+    if (elements.insightOneRunProbability) {
+      setInsightText(elements.insightOneRunProbability, '計算中…');
+      elements.insightOneRunProbability.dataset.intensity = 'low';
+    }
+    if (elements.insightWinProbability) {
+      setInsightText(elements.insightWinProbability, '計算中…');
+      elements.insightWinProbability.dataset.trend = 'neutral';
+    }
+    if (elements.insightOneRunContext) {
+      setInsightText(
+        elements.insightOneRunContext,
+        `サンプル: ${samples || '--'}試合 / 攻撃: ${offenseLabel}`,
+      );
+    }
+    if (elements.insightWinContext) {
+      const score = gameState.score || {};
+      const runDiff = numberOrZero(score.home) - numberOrZero(score.away);
+      const formattedDiff = runDiff > 0 ? `+${runDiff}` : runDiff < 0 ? `${runDiff}` : '±0';
+      setInsightText(
+        elements.insightWinContext,
+        `得点差: ${formattedDiff} ・サンプル: ${samples || '--'}試合`,
+      );
+    }
+    if (elements.insightProbabilityFill) {
+      elements.insightProbabilityFill.style.width = '0%';
+    }
+    if (elements.insightProbabilityLabel) {
+      elements.insightProbabilityLabel.textContent = '計算中…';
+    }
+    if (elements.insightProbabilityMeter) {
+      elements.insightProbabilityMeter.setAttribute('aria-label', '勝利確率 計算中');
+    }
+    return;
+  }
+
+  if (!result) {
+    resetInsights();
+    if (elements.insightInningContext) {
+      setInsightText(
+        elements.insightInningContext,
+        `アウト: ${outs} / 3 ・走者: ${occupiedBases}`,
+      );
+    }
+    return;
+  }
+
+  const expectedRuns = Number.isFinite(Number(result.expected_runs))
+    ? Number(result.expected_runs)
+    : 0;
+  setInsightText(elements.insightInningRunExpectancy, expectedRuns.toFixed(2));
   if (elements.insightInningContext) {
     setInsightText(
       elements.insightInningContext,
@@ -2345,23 +2450,23 @@ function updateAnalyticsPanel(gameState) {
   }
 
   if (elements.insightOneRunProbability) {
-    const scoringPressure = Math.max(
+    const scoringProbability = Math.max(
       0,
-      Math.min(1, 0.1 + baseThreatScore / 2.4 + remainingOutsFactor * 0.6),
+      Math.min(1, Number.isFinite(Number(result.score_probability)) ? Number(result.score_probability) : 0),
     );
-    const probabilityPercent = Math.round(scoringPressure * 100);
+    const probabilityPercent = Math.round(scoringProbability * 100);
     setInsightText(elements.insightOneRunProbability, `${probabilityPercent}%`);
     let intensity = 'low';
-    if (scoringPressure >= 0.67) {
+    if (scoringProbability >= 0.67) {
       intensity = 'high';
-    } else if (scoringPressure >= 0.34) {
+    } else if (scoringProbability >= 0.34) {
       intensity = 'medium';
     }
     elements.insightOneRunProbability.dataset.intensity = intensity;
     if (elements.insightOneRunContext) {
       setInsightText(
         elements.insightOneRunContext,
-        `走者指数: ${baseThreatScore.toFixed(2)}`,
+        `サンプル: ${samples || '--'}試合 / 攻撃: ${offenseLabel}`,
       );
     }
   }
@@ -2425,7 +2530,7 @@ function updateAnalyticsPanel(gameState) {
     const formattedDiff = runDiff > 0 ? `+${runDiff}` : runDiff < 0 ? `${runDiff}` : '±0';
     setInsightText(
       elements.insightWinContext,
-      `得点差: ${formattedDiff} ・進行度: ${Math.round(clampedProgress * 100)}%`,
+      `得点差: ${formattedDiff} ・サンプル: ${samples || '--'}試合`,
     );
   }
 
@@ -2479,6 +2584,11 @@ function updateStrategyControls(gameState, teams) {
   const isActive = Boolean(gameState.active);
   const isGameOver = Boolean(gameState.game_over);
   const controlState = stateCache.gameControl || createDefaultControlState();
+  const analyticsState =
+    (gameState && typeof gameState.analytics === 'object' ? gameState.analytics : null)
+      || stateCache.analytics
+      || {};
+  const analyticsRunning = Boolean(analyticsState.running) || Boolean(stateCache.analyticsPending);
   const controlMode = controlState.mode || 'manual';
   const isCpuMode = controlMode === 'cpu';
   const isAutoMode = controlMode === 'auto';
@@ -2488,8 +2598,10 @@ function updateStrategyControls(gameState, teams) {
   const defenseControlsAllowed = isAutoMode
     ? false
     : !isCpuMode || Boolean(controlState.defenseAllowed);
-  const offenseControlsEnabled = isActive && !isGameOver && offenseControlsAllowed;
-  const defenseControlsEnabled = isActive && !isGameOver && defenseControlsAllowed;
+  const offenseControlsEnabled =
+    isActive && !isGameOver && offenseControlsAllowed && !analyticsRunning;
+  const defenseControlsEnabled =
+    isActive && !isGameOver && defenseControlsAllowed && !analyticsRunning;
 
   const offenseTeam = gameState.offense ? teams[gameState.offense] : null;
   const offenseLineup = offenseTeam?.lineup || [];
@@ -2852,6 +2964,11 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
   const isActiveGame = Boolean(gameState && gameState.active);
   const showGameView = stateCache.uiView === 'game';
   const controlInfo = stateCache.gameControl || createDefaultControlState();
+  const analyticsState =
+    (gameState && typeof gameState.analytics === 'object' ? gameState.analytics : null)
+      || stateCache.analytics
+      || {};
+  const analyticsRunning = Boolean(analyticsState.running) || Boolean(stateCache.analyticsPending);
   setInsightsVisibility(isActiveGame && showGameView);
 
   if (!isActiveGame) {
@@ -2981,22 +3098,22 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     }
     elements.actionWarning.textContent = 'ゲーム終了 - 新しい試合を開始するか、タイトルに戻ってください';
   } else {
-    elements.swingButton.disabled = !gameState.actions?.swing;
+    elements.swingButton.disabled = !(gameState.actions?.swing && !analyticsRunning);
     const showBunt = Boolean(gameState.actions?.show_bunt ?? true);
-    const buntAllowed = Boolean(gameState.actions?.bunt);
+    const buntAllowed = Boolean(gameState.actions?.bunt && !analyticsRunning);
     elements.buntButton.disabled = !(buntAllowed && showBunt);
     elements.swingButton.textContent = '通常打撃';
     elements.buntButton.textContent = 'バント';
     if (elements.squeezeButton) {
-      const squeezeAllowed = Boolean(gameState.actions?.squeeze);
+      const squeezeAllowed = Boolean(gameState.actions?.squeeze && !analyticsRunning);
       elements.squeezeButton.disabled = !squeezeAllowed;
       elements.squeezeButton.textContent = 'スクイズ';
     }
     if (elements.stealButton) {
-      elements.stealButton.disabled = !gameState.actions?.steal;
+      elements.stealButton.disabled = !(gameState.actions?.steal && !analyticsRunning);
       elements.stealButton.textContent = '盗塁';
     }
-    const progressAllowed = Boolean(gameState.actions?.progress);
+    const progressAllowed = Boolean(gameState.actions?.progress && !analyticsRunning);
     if (elements.progressButton) {
       elements.progressButton.classList.toggle('hidden', !progressAllowed);
       elements.progressButton.disabled = !progressAllowed;
@@ -3023,6 +3140,9 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
     }
     if (controlInfo.instruction) {
       actionMessages.push(controlInfo.instruction);
+    }
+    if (analyticsRunning) {
+      actionMessages.push('統計計算中です。CPU解析が完了するまでお待ちください。');
     }
     elements.actionWarning.textContent = actionMessages.join(' / ');
   }
@@ -5886,6 +6006,7 @@ export function updateAbilitiesPanel(state) {
 export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;
+  stateCache.analytics = normalizeAnalyticsState(data?.game?.analytics);
   const previousSimulation = stateCache.simulation || {};
 
   const controlState = normalizeControlState(data?.game?.control);

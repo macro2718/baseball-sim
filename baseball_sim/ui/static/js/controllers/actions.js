@@ -28,6 +28,81 @@ function handleApiError(error, render) {
 }
 
 export function createGameActions(render) {
+  const ANALYTICS_STATUS_MESSAGE = '統計計算中です。CPU解析が完了するまでお待ちください。';
+
+  function setAnalyticsPendingUI(isPending) {
+    const pending = Boolean(isPending);
+    stateCache.analyticsPending = pending;
+
+    if (elements.appShell) {
+      elements.appShell.classList.toggle('analytics-pending', pending);
+    }
+
+    if (elements.gameScreen) {
+      elements.gameScreen.classList.toggle('analytics-lock', pending);
+      if (pending) {
+        elements.gameScreen.setAttribute('aria-busy', 'true');
+      } else {
+        elements.gameScreen.removeAttribute('aria-busy');
+      }
+    }
+
+    if (elements.actionWarning) {
+      if (pending) {
+        elements.actionWarning.dataset.analyticsMessage = 'true';
+        elements.actionWarning.textContent = ANALYTICS_STATUS_MESSAGE;
+      } else if (elements.actionWarning.dataset.analyticsMessage) {
+        delete elements.actionWarning.dataset.analyticsMessage;
+      }
+    }
+  }
+
+  async function requestLiveAnalytics(options = {}) {
+    if (stateCache.analyticsPending) {
+      return null;
+    }
+
+    const { force = false, samples = null } = options || {};
+    const latestData = stateCache.data || {};
+    const gameState = options?.gameState || latestData.game || null;
+    const hasGame = gameState && typeof gameState === 'object';
+    const isPlayable = hasGame && (gameState.active || gameState.game_over);
+    const isGameView = stateCache.uiView === 'game' || isPlayable;
+
+    if (!force && !isGameView) {
+      setAnalyticsPendingUI(false);
+      return null;
+    }
+
+    if (!force && !isPlayable) {
+      setAnalyticsPendingUI(false);
+      return null;
+    }
+
+    const requestBody = {};
+    if (Number.isFinite(samples) && samples > 0) {
+      requestBody.samples = Math.max(1, Math.round(samples));
+    }
+
+    setAnalyticsPendingUI(true);
+    try {
+      const requestOptions = { method: 'POST' };
+      if (Object.keys(requestBody).length > 0) {
+        requestOptions.body = JSON.stringify(requestBody);
+      }
+
+      const payload = await apiRequest(CONFIG.api.endpoints.gameAnalytics, requestOptions);
+      stateCache.analyticsPending = false;
+      render(payload);
+      return payload;
+    } catch (error) {
+      handleApiError(error, render);
+      return null;
+    } finally {
+      setAnalyticsPendingUI(false);
+    }
+  }
+
   async function handleStart(options = {}) {
     const payloadBody = {
       reload: Boolean(options?.reload),
@@ -45,6 +120,7 @@ export function createGameActions(render) {
         body: JSON.stringify(payloadBody),
       });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -64,6 +140,7 @@ export function createGameActions(render) {
       const payload = await apiRequest(CONFIG.api.endpoints.gameStop, { method: 'POST' });
       setUIView('title');
       render(payload);
+      setAnalyticsPendingUI(false);
     } catch (error) {
       handleApiError(error, render);
     }
@@ -201,6 +278,7 @@ export function createGameActions(render) {
       });
       setUIView('game');
       render(payload);
+      await requestLiveAnalytics();
       return payload;
     } catch (error) {
       handleApiError(error, render);
@@ -212,6 +290,7 @@ export function createGameActions(render) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameSwing, { method: 'POST' });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -221,6 +300,7 @@ export function createGameActions(render) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameBunt, { method: 'POST' });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -230,6 +310,7 @@ export function createGameActions(render) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameSqueeze, { method: 'POST' });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -239,6 +320,7 @@ export function createGameActions(render) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameProgress, { method: 'POST' });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -248,6 +330,7 @@ export function createGameActions(render) {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.strategySteal, { method: 'POST' });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -278,6 +361,7 @@ export function createGameActions(render) {
         body: JSON.stringify({ lineup_index: lineupIndex, bench_index: benchIndex }),
       });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -309,6 +393,7 @@ export function createGameActions(render) {
         body: JSON.stringify({ base_index: baseIndex, bench_index: benchIndex }),
       });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -377,6 +462,7 @@ export function createGameActions(render) {
       stateCache.defensePlan = null;
       resetDefenseSelection();
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -421,6 +507,7 @@ export function createGameActions(render) {
         body: JSON.stringify({ pitcher_index: pitcherIndex }),
       });
       render(payload);
+      await requestLiveAnalytics();
     } catch (error) {
       handleApiError(error, render);
     }
@@ -481,6 +568,7 @@ export function createGameActions(render) {
     try {
       const initialState = await apiRequest(CONFIG.api.endpoints.gameState);
       render(initialState);
+      await requestLiveAnalytics({ gameState: initialState?.game || null });
     } catch (error) {
       console.error(error);
       showStatus('初期状態の取得に失敗しました。ページを再読み込みしてください。', 'danger');
@@ -704,6 +792,7 @@ export function createGameActions(render) {
   }
 
   return {
+    requestLiveAnalytics,
     handleStart,
     handleReloadTeams,
     handleReturnToTitle,

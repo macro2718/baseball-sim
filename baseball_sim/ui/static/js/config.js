@@ -11,6 +11,7 @@ export const CONFIG = {
       gameBunt: '/api/game/bunt',
       gameSqueeze: '/api/game/squeeze',
       gameProgress: '/api/game/progress',
+      gameAnalytics: '/api/game/analytics',
       strategySteal: '/api/strategy/steal',
       pinchHit: '/api/strategy/pinch_hit',
       pinchRun: '/api/strategy/pinch_run',

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from time import time
 from typing import Any, Dict, Optional
 
 from baseball_sim.config import setup_project_environment
 from baseball_sim.data.team_library import TeamLibrary
+from baseball_sim.interface.live_analytics import simulate_live_analytics
 
 from .exceptions import GameSessionError
 from .gameplay_actions import GameplayActionsMixin
@@ -60,6 +62,8 @@ class WebGameSession(
         self._cpu_team_key: Optional[str] = None
         self._cpu_defense_context: Optional[Any] = None
         self._cpu_offense_context: Optional[Any] = None
+        self._analytics_state: Dict[str, Any] = {}
+        self._reset_live_analytics()
         self.ensure_teams()
 
     # ------------------------------------------------------------------
@@ -78,6 +82,100 @@ class WebGameSession(
         )
         self._action_block_reason = updated_reason
         return payload
+
+    # ------------------------------------------------------------------
+    # Live analytics helpers
+    # ------------------------------------------------------------------
+    def _reset_live_analytics(self) -> None:
+        self._analytics_state = {
+            "running": False,
+            "samples": 0,
+            "sequence": None,
+            "offense": None,
+            "timestamp": None,
+            "result": None,
+        }
+
+    def _invalidate_live_analytics(self) -> None:
+        if not isinstance(getattr(self, "_analytics_state", None), dict):
+            self._reset_live_analytics()
+            return
+        state = self._analytics_state
+        state["result"] = None
+        state["sequence"] = None
+        state["timestamp"] = None
+
+    def _ensure_analytics_idle(self) -> None:
+        state = getattr(self, "_analytics_state", {}) or {}
+        if state.get("running"):
+            raise GameSessionError("統計計算中のため操作できません。完了までお待ちください。")
+
+    def _current_play_sequence(self) -> int:
+        if not self.game_state:
+            return 0
+        last_play = getattr(self.game_state, "last_play", None)
+        if isinstance(last_play, dict):
+            seq = last_play.get("sequence")
+            if seq is not None:
+                try:
+                    return int(seq)
+                except (TypeError, ValueError):
+                    pass
+        return int(getattr(self.game_state, "_play_sequence", 0))
+
+    def get_analytics_state(self) -> Dict[str, Any]:
+        state = getattr(self, "_analytics_state", {}) or {}
+        payload: Dict[str, Any] = {
+            "running": bool(state.get("running")),
+            "samples": int(state.get("samples") or 0),
+            "sequence": state.get("sequence"),
+            "offense": state.get("offense"),
+        }
+        if state.get("timestamp") is not None:
+            payload["timestamp"] = state.get("timestamp")
+        result = state.get("result")
+        if isinstance(result, dict):
+            payload["result"] = dict(result)
+        return payload
+
+    def compute_live_analytics(self, samples: int = 100) -> Dict[str, Any]:
+        if not self.game_state:
+            raise GameSessionError("試合が開始されていません。")
+
+        desired_samples = 100 if samples <= 0 else samples
+        # 固定で100試合の解析を行う
+        desired_samples = 100
+
+        sequence = self._current_play_sequence()
+        analytics_state = getattr(self, "_analytics_state", {}) or {}
+        if (
+            analytics_state.get("result")
+            and analytics_state.get("sequence") == sequence
+            and not analytics_state.get("running")
+        ):
+            return self.build_state()
+
+        self._ensure_analytics_idle()
+
+        previous_reason = self._action_block_reason
+        self._action_block_reason = "統計計算中です。CPUが100試合を解析しています。"
+        analytics_state["running"] = True
+        try:
+            simulation = simulate_live_analytics(self.game_state, samples=desired_samples)
+            payload = simulation.as_payload()
+            payload["sequence"] = sequence
+            payload["timestamp"] = time()
+            analytics_state.update(payload)
+            analytics_state["running"] = False
+        finally:
+            analytics_state["running"] = False
+            if previous_reason is not None:
+                self._action_block_reason = previous_reason
+            else:
+                self._action_block_reason = None
+
+        self._analytics_state = analytics_state
+        return self.build_state()
 
     # ------------------------------------------------------------------
     # Control helpers for CPU vs player modes
@@ -119,6 +217,7 @@ class WebGameSession(
         return None
 
     def _guard_offense_action(self) -> None:
+        self._ensure_analytics_idle()
         if getattr(self, "_control_mode", "manual") == "cpu":
             prepare = getattr(self, "_cpu_prepare_defense_strategy", None)
             if callable(prepare):
@@ -129,12 +228,14 @@ class WebGameSession(
             )
 
     def _guard_defense_action(self) -> None:
+        self._ensure_analytics_idle()
         if not self._is_defense_action_allowed():
             raise GameSessionError(
                 "攻撃中は守備采配を行えません。攻撃が終了するまでお待ちください。"
             )
 
     def _guard_progress_action(self) -> None:
+        self._ensure_analytics_idle()
         if not self.is_progress_action_available():
             raise GameSessionError("進行操作は現在利用できません。")
 
@@ -160,6 +261,8 @@ class WebGameSession(
 
     def is_progress_action_available(self) -> bool:
         if not self.game_state or self.game_state.game_ended:
+            return False
+        if getattr(self, "_analytics_state", {}).get("running"):
             return False
         mode = getattr(self, "_control_mode", "manual")
         allowed, _ = self.game_state.is_game_action_allowed()
