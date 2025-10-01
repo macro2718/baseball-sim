@@ -48,7 +48,14 @@ class LiveAnalyticsResult:
 
 
 def simulate_live_analytics(game_state, samples: int = 100) -> LiveAnalyticsResult:
-    """Run repeated CPU simulations from ``game_state`` and aggregate metrics."""
+    """Run CPU simulations from ``game_state`` and aggregate half-inning metrics.
+
+    The simulated sequences are truncated when the current offensive half-inning
+    ends. ``expected_runs`` and ``score_probability`` therefore reflect the
+    projected production for the remainder of the active half only. When the
+    game continues beyond the half-inning, the simulation proceeds to a full
+    conclusion so that win probabilities remain available.
+    """
 
     if samples <= 0:
         samples = 1
@@ -75,23 +82,38 @@ def simulate_live_analytics(game_state, samples: int = 100) -> LiveAnalyticsResu
     base_home = getattr(base_state, "home_score", 0)
     base_away = getattr(base_state, "away_score", 0)
 
-    total_runs = 0.0
-    scoring_games = 0
+    half_inning_runs = 0.0
+    half_inning_scoring_games = 0
     home_wins = 0
     away_wins = 0
     ties = 0
 
     for _ in range(samples):
         clone = deepcopy(base_state)
-        _play_out_game(clone)
+        starting_home = getattr(clone, "home_score", base_home)
+        starting_away = getattr(clone, "away_score", base_away)
+
+        _play_out_game(clone, stop_at_half_inning=True)
+
+        mid_home = getattr(clone, "home_score", starting_home)
+        mid_away = getattr(clone, "away_score", starting_away)
+
+        if offense_key == "home":
+            offense_runs = mid_home - starting_home
+        elif offense_key == "away":
+            offense_runs = mid_away - starting_away
+        else:
+            offense_runs = 0
+
+        if offense_runs > 0:
+            half_inning_scoring_games += 1
+        half_inning_runs += offense_runs
+
+        if not getattr(clone, "game_ended", False):
+            _play_out_game(clone)
 
         final_home = getattr(clone, "home_score", base_home)
         final_away = getattr(clone, "away_score", base_away)
-
-        offense_runs = (final_home - base_home) if offense_key == "home" else (final_away - base_away)
-        if offense_runs > 0:
-            scoring_games += 1
-        total_runs += offense_runs
 
         winner = _determine_winner(clone)
         if winner == "home":
@@ -101,8 +123,8 @@ def simulate_live_analytics(game_state, samples: int = 100) -> LiveAnalyticsResu
         else:
             ties += 1
 
-    expected_runs = total_runs / samples
-    score_probability = scoring_games / samples
+    expected_runs = half_inning_runs / samples
+    score_probability = half_inning_scoring_games / samples
     home_win_probability = (home_wins + 0.5 * ties) / samples
 
     return LiveAnalyticsResult(
@@ -137,11 +159,18 @@ def _determine_winner(game_state) -> Optional[str]:
     return None
 
 
-def _play_out_game(game_state) -> None:
-    """Advance ``game_state`` to completion with CPU strategies."""
+def _play_out_game(game_state, *, stop_at_half_inning: bool = False) -> None:
+    """Advance ``game_state`` with CPU strategies.
+
+    When ``stop_at_half_inning`` is ``True`` the progression stops once the
+    offense finishes the current half-inning or the game ends.
+    """
 
     offense_context: Dict[str, Tuple[Optional[int], int, bool, int, Tuple[int, int, int]]] = {}
     defense_context: Dict[str, Tuple[Optional[int], int, bool, int, Tuple[int, int, int]]] = {}
+
+    target_inning = getattr(game_state, "inning", None)
+    target_half_top = getattr(game_state, "is_top_inning", None)
 
     while not getattr(game_state, "game_ended", False):
         offense_team = getattr(game_state, "batting_team", None)
@@ -219,6 +248,16 @@ def _play_out_game(game_state) -> None:
         inning_changed = (prev_inning != game_state.inning) or (prev_half_top != game_state.is_top_inning)
         if play is not CPUPlayType.STEAL and not inning_changed:
             offense_team.next_batter()
+
+        if stop_at_half_inning:
+            if getattr(game_state, "game_ended", False):
+                break
+            if inning_changed:
+                break
+            if target_inning is not None and game_state.inning != target_inning:
+                break
+            if target_half_top is not None and game_state.is_top_inning != target_half_top:
+                break
 
 
 def _build_strategy_context(game_state) -> Tuple[Optional[int], int, bool, int, Tuple[int, int, int]]:
