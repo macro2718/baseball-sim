@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from typing import Any, Dict, List, Optional
 
 from baseball_sim.config import GameResults
@@ -24,6 +26,21 @@ from baseball_sim.gameplay.cpu_strategy import (
 
 from .exceptions import GameSessionError
 from .formatting import half_inning_banner
+
+
+@dataclass
+class _OffenseActionContext:
+    allowed: bool
+    batter: Optional[Any]
+    pitcher: Optional[Any]
+    prev_inning: Optional[int]
+    prev_half: Optional[bool]
+    state: Optional[Dict[str, Any]] = None
+
+    def return_state(self) -> Dict[str, Any]:
+        if self.state is None:
+            raise RuntimeError("No state prepared for this context.")
+        return self.state
 
 
 def _standardize_player_event(player_name: str, raw: str, emoji: str = "") -> str:
@@ -74,33 +91,14 @@ class GameplayActionsMixin:
     def execute_normal_play(self) -> Dict[str, Any]:
         """Simulate a standard plate appearance."""
 
-        if not self.game_state:
-            raise GameSessionError("Game has not started yet.")
+        context = self._prepare_offense_action()
+        if not context.allowed:
+            return context.return_state()
 
-        if self.game_state.game_ended:
-            self._action_block_reason = "The game has already ended."
-            self._log.append(self._action_block_reason, variant="warning")
-            return self.build_state()
-
-        guard = getattr(self, "_guard_offense_action", None)
-        if callable(guard):
-            guard()
-
-        allowed, reason = self.game_state.is_game_action_allowed()
-        if not allowed:
-            self._action_block_reason = reason
-            self._log.append(f"❌ {reason}", variant="danger")
-            return self.build_state()
-
-        self._action_block_reason = None
-        invalidate = getattr(self, "_invalidate_live_analytics", None)
-        if callable(invalidate):
-            invalidate()
-
-        batter = self.game_state.batting_team.current_batter
-        pitcher = self.game_state.fielding_team.current_pitcher
-        prev_inning = self.game_state.inning
-        prev_half = self.game_state.is_top_inning
+        batter = context.batter
+        pitcher = context.pitcher
+        prev_inning = context.prev_inning
+        prev_half = context.prev_half
 
         result = self.game_state.calculate_result(batter, pitcher)
         message = self.game_state.apply_result(result, batter)
@@ -134,23 +132,9 @@ class GameplayActionsMixin:
     def execute_bunt(self) -> Dict[str, Any]:
         """Attempt a bunt for the current batter."""
 
-        if not self.game_state:
-            raise GameSessionError("Game has not started yet.")
-
-        if self.game_state.game_ended:
-            self._action_block_reason = "The game has already ended."
-            self._log.append(self._action_block_reason, variant="warning")
-            return self.build_state()
-
-        guard = getattr(self, "_guard_offense_action", None)
-        if callable(guard):
-            guard()
-
-        allowed, reason = self.game_state.is_game_action_allowed()
-        if not allowed:
-            self._action_block_reason = reason
-            self._log.append(f"❌ {reason}", variant="danger")
-            return self.build_state()
+        context = self._prepare_offense_action()
+        if not context.allowed:
+            return context.return_state()
 
         if not self.game_state.can_bunt():
             self._action_block_reason = (
@@ -159,15 +143,10 @@ class GameplayActionsMixin:
             self._log.append(self._action_block_reason, variant="warning")
             return self.build_state()
 
-        self._action_block_reason = None
-        invalidate = getattr(self, "_invalidate_live_analytics", None)
-        if callable(invalidate):
-            invalidate()
-
-        batter = self.game_state.batting_team.current_batter
-        pitcher = self.game_state.fielding_team.current_pitcher
-        prev_inning = self.game_state.inning
-        prev_half = self.game_state.is_top_inning
+        batter = context.batter
+        pitcher = context.pitcher
+        prev_inning = context.prev_inning
+        prev_half = context.prev_half
 
         result_message = self.game_state.execute_bunt(batter, pitcher)
 
@@ -214,23 +193,9 @@ class GameplayActionsMixin:
     def execute_squeeze(self) -> Dict[str, Any]:
         """Attempt a squeeze bunt for the current batter."""
 
-        if not self.game_state:
-            raise GameSessionError("Game has not started yet.")
-
-        if self.game_state.game_ended:
-            self._action_block_reason = "The game has already ended."
-            self._log.append(self._action_block_reason, variant="warning")
-            return self.build_state()
-
-        guard = getattr(self, "_guard_offense_action", None)
-        if callable(guard):
-            guard()
-
-        allowed, reason = self.game_state.is_game_action_allowed()
-        if not allowed:
-            self._action_block_reason = reason
-            self._log.append(f"❌ {reason}", variant="danger")
-            return self.build_state()
+        context = self._prepare_offense_action()
+        if not context.allowed:
+            return context.return_state()
 
         if not self.game_state.can_squeeze():
             message = "Squeeze not allowed (need a runner on 3rd and fewer than 2 outs)."
@@ -238,15 +203,10 @@ class GameplayActionsMixin:
             self._log.append(message, variant="warning")
             return self.build_state()
 
-        self._action_block_reason = None
-        invalidate = getattr(self, "_invalidate_live_analytics", None)
-        if callable(invalidate):
-            invalidate()
-
-        batter = self.game_state.batting_team.current_batter
-        pitcher = self.game_state.fielding_team.current_pitcher
-        prev_inning = self.game_state.inning
-        prev_half = self.game_state.is_top_inning
+        batter = context.batter
+        pitcher = context.pitcher
+        prev_inning = context.prev_inning
+        prev_half = context.prev_half
 
         result_message = self.game_state.execute_squeeze(batter, pitcher)
 
@@ -291,23 +251,9 @@ class GameplayActionsMixin:
     def execute_steal(self) -> Dict[str, Any]:
         """Attempt a steal with the current base runners."""
 
-        if not self.game_state:
-            raise GameSessionError("Game has not started yet.")
-
-        if self.game_state.game_ended:
-            self._action_block_reason = "The game has already ended."
-            self._log.append(self._action_block_reason, variant="warning")
-            return self.build_state()
-
-        guard = getattr(self, "_guard_offense_action", None)
-        if callable(guard):
-            guard()
-
-        allowed, reason = self.game_state.is_game_action_allowed()
-        if not allowed:
-            self._action_block_reason = reason
-            self._log.append(f"❌ {reason}", variant="danger")
-            return self.build_state()
+        context = self._prepare_offense_action()
+        if not context.allowed:
+            return context.return_state()
 
         if not self.game_state.can_steal():
             message = "盗塁はできません（適切な走者がいません）。"
@@ -315,13 +261,8 @@ class GameplayActionsMixin:
             self._log.append(message, variant="warning")
             return self.build_state()
 
-        self._action_block_reason = None
-        invalidate = getattr(self, "_invalidate_live_analytics", None)
-        if callable(invalidate):
-            invalidate()
-
-        prev_inning = self.game_state.inning
-        prev_half = self.game_state.is_top_inning
+        prev_inning = context.prev_inning
+        prev_half = context.prev_half
 
         self._log.append("🔐 盗塁指示", variant="header")
 
@@ -352,6 +293,61 @@ class GameplayActionsMixin:
             self._record_game_over()
 
         return self.build_state()
+
+    def _prepare_offense_action(self) -> _OffenseActionContext:
+        """Run shared pre-checks for offensive plays and return context data."""
+        if not self.game_state:
+            raise GameSessionError("Game has not started yet.")
+
+        if self.game_state.game_ended:
+            message = "The game has already ended."
+            self._action_block_reason = message
+            self._log.append(message, variant="warning")
+            return _OffenseActionContext(
+                allowed=False,
+                batter=None,
+                pitcher=None,
+                prev_inning=None,
+                prev_half=None,
+                state=self.build_state(),
+            )
+
+        guard = getattr(self, "_guard_offense_action", None)
+        if callable(guard):
+            guard()
+
+        allowed, reason = self.game_state.is_game_action_allowed()
+        if not allowed:
+            self._action_block_reason = reason
+            self._log.append(f"❌ {reason}", variant="danger")
+            return _OffenseActionContext(
+                allowed=False,
+                batter=None,
+                pitcher=None,
+                prev_inning=None,
+                prev_half=None,
+                state=self.build_state(),
+            )
+
+        self._action_block_reason = None
+        invalidate = getattr(self, "_invalidate_live_analytics", None)
+        if callable(invalidate):
+            invalidate()
+
+        batter = None
+        pitcher = None
+        if self.game_state.batting_team:
+            batter = self.game_state.batting_team.current_batter
+        if self.game_state.fielding_team:
+            pitcher = self.game_state.fielding_team.current_pitcher
+
+        return _OffenseActionContext(
+            allowed=True,
+            batter=batter,
+            pitcher=pitcher,
+            prev_inning=self.game_state.inning,
+            prev_half=self.game_state.is_top_inning,
+        )
 
     def execute_pinch_hit(self, lineup_index: int, bench_index: int) -> Dict[str, Any]:
         """Replace the selected batter with a bench player."""
