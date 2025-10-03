@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from baseball_sim.gameplay.statistics import StatsCalculator
+from baseball_sim.interface.utils import iter_unique_teams
 
 
 def summarize_simulation_results(
@@ -22,7 +23,7 @@ def summarize_simulation_results(
     team_stats = results.get("team_stats") or {}
     alias_map = results.get("team_aliases") or {}
 
-    unique_teams = list(_iter_unique_teams(results))
+    unique_teams = list(iter_unique_teams(results))
     simulation_key_map = {id(team): f"sim-team-{index + 1}" for index, team in enumerate(unique_teams)}
     league_mode = bool(league) or len(unique_teams) > 2
 
@@ -113,26 +114,6 @@ def summarize_simulation_results(
         "aliases": alias_map,
         "roles": role_map,
     }
-
-
-def _iter_unique_teams(results: Mapping[str, Any]) -> Iterable[object]:
-    """Yield unique team objects present in the results.
-
-    Mirrors the logic in `interface/simulation._iter_unique_teams` but kept
-    locally to avoid tight coupling and import cycles between UI and core.
-    """
-    teams = results.get("teams") or {}
-    seen_ids: set[int] = set()
-    for team in teams.values():
-        if team is None:
-            continue
-        identifier = id(team)
-        if identifier in seen_ids:
-            continue
-        seen_ids.add(identifier)
-        yield team
-
-
 def _extract_team_objects(results: Mapping[str, Any]) -> Mapping[str, object]:
     raw = results.get("teams") or {}
     named = {}
