@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from baseball_sim.config import FileUtils, get_project_paths
+from baseball_sim.data.rotation_utils import parse_rotation_entries
 
 
 class TeamLibraryError(RuntimeError):
@@ -322,26 +323,19 @@ class TeamLibrary:
 
         rotation: List[str] = []
         rotation_raw = raw.get("rotation")
-        if isinstance(rotation_raw, list):
-            seen_rotation: set[str] = set()
-            for entry in rotation_raw:
-                if isinstance(entry, dict):
-                    rotation_name_value = entry.get("name")
-                else:
-                    rotation_name_value = entry
-                rotation_name = str(rotation_name_value or "").strip()
-                if not rotation_name:
-                    continue
-                if rotation_name not in pitchers:
-                    raise TeamLibraryError(
-                        f"ローテーション投手 '{rotation_name}' が投手リストに含まれていません。"
-                    )
-                if rotation_name in seen_rotation:
-                    raise TeamLibraryError(
-                        f"ローテーション投手 '{rotation_name}' が重複しています。"
-                    )
-                seen_rotation.add(rotation_name)
-                rotation.append(rotation_name)
+        rotation_names = parse_rotation_entries(rotation_raw)
+        seen_rotation: set[str] = set()
+        for rotation_name in rotation_names:
+            if rotation_name not in pitchers:
+                raise TeamLibraryError(
+                    f"ローテーション投手 '{rotation_name}' が投手リストに含まれていません。"
+                )
+            if rotation_name in seen_rotation:
+                raise TeamLibraryError(
+                    f"ローテーション投手 '{rotation_name}' が重複しています。"
+                )
+            seen_rotation.add(rotation_name)
+            rotation.append(rotation_name)
 
         payload = dict(raw)
         payload["name"] = team_name
