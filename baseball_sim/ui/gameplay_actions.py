@@ -112,20 +112,12 @@ class GameplayActionsMixin:
         else:
             self._publish_negative_result(result, batter)
 
-        pitcher.decrease_stamina()
-
-        inning_changed = (
-            prev_inning != self.game_state.inning
-            or prev_half != self.game_state.is_top_inning
+        self._finalise_plate_appearance(
+            prev_inning,
+            prev_half,
+            advance_batter=False,
+            pitcher=pitcher,
         )
-        if not inning_changed:
-            self.game_state.batting_team.next_batter()
-        else:
-            banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
-            self._log.extend_banner(banner)
-
-        if self.game_state.game_ended:
-            self._record_game_over()
 
         return self.build_state()
 
@@ -168,25 +160,12 @@ class GameplayActionsMixin:
             notif = _standardize_player_event(batter.name, "bunt attempt fails", "❌")
             self._notifications.publish("warning", notif)
 
-        pitcher.decrease_stamina()
-        self.game_state.batting_team.next_batter()
-
-        inning_changed = (
-            prev_inning != self.game_state.inning
-            or prev_half != self.game_state.is_top_inning
+        self._finalise_plate_appearance(
+            prev_inning,
+            prev_half,
+            advance_batter=True,
+            pitcher=pitcher,
         )
-        if inning_changed:
-            banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
-            self._log.extend_banner(banner)
-
-        if self.game_state.game_ended:
-            self._record_game_over()
-        elif (
-            self.game_state.inning >= 9
-            and not self.game_state.is_top_inning
-            and self.game_state.home_score > self.game_state.away_score
-        ):
-            self._record_game_over()
 
         return self.build_state()
 
@@ -226,27 +205,54 @@ class GameplayActionsMixin:
             notif = _standardize_player_event(batter.name, "squeeze attempt fails", "❌")
             self._notifications.publish("warning", notif)
 
-        pitcher.decrease_stamina()
-        self.game_state.batting_team.next_batter()
+        self._finalise_plate_appearance(
+            prev_inning,
+            prev_half,
+            advance_batter=True,
+            pitcher=pitcher,
+        )
+
+        return self.build_state()
+
+    def _finalise_plate_appearance(
+        self,
+        prev_inning: Optional[int],
+        prev_half: Optional[bool],
+        advance_batter: bool,
+        pitcher: Optional[Any] = None,
+    ) -> None:
+        """Handle shared post-play bookkeeping for a plate appearance."""
+
+        if pitcher is None and getattr(self.game_state, "fielding_team", None):
+            pitcher = self.game_state.fielding_team.current_pitcher
+
+        if pitcher is not None:
+            pitcher.decrease_stamina()
 
         inning_changed = (
             prev_inning != self.game_state.inning
             or prev_half != self.game_state.is_top_inning
         )
+
+        batting_team = getattr(self.game_state, "batting_team", None)
+        if advance_batter:
+            if batting_team is not None:
+                batting_team.next_batter()
+        elif not inning_changed and batting_team is not None:
+            batting_team.next_batter()
+
         if inning_changed:
             banner = half_inning_banner(self.game_state, self.home_team, self.away_team)
             self._log.extend_banner(banner)
 
         if self.game_state.game_ended:
             self._record_game_over()
-        elif (
+        elif advance_batter and (
             self.game_state.inning >= 9
             and not self.game_state.is_top_inning
             and self.game_state.home_score > self.game_state.away_score
         ):
             self._record_game_over()
-
-        return self.build_state()
 
     def execute_steal(self) -> Dict[str, Any]:
         """Attempt a steal with the current base runners."""
