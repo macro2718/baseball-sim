@@ -14,6 +14,7 @@ from baseball_sim.gameplay.cpu_strategy import (
     plan_pinch_run,
     select_offense_play,
 )
+from baseball_sim.infrastructure.logging_utils import logger as root_logger
 
 
 @dataclass
@@ -35,6 +36,8 @@ class TeamContext:
 
 setup_project_environment()
 PATHS = get_project_paths()
+
+LOGGER = root_logger.getChild("interface.simulation")
 
 
 def get_pitcher_rotation(pitchers, preferred_rotation=None):
@@ -106,7 +109,9 @@ def _build_team_contexts(team_datas: Sequence[Mapping[str, object]]) -> List[Tea
         if not isinstance(data, Mapping):
             raise ValueError("Each team configuration must be a mapping object.")
         team_config = dict(data)
-        team = DataLoader.create_team(team_config, player_data=player_data)
+        team, warnings = DataLoader.create_team(team_config, player_data=player_data)
+        for warning in warnings:
+            LOGGER.warning("Team setup warning: %s", warning)
         # 各試合前に初期ラインナップ/ベンチへ戻せるようスナップショットを保持
         try:
             # 初期打順と各選手の守備位置
