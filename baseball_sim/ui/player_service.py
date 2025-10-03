@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import uuid
 
@@ -334,22 +334,51 @@ class PlayerLibraryService:
     # ------------------------------------------------------------------
     # Reference helpers
     # ------------------------------------------------------------------
+    @staticmethod
+    def _iter_team_name_slots(
+        team_obj: dict,
+    ) -> Iterator[Tuple[object, object, Callable[[], Optional[str]], Callable[[str], None]]]:
+        if not isinstance(team_obj, dict):
+            return
+
+        def list_setter(container: List[object], index: int) -> Callable[[str], None]:
+            return lambda value: container.__setitem__(index, value)
+
+        def list_getter(container: List[object], index: int) -> Callable[[], Optional[str]]:
+            def getter() -> Optional[str]:
+                value = container[index]
+                if isinstance(value, str):
+                    return value
+                if isinstance(value, dict):
+                    name = value.get("name")
+                    return name if isinstance(name, str) else None
+                return None
+
+            return getter
+
+        for key in ("lineup", "bench", "pitchers", "rotation"):
+            entries = team_obj.get(key)
+            if not isinstance(entries, list):
+                continue
+            for index, entry in enumerate(entries):
+                if isinstance(entry, str):
+                    yield entries, index, list_getter(entries, index), list_setter(entries, index)
+                elif isinstance(entry, dict):
+                    def dict_getter(obj: dict = entry) -> Optional[str]:
+                        name = obj.get("name")
+                        return name if isinstance(name, str) else None
+
+                    def dict_setter(value: str, obj: dict = entry) -> None:
+                        obj["name"] = value
+
+                    yield entry, "name", dict_getter, dict_setter
+
     def _team_mentions_player(self, team_obj: dict, target_name: str) -> bool:
         if not isinstance(team_obj, dict) or not target_name:
             return False
-        for pitcher_name in team_obj.get("pitchers", []) or []:
-            if isinstance(pitcher_name, str) and pitcher_name == target_name:
-                return True
-        for entry in team_obj.get("lineup", []) or []:
-            if isinstance(entry, dict) and entry.get("name") == target_name:
-                return True
-        for bench_name in team_obj.get("bench", []) or []:
-            if isinstance(bench_name, str) and bench_name == target_name:
-                return True
-        for rotation_entry in team_obj.get("rotation", []) or []:
-            if isinstance(rotation_entry, str) and rotation_entry == target_name:
-                return True
-            if isinstance(rotation_entry, dict) and rotation_entry.get("name") == target_name:
+        for _, _, getter, _ in self._iter_team_name_slots(team_obj):
+            current_name = getter()
+            if isinstance(current_name, str) and current_name == target_name:
                 return True
         return False
 
@@ -395,39 +424,11 @@ class PlayerLibraryService:
 
         changed = False
 
-        lineup = team_obj.get("lineup")
-        if isinstance(lineup, list):
-            for entry in lineup:
-                if isinstance(entry, dict) and entry.get("name") == old_name:
-                    entry["name"] = new_name
-                    changed = True
-
-        bench = team_obj.get("bench")
-        if isinstance(bench, list):
-            for index, entry in enumerate(bench):
-                if isinstance(entry, str) and entry == old_name:
-                    bench[index] = new_name
-                    changed = True
-                elif isinstance(entry, dict) and entry.get("name") == old_name:
-                    entry["name"] = new_name
-                    changed = True
-
-        pitchers = team_obj.get("pitchers")
-        if isinstance(pitchers, list):
-            for index, entry in enumerate(pitchers):
-                if isinstance(entry, str) and entry == old_name:
-                    pitchers[index] = new_name
-                    changed = True
-
-        rotation_list = team_obj.get("rotation")
-        if isinstance(rotation_list, list):
-            for index, entry in enumerate(rotation_list):
-                if isinstance(entry, str) and entry == old_name:
-                    rotation_list[index] = new_name
-                    changed = True
-                elif isinstance(entry, dict) and entry.get("name") == old_name:
-                    rotation_list[index] = new_name
-                    changed = True
+        for container, key, getter, setter in self._iter_team_name_slots(team_obj):
+            current_name = getter()
+            if isinstance(current_name, str) and current_name == old_name:
+                setter(new_name)
+                changed = True
         return changed
 
     def rename_player_references(self, old_name: str, new_name: str) -> None:
