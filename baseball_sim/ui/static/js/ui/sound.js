@@ -1,10 +1,10 @@
-// Simple sound manager for UI SFX using Web Audio API
+// Simple sound manager for UI SFX using Web Audio API.
 // Generates a short click/tick sound on demand without external assets.
+
+const DEFAULT_VOLUME = 0.3; // 0.0 - 1.0
 
 let audioCtx = null;
 let masterGain = null;
-let enabled = true;
-let volume = 0.3; // 0.0 - 1.0
 
 function ensureContext() {
   if (audioCtx) return audioCtx;
@@ -12,7 +12,7 @@ function ensureContext() {
   if (!Ctx) return null;
   audioCtx = new Ctx();
   masterGain = audioCtx.createGain();
-  masterGain.gain.value = volume;
+  masterGain.gain.value = DEFAULT_VOLUME;
   masterGain.connect(audioCtx.destination);
   return audioCtx;
 }
@@ -26,7 +26,6 @@ function resumeIfNeeded() {
 }
 
 function playClickTone() {
-  if (!enabled) return;
   const ctx = ensureContext();
   if (!ctx) return;
   resumeIfNeeded();
@@ -58,16 +57,6 @@ function playClickTone() {
   osc.stop(now + duration + 0.01);
 }
 
-export function setUISoundEnabled(flag) {
-  enabled = !!flag;
-}
-
-export function setUISoundVolume(v) {
-  volume = Math.max(0, Math.min(1, Number(v) || 0));
-  if (!masterGain) return;
-  masterGain.gain.value = volume;
-}
-
 export function initButtonClickSound({ selector = 'button, [role="button"]', filter } = {}) {
   // Global delegated listener so dynamically created buttons also click.
   document.addEventListener(
@@ -88,11 +77,5 @@ export function initButtonClickSound({ selector = 'button, [role="button"]', fil
     },
     { capture: true },
   );
-}
-
-export function playUISound(name = 'click') {
-  if (name === 'click') {
-    playClickTone();
-  }
 }
 

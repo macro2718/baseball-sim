@@ -797,7 +797,6 @@ export function createGameActions(render) {
     handleReloadTeams,
     handleReturnToTitle,
     handleClearLog,
-    runSimulation: handleRunSimulation,
     startSimulation: handleSimulationStart,
     handleSimulationMatchStart,
     handleSwing,
