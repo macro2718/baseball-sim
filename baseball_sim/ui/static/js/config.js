@@ -38,15 +38,6 @@ export const CONFIG = {
       playerFolderDelete: '/api/players/folders/delete',
       playerFolderRename: '/api/players/folders/rename',
       leagueAverages: '/api/league/averages',
-      health: '/api/health',
-    },
-  },
-  css: {
-    classes: {
-      positionToken: 'position-token',
-      selected: 'selected',
-      disabled: 'disabled',
-      invalid: 'invalid',
     },
   },
 };

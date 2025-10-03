@@ -446,8 +446,4 @@ def create_routes(session: WebGameSession) -> Blueprint:
         state = session.build_state()
         return jsonify({"deleted": deleted_identifier, "state": state})
 
-    @api_bp.get("/health")
-    def health() -> Dict[str, Any]:
-        return jsonify({"status": "ok"})
-
     return api_bp
