@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Mapping, Optional, Sequence
+from typing import Dict, Mapping, Optional, Sequence
 
 from baseball_sim.config import get_project_paths, setup_project_environment
 from baseball_sim.gameplay.game import GameState
@@ -20,6 +20,7 @@ from baseball_sim.interface.league_setup import (
     generate_round_robin_pairs,
     initialize_league_results,
 )
+from baseball_sim.interface.utils import iter_unique_teams
 
 setup_project_environment()
 PATHS = get_project_paths()
@@ -159,23 +160,6 @@ class LeagueSimulator:
             cards_per_opponent=1,
             role_assignment={"home": 0, "away": 1},
         )
-
-
-def _iter_unique_teams(results: Mapping[str, object]) -> Iterable[object]:
-    """結果に含まれる重複しないチームオブジェクトを列挙する"""
-
-    teams = results.get("teams") or {}
-    seen_ids: set[int] = set()
-    for team in teams.values():
-        if team is None:
-            continue
-        identifier = id(team)
-        if identifier in seen_ids:
-            continue
-        seen_ids.add(identifier)
-        yield team
-
-
 def simulate_games(
     num_games=10,
     output_file=None,
@@ -522,4 +506,9 @@ def simulate_single_game(game):
     return game_result
 
 
-__all__ = ["LeagueSimulator", "simulate_games", "simulate_single_game"]
+__all__ = [
+    "LeagueSimulator",
+    "simulate_games",
+    "simulate_single_game",
+    "iter_unique_teams",
+]
