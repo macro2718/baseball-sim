@@ -7,9 +7,13 @@ from typing import Any, Dict, List, Optional, Tuple
 from baseball_sim.data.loader import DataLoader
 from baseball_sim.data.team_library import TeamLibraryError
 from baseball_sim.gameplay.game import GameState
+from baseball_sim.infrastructure.logging_utils import logger as root_logger
 
 from .exceptions import GameSessionError
 from .formatting import half_inning_banner
+
+
+LOGGER = root_logger.getChild("ui.team_management")
 
 
 class TeamManagementMixin:
@@ -45,12 +49,20 @@ class TeamManagementMixin:
                 return self.home_team, self.away_team
 
             try:
-                self.home_team, self.away_team = DataLoader.create_teams_from_data(
+                self.home_team, self.away_team, warnings = DataLoader.create_teams_from_data(
                     home_team_override=home_source,
                     away_team_override=away_source,
                 )
                 self._home_team_source = home_source
                 self._away_team_source = away_source
+                if warnings:
+                    for warning in warnings:
+                        LOGGER.warning("Team setup warning: %s", warning)
+                        self._notifications.publish("warning", warning)
+                        play_log = getattr(self, "_log", None)
+                        append = getattr(play_log, "append", None)
+                        if callable(append):
+                            append(f"⚠️ {warning}", variant="warning")
             except Exception as exc:  # pragma: no cover - defensive
                 self._clear_team_cache()
                 self._notifications.publish(

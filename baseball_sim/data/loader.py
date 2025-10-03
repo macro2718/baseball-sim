@@ -8,10 +8,13 @@ from baseball_sim.config import get_project_paths
 from baseball_sim.data.player import Player
 from baseball_sim.data.player_factory import PlayerFactory
 from baseball_sim.gameplay.team import Team
-from baseball_sim.infrastructure.logging_utils import log_error
+from baseball_sim.infrastructure.logging_utils import log_error, logger as root_logger
 
 
 PATHS = get_project_paths()
+
+
+LOGGER = root_logger.getChild("data.loader")
 
 
 class DataLoader:
@@ -38,26 +41,30 @@ class DataLoader:
 
     @staticmethod
     def setup_team_lineup(team: Team, team_data: Dict, players_dict: Dict[str, Player]) -> List[str]:
-        """チームのラインナップをセットアップし、エラーメッセージを返す"""
-        errors = []
-        
-        print(f"\n=== Setting up {team.name} lineup ===")
+        """チームのラインナップをセットアップし、警告メッセージを返す"""
+        warnings: List[str] = []
+
+        LOGGER.info("Setting up lineup for %s", team.name)
         for player_pos in team_data["lineup"]:
             player = players_dict[player_pos["name"]]
             position = player_pos["position"]
-            
+
             # 適性チェック
             if not player.can_play_position(position):
                 primary_pos = player.eligible_positions[0] if player.eligible_positions else "N/A"
-                print(f"Warning: {player.name} cannot play {position}, assigning to primary position {primary_pos}")
+                warning_msg = (
+                    f"{team.name}: {player.name} cannot play {position}, assigning to primary position {primary_pos}"
+                )
+                LOGGER.warning(warning_msg)
+                warnings.append(warning_msg)
                 position = primary_pos
-            
+
             if not team.add_player_to_lineup(player, position):
-                error_msg = f"Error: Could not add {player.name} to {position}"
-                print(error_msg)
-                errors.append(error_msg)
-        
-        return errors
+                error_msg = f"{team.name}: Could not add {player.name} to {position}"
+                LOGGER.error(error_msg)
+                warnings.append(error_msg)
+
+        return warnings
 
     @staticmethod
     def setup_team_pitchers(team: Team, team_data: Dict, players_dict: Dict[str, Player]) -> None:
@@ -99,7 +106,7 @@ class DataLoader:
         team_data: Dict,
         *,
         player_data: Dict,
-    ) -> Team:
+    ) -> Tuple[Team, List[str]]:
         """与えられたチームデータから :class:`Team` インスタンスを生成する"""
 
         team = Team(team_data["name"])
@@ -109,20 +116,21 @@ class DataLoader:
 
         # 投手・野手の登録
         cls.setup_team_pitchers(team, team_data, players)
-        cls.setup_team_lineup(team, team_data, players)
+        warnings = cls.setup_team_lineup(team, team_data, players)
         cls.setup_team_bench(team, team_data, players)
 
         # ラインナップの妥当性チェックを行い、警告を表示
-        print(f"\n=== Validating lineup: {team.name} ===")
+        LOGGER.info("Validating lineup for %s", team.name)
         validation_errors = team.validate_lineup()
         if validation_errors:
-            print(f"{team.name} lineup errors:")
             for error in validation_errors:
-                print(f"  - {error}")
+                message = f"{team.name}: {error}"
+                LOGGER.warning(message)
+                warnings.append(message)
         else:
-            print(f"{team.name} lineup is valid")
+            LOGGER.info("%s lineup is valid", team.name)
 
-        return team
+        return team, warnings
 
     @classmethod
     def create_teams_from_data(
@@ -130,7 +138,7 @@ class DataLoader:
         *,
         home_team_override: Dict | None = None,
         away_team_override: Dict | None = None,
-    ) -> Tuple[Team, Team]:
+    ) -> Tuple[Team, Team, List[str]]:
         """JSONデータからホーム/アウェイの2チームを作成する"""
         # パス管理
         player_data_path = PATHS.get_players_data_path()
@@ -151,13 +159,17 @@ class DataLoader:
             raise ValueError("Away team data could not be loaded.")
 
         # チームの作成（ラインナップ検証を含む）
-        home_team = cls._build_team(home_team_data, player_data=player_data)
-        away_team = cls._build_team(away_team_data, player_data=player_data)
+        home_team, home_warnings = cls._build_team(home_team_data, player_data=player_data)
+        away_team, away_warnings = cls._build_team(away_team_data, player_data=player_data)
 
-        return home_team, away_team
+        combined_warnings = home_warnings + away_warnings
+
+        return home_team, away_team, combined_warnings
 
     @classmethod
-    def create_team(cls, team_data: Dict, *, player_data: Dict | None = None) -> Team:
+    def create_team(
+        cls, team_data: Dict, *, player_data: Dict | None = None
+    ) -> Tuple[Team, List[str]]:
         """単一チームを生成するためのヘルパー"""
         if player_data is None:
             player_data_path = PATHS.get_players_data_path()
