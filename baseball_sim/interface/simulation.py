@@ -467,6 +467,157 @@ def reset_team_and_players(
         else (away_team.pitchers[0] if away_team.pitchers else None)
     )
 
+class CPUDecisionEngine:
+    """CPU decisions around defensive/offensive adjustments for a single game."""
+
+    def __init__(self, game):
+        self.game = game
+
+    def apply_defense_plans(self):
+        """Apply defensive substitutions and pitcher changes.
+
+        Returns:
+            Dict[str, object]: Metadata describing roster changes executed.
+        """
+
+        fielding_team = self.game.fielding_team
+        sub = SubstitutionManager(fielding_team)
+        changes = {
+            "defensive_substitutions": [],
+            "pitcher_change": None,
+        }
+
+        try:
+            defensive_plans = list(
+                plan_defensive_substitutions(self.game, fielding_team, sub)
+            )
+        except Exception:
+            defensive_plans = []
+
+        if defensive_plans:
+            bench = sub.get_available_bench_players()
+            for plan in defensive_plans:
+                try:
+                    bench_index = bench.index(plan.bench_player)
+                except ValueError:
+                    continue
+                success, message = sub.execute_defensive_substitution(
+                    bench_index, plan.lineup_index
+                )
+                if success:
+                    changes["defensive_substitutions"].append(
+                        {
+                            "bench_player": getattr(plan.bench_player, "name", None),
+                            "lineup_index": plan.lineup_index,
+                            "message": message,
+                        }
+                    )
+
+        try:
+            pitcher_plan = plan_pitcher_change(self.game, fielding_team, sub)
+        except Exception:
+            pitcher_plan = None
+
+        if pitcher_plan is not None:
+            success, message = sub.execute_pitcher_change(pitcher_plan.pitcher_index)
+            if success:
+                changes["pitcher_change"] = {
+                    "pitcher": getattr(fielding_team.current_pitcher, "name", None),
+                    "message": message,
+                }
+
+        return changes
+
+    def apply_offense_adjustments(self):
+        """Apply pinch hit/run decisions for the batting team.
+
+        Returns:
+            Dict[str, object]: Metadata describing offensive roster changes.
+        """
+
+        batting_team = self.game.batting_team
+        sub = SubstitutionManager(batting_team)
+        changes = {
+            "pinch_hit": None,
+            "pinch_run": None,
+        }
+
+        try:
+            pinch_hit_plan = plan_pinch_hit(self.game, batting_team, sub)
+        except Exception:
+            pinch_hit_plan = None
+
+        if pinch_hit_plan is not None:
+            success, message = sub.execute_pinch_hit(
+                pinch_hit_plan.bench_index, pinch_hit_plan.lineup_index
+            )
+            if success:
+                changes["pinch_hit"] = {
+                    "bench_player": getattr(
+                        batting_team.lineup[pinch_hit_plan.lineup_index], "name", None
+                    ),
+                    "lineup_index": pinch_hit_plan.lineup_index,
+                    "message": message,
+                }
+
+        try:
+            pinch_run_plan = plan_pinch_run(self.game, batting_team, sub)
+        except Exception:
+            pinch_run_plan = None
+
+        if pinch_run_plan is not None:
+            success, message = sub.execute_defensive_substitution(
+                pinch_run_plan.bench_index, pinch_run_plan.lineup_index
+            )
+            if success:
+                try:
+                    new_runner = batting_team.lineup[pinch_run_plan.lineup_index]
+                    self.game.bases[pinch_run_plan.base_index] = new_runner
+                except Exception:
+                    pass
+                changes["pinch_run"] = {
+                    "runner": getattr(
+                        batting_team.lineup[pinch_run_plan.lineup_index], "name", None
+                    ),
+                    "lineup_index": pinch_run_plan.lineup_index,
+                    "base_index": pinch_run_plan.base_index,
+                    "message": message,
+                }
+
+        return changes
+
+    @staticmethod
+    def assemble_event(
+        *,
+        game,
+        batting_team,
+        fielding_team,
+        batter,
+        pitcher,
+        prev_inning,
+        prev_half,
+        action_label,
+        result_key,
+        message,
+        runs_scored,
+        roster_changes,
+    ):
+        """Create an event dictionary summarizing the play."""
+
+        return {
+            "inning": f"{prev_inning} {'Top' if prev_half else 'Bottom'}",
+            "batter": getattr(batter, "name", "Unknown"),
+            "pitcher": getattr(pitcher, "name", "Unknown"),
+            "action": action_label,
+            "result": result_key,
+            "message": message,
+            "runs_scored": runs_scored,
+            "batting_team": getattr(batting_team, "name", ""),
+            "fielding_team": getattr(fielding_team, "name", ""),
+            "roster_changes": roster_changes or {},
+        }
+
+
 def simulate_single_game(game):
     """1試合をCPU対CPUのロジックでシミュレーション実行し、結果を返す"""
     game_result = {
@@ -477,6 +628,8 @@ def simulate_single_game(game):
         "innings": 0,
         "events": [],
     }
+
+    decision_engine = CPUDecisionEngine(game)
 
     # コンテキストを使って同一盤面での重複CPU判断を抑制
     last_context = None
@@ -502,63 +655,25 @@ def simulate_single_game(game):
             except Exception:
                 pass
 
+        roster_changes = None
+
         # 盤面コンテキストが変わったときのみ、CPUの守備采配/代打・代走検討を行う
         base_sig = tuple(1 if r is not None else 0 for r in game.bases[:3])
-        context = (game.last_play.get("sequence") if game.last_play else None, game.inning, game.is_top_inning, game.outs, base_sig)
+        context = (
+            game.last_play.get("sequence") if game.last_play else None,
+            game.inning,
+            game.is_top_inning,
+            game.outs,
+            base_sig,
+        )
         if context != last_context:
             last_context = context
-
-            # 守備側CPU: 投手交代・守備交代
-            def apply_defense_plans():
-                sub = SubstitutionManager(fielding_team)
-                # 先に守備交代（適性/守備固め）を適用
-                try:
-                    dplans = list(plan_defensive_substitutions(game, fielding_team, sub))
-                except Exception:
-                    dplans = []
-                if dplans:
-                    bench = sub.get_available_bench_players()
-                    for plan in dplans:
-                        # 現在のベンチから対象選手のインデックスを検索
-                        try:
-                            bench_index = bench.index(plan.bench_player)
-                        except ValueError:
-                            continue
-                        sub.execute_defensive_substitution(bench_index, plan.lineup_index)
-                # 投手交代
-                try:
-                    pplan = plan_pitcher_change(game, fielding_team, sub)
-                except Exception:
-                    pplan = None
-                if pplan is not None:
-                    sub.execute_pitcher_change(pplan.pitcher_index)
-
-            apply_defense_plans()
-
-            # 攻撃側CPU: 代打・代走の検討
-            try:
-                offense_sub = SubstitutionManager(batting_team)
-                ph_plan = plan_pinch_hit(game, batting_team, offense_sub)
-            except Exception:
-                ph_plan = None
-            if ph_plan is not None:
-                offense_sub.execute_pinch_hit(ph_plan.bench_index, ph_plan.lineup_index)
-
-            try:
-                pr_plan = plan_pinch_run(game, batting_team, offense_sub)
-            except Exception:
-                pr_plan = None
-            if pr_plan is not None:
-                success, _ = offense_sub.execute_defensive_substitution(
-                    pr_plan.bench_index, pr_plan.lineup_index
-                )
-                if success:
-                    # ベース上の走者を差し替える
-                    try:
-                        new_runner = batting_team.lineup[pr_plan.lineup_index]
-                        game.bases[pr_plan.base_index] = new_runner
-                    except Exception:
-                        pass
+            defense_changes = decision_engine.apply_defense_plans()
+            offense_changes = decision_engine.apply_offense_adjustments()
+            roster_changes = {
+                "defense": defense_changes,
+                "offense": offense_changes,
+            }
 
         # 攻撃側のプレー選択
         decision = select_offense_play(game, batting_team)
@@ -619,17 +734,20 @@ def simulate_single_game(game):
         else:
             runs_scored = max(0, post_away - pre_away)
 
-        event = {
-            "inning": f"{prev_inning} {'Top' if prev_half else 'Bottom'}",
-            "batter": getattr(batter, 'name', 'Unknown'),
-            "pitcher": getattr(pitcher, 'name', 'Unknown'),
-            "action": action_label,
-            "result": result_key,
-            "message": message,
-            "runs_scored": runs_scored,
-            "batting_team": getattr(batting_team, 'name', ''),
-            "fielding_team": getattr(fielding_team, 'name', ''),
-        }
+        event = CPUDecisionEngine.assemble_event(
+            game=game,
+            batting_team=batting_team,
+            fielding_team=fielding_team,
+            batter=batter,
+            pitcher=pitcher,
+            prev_inning=prev_inning,
+            prev_half=prev_half,
+            action_label=action_label,
+            result_key=result_key,
+            message=message,
+            runs_scored=runs_scored,
+            roster_changes=roster_changes,
+        )
         game_result["events"].append(event)
 
         # 終了判定は GameState に委譲（サヨナラ/延長制限を含む）
