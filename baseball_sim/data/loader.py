@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple
 from baseball_sim.config import get_project_paths
 from baseball_sim.data.player import Player
 from baseball_sim.data.player_factory import PlayerFactory
+from baseball_sim.data.rotation_utils import parse_rotation_entries
 from baseball_sim.gameplay.team import Team
 from baseball_sim.infrastructure.logging_utils import log_error, logger as root_logger
 
@@ -70,16 +71,7 @@ class DataLoader:
     def setup_team_pitchers(team: Team, team_data: Dict, players_dict: Dict[str, Player]) -> None:
         """チームの投手陣をセットアップ"""
         rotation_raw = team_data.get("rotation")
-        rotation_names = []
-        if isinstance(rotation_raw, list):
-            for entry in rotation_raw:
-                if isinstance(entry, dict):
-                    name_value = entry.get("name")
-                else:
-                    name_value = entry
-                name = str(name_value or "").strip()
-                if name:
-                    rotation_names.append(name)
+        rotation_names = parse_rotation_entries(rotation_raw)
 
         for pitcher_name in team_data["pitchers"]:
             team.add_pitcher(players_dict[pitcher_name])
