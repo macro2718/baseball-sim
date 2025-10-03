@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from baseball_sim.interface.simulation import reset_team_and_players, simulate_games
+from baseball_sim.interface.game_management import reset_team_and_players
+from baseball_sim.interface.simulation import simulate_games
 from baseball_sim.data.team_library import TeamLibraryError
 
 from .exceptions import GameSessionError

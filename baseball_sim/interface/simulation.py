@@ -1,6 +1,4 @@
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, Iterable, Mapping, Optional, Sequence
 
 from baseball_sim.config import get_project_paths, setup_project_environment
 from baseball_sim.gameplay.game import GameState
@@ -15,24 +13,13 @@ from baseball_sim.gameplay.cpu_strategy import (
     select_offense_play,
 )
 from baseball_sim.infrastructure.logging_utils import logger as root_logger
-
-
-@dataclass
-class TeamContext:
-    """試合を跨いで必要となるチーム固有の状態"""
-
-    team: object
-    original_name: str
-    unique_name: str
-    pitcher_pool: List[object]
-    rotation: List[object]
-    rotation_index: int = 0
-
-    def next_starting_pitcher(self) -> Optional[object]:
-        pitcher = select_starting_pitcher(self.rotation, self.rotation_index)
-        if self.rotation:
-            self.rotation_index = (self.rotation_index + 1) % len(self.rotation)
-        return pitcher
+from baseball_sim.interface.game_management import reset_team_and_players, update_statistics
+from baseball_sim.interface.league_setup import (
+    TeamContext,
+    build_team_contexts,
+    generate_round_robin_pairs,
+    initialize_league_results,
+)
 
 setup_project_environment()
 PATHS = get_project_paths()
@@ -40,268 +27,138 @@ PATHS = get_project_paths()
 LOGGER = root_logger.getChild("interface.simulation")
 
 
-def get_pitcher_rotation(pitchers, preferred_rotation=None):
-    """登録順または指定順で先発投手のローテーションリストを作成する"""
-    if not pitchers:
-        return []
+class LeagueSimulator:
+    """Coordinate multi-game or multi-team simulations."""
 
-    if preferred_rotation:
-        rotation_list = []
-        seen = set()
-        for pitcher in preferred_rotation:
-            if pitcher and pitcher in pitchers and id(pitcher) not in seen:
-                rotation_list.append(pitcher)
-                seen.add(id(pitcher))
-        if rotation_list:
-            return rotation_list
+    def __init__(self, *, progress_callback=None, message_callback=None) -> None:
+        self.progress_callback = progress_callback
+        self.message_callback = message_callback
 
-    starters = [
-        pitcher
-        for pitcher in pitchers
-        if getattr(pitcher, "pitcher_type", "").upper() == "SP"
-    ]
+    def run_league(
+        self,
+        *,
+        team_datas: Sequence[Mapping[str, object]],
+        games_per_card: int,
+        cards_per_opponent: int,
+        role_assignment: Optional[Mapping[str, int]] = None,
+    ) -> Dict[str, object]:
+        """Simulate a full league schedule and return aggregated results."""
 
-    return list(starters)
+        if games_per_card <= 0:
+            raise ValueError("games_per_card must be greater than zero.")
+        if cards_per_opponent <= 0:
+            raise ValueError("cards_per_opponent must be greater than zero.")
 
+        contexts = build_team_contexts(team_datas)
+        if len(contexts) % 2 != 0:
+            raise ValueError("League simulation requires an even number of teams.")
 
-def select_starting_pitcher(rotation, index):
-    """ローテーションと現在のインデックスから先発投手を取得する"""
-    if not rotation:
-        return None
+        results = initialize_league_results(contexts, role_assignment=role_assignment)
 
-    safe_index = index % len(rotation)
-    return rotation[safe_index]
+        rounds = generate_round_robin_pairs(len(contexts))
+        total_days = (len(contexts) - 1) * games_per_card * cards_per_opponent
+        total_games = total_days * (len(contexts) // 2)
 
-
-def _assign_unique_team_names(contexts: Sequence[TeamContext]) -> None:
-    """同名チームに対して -1, -2 ... といった識別子を付与する"""
-
-    totals: Dict[str, int] = defaultdict(int)
-    for ctx in contexts:
-        totals[ctx.original_name] += 1
-
-    counters: Dict[str, int] = defaultdict(int)
-    for ctx in contexts:
-        base = ctx.original_name
-        if totals[base] > 1:
-            counters[base] += 1
-            unique = f"{base}-{counters[base]}"
-        else:
-            unique = base
-        ctx.unique_name = unique
-        if hasattr(ctx.team, "name"):
-            ctx.team.name = unique
-
-
-def _build_team_contexts(team_datas: Sequence[Mapping[str, object]]) -> List[TeamContext]:
-    """入力データからリーグ戦用のチームコンテキストを作成"""
-
-    if not team_datas:
-        raise ValueError("League simulation requires at least two teams.")
-
-    from baseball_sim.data.loader import DataLoader
-
-    player_data_path = PATHS.get_players_data_path()
-    player_data = DataLoader.load_json_data(player_data_path)
-
-    contexts: List[TeamContext] = []
-    for data in team_datas:
-        if not isinstance(data, Mapping):
-            raise ValueError("Each team configuration must be a mapping object.")
-        team_config = dict(data)
-        team, warnings = DataLoader.create_team(team_config, player_data=player_data)
-        for warning in warnings:
-            LOGGER.warning("Team setup warning: %s", warning)
-        # 各試合前に初期ラインナップ/ベンチへ戻せるようスナップショットを保持
-        try:
-            # 初期打順と各選手の守備位置
-            initial_lineup = list(getattr(team, "lineup", []) or [])
-            initial_positions = [getattr(p, "current_position", None) for p in initial_lineup]
-            setattr(team, "_initial_lineup", initial_lineup)
-            setattr(team, "_initial_lineup_positions", initial_positions)
-            # 初期ベンチ
-            setattr(team, "_initial_bench", list(getattr(team, "bench", []) or []))
-        except Exception:
-            # 失敗時もシミュレーション継続（復元はスキップ）
-            pass
-        context = TeamContext(
-            team=team,
-            original_name=team_config.get("name", getattr(team, "name", "Team")),
-            unique_name=getattr(team, "name", "Team"),
-            pitcher_pool=list(team.pitchers),
-            rotation=get_pitcher_rotation(list(team.pitchers), getattr(team, "pitcher_rotation", None)),
+        results["meta"].update(
+            {
+                "total_teams": len(contexts),
+                "games_per_card": games_per_card,
+                "cards_per_opponent": cards_per_opponent,
+                "total_days": total_days,
+                "scheduled_games": total_games,
+            }
         )
-        contexts.append(context)
 
-    _assign_unique_team_names(contexts)
-    return contexts
+        day_number = 1
+        games_played = 0
 
-
-def _initialize_league_results(
-    contexts: Sequence[TeamContext],
-    *,
-    role_assignment: Optional[Mapping[str, int]] = None,
-) -> Dict[str, object]:
-    """リーグシミュレーション結果の基本構造を初期化する"""
-
-    results: Dict[str, object] = {
-        "games": [],
-        "team_stats": {},
-        "teams": {},
-        "meta": {},
-        "team_aliases": {},
-    }
-
-    for index, ctx in enumerate(contexts):
-        team = ctx.team
-        team_name = getattr(team, "name", f"Team {index + 1}")
-        original_name = ctx.original_name
-
-        results["teams"][team_name] = team
-        if original_name not in results["teams"]:
-            results["teams"][original_name] = team
-
-        # 役割（home/awayなど）に対応するエイリアスを登録
-        if role_assignment:
-            for role, assigned_index in role_assignment.items():
-                if assigned_index != index:
-                    continue
-                results["teams"][role] = team
-                suffix = "Home" if role == "home" else "Away"
-                alias_name = f"{original_name} ({suffix})"
-                results["teams"][alias_name] = team
-                results["team_aliases"][alias_name] = team_name
-
-        # 以前はファイル出力用に追加データを保持していたが、現在は不要のため収集しない
-
-    return results
-
-
-def _generate_round_robin_pairs(num_teams: int) -> List[List[Tuple[int, int]]]:
-    """偶数チーム数の総当たり組み合わせを生成する"""
-
-    if num_teams % 2 != 0:
-        raise ValueError("Team count must be even for league scheduling.")
-
-    if num_teams < 2:
-        return []
-
-    indices = list(range(num_teams))
-    half = num_teams // 2
-    rounds: List[List[Tuple[int, int]]] = []
-
-    for round_index in range(num_teams - 1):
-        pairs: List[Tuple[int, int]] = []
-        for i in range(half):
-            first = indices[i]
-            second = indices[-(i + 1)]
-            if round_index % 2 == 0:
-                home, away = first, second
-            else:
-                home, away = second, first
-            pairs.append((home, away))
-        rounds.append(pairs)
-
-        # circle method rotation (固定1チーム + 残りを回転)
-        indices = [indices[0]] + [indices[-1]] + indices[1:-1]
-
-    return rounds
-
-
-def _simulate_league(
-    *,
-    team_datas: Sequence[Mapping[str, object]],
-    games_per_card: int,
-    cards_per_opponent: int,
-    progress_callback=None,
-    message_callback=None,
-    role_assignment: Optional[Mapping[str, int]] = None,
-) -> Dict[str, object]:
-    """リーグ戦全体をシミュレーションして結果を返す"""
-
-    if games_per_card <= 0:
-        raise ValueError("games_per_card must be greater than zero.")
-    if cards_per_opponent <= 0:
-        raise ValueError("cards_per_opponent must be greater than zero.")
-
-    contexts = _build_team_contexts(team_datas)
-    if len(contexts) % 2 != 0:
-        raise ValueError("League simulation requires an even number of teams.")
-
-    results = _initialize_league_results(contexts, role_assignment=role_assignment)
-
-    rounds = _generate_round_robin_pairs(len(contexts))
-    total_days = (len(contexts) - 1) * games_per_card * cards_per_opponent
-    total_games = total_days * (len(contexts) // 2)
-
-    results["meta"].update(
-        {
-            "total_teams": len(contexts),
-            "games_per_card": games_per_card,
-            "cards_per_opponent": cards_per_opponent,
-            "total_days": total_days,
-            "scheduled_games": total_games,
-        }
-    )
-
-    day_number = 1
-    games_played = 0
-
-    for card_index in range(cards_per_opponent):
-        for round_index, round_pairs in enumerate(rounds):
-            for repeat_index in range(games_per_card):
-                if message_callback:
-                    message_callback(
-                        "Day {day}: card {card}/{cards}, round {round}/{rounds}, game {game}/{games}".format(
-                            day=day_number,
-                            card=card_index + 1,
-                            cards=cards_per_opponent,
-                            round=round_index + 1,
-                            rounds=len(rounds),
-                            game=repeat_index + 1,
-                            games=games_per_card,
+        for card_index in range(cards_per_opponent):
+            for round_index, round_pairs in enumerate(rounds):
+                for repeat_index in range(games_per_card):
+                    if self.message_callback:
+                        self.message_callback(
+                            "Day {day}: card {card}/{cards}, round {round}/{rounds}, game {game}/{games}".format(
+                                day=day_number,
+                                card=card_index + 1,
+                                cards=cards_per_opponent,
+                                round=round_index + 1,
+                                rounds=len(rounds),
+                                game=repeat_index + 1,
+                                games=games_per_card,
+                            )
                         )
-                    )
 
-                for home_index, away_index in round_pairs:
-                    home_ctx = contexts[home_index]
-                    away_ctx = contexts[away_index]
+                    for home_index, away_index in round_pairs:
+                        home_ctx = contexts[home_index]
+                        away_ctx = contexts[away_index]
 
-                    home_starter = home_ctx.next_starting_pitcher()
-                    away_starter = away_ctx.next_starting_pitcher()
+                        home_starter = home_ctx.next_starting_pitcher()
+                        away_starter = away_ctx.next_starting_pitcher()
 
-                    reset_team_and_players(
-                        home_ctx.team,
-                        away_ctx.team,
-                        home_pitcher_pool=home_ctx.pitcher_pool,
-                        away_pitcher_pool=away_ctx.pitcher_pool,
-                        home_starting_pitcher=home_starter,
-                        away_starting_pitcher=away_starter,
-                    )
+                        reset_team_and_players(
+                            home_ctx.team,
+                            away_ctx.team,
+                            home_pitcher_pool=home_ctx.pitcher_pool,
+                            away_pitcher_pool=away_ctx.pitcher_pool,
+                            home_starting_pitcher=home_starter,
+                            away_starting_pitcher=away_starter,
+                        )
 
-                    game = GameState(home_ctx.team, away_ctx.team)
-                    game_result = simulate_single_game(game)
-                    game_result.update(
-                        {
-                            "day": day_number,
-                            "card": card_index + 1,
-                            "round": round_index + 1,
-                            "card_game": repeat_index + 1,
-                        }
-                    )
-                    results["games"].append(game_result)
-                    update_statistics(results, game, game_result)
-                    games_played += 1
+                        game = GameState(home_ctx.team, away_ctx.team)
+                        game_result = simulate_single_game(game)
+                        game_result.update(
+                            {
+                                "day": day_number,
+                                "card": card_index + 1,
+                                "round": round_index + 1,
+                                "card_game": repeat_index + 1,
+                            }
+                        )
+                        results["games"].append(game_result)
+                        update_statistics(results, game, game_result)
+                        games_played += 1
 
-                if progress_callback:
-                    progress_callback(day_number, total_days)
+                    if self.progress_callback:
+                        self.progress_callback(day_number, total_days)
 
-                day_number += 1
+                    day_number += 1
 
-    results["meta"]["completed_games"] = games_played
-    results["meta"]["completed_days"] = day_number - 1
+        results["meta"]["completed_games"] = games_played
+        results["meta"]["completed_days"] = day_number - 1
 
-    return results
+        return results
+
+    def run_series(
+        self,
+        *,
+        num_games: int,
+        home_team_data: Optional[Mapping[str, object]] = None,
+        away_team_data: Optional[Mapping[str, object]] = None,
+    ) -> Dict[str, object]:
+        """Simulate a series between two teams, loading defaults when required."""
+
+        from baseball_sim.data.loader import DataLoader
+
+        team_data_path = PATHS.get_teams_data_path()
+        raw_team_data = DataLoader.load_json_data(team_data_path)
+        if not isinstance(raw_team_data, Mapping):
+            raise ValueError("Team data file is invalid or missing required structure.")
+
+        base_home = home_team_data or raw_team_data.get("home_team")
+        base_away = away_team_data or raw_team_data.get("away_team")
+        if not isinstance(base_home, Mapping) or not isinstance(base_away, Mapping):
+            raise ValueError("Home/Away team data could not be loaded.")
+
+        games_per_card = int(num_games) if num_games else 0
+        if games_per_card <= 0:
+            raise ValueError("リーグシミュレーションには1試合以上の設定が必要です。")
+
+        return self.run_league(
+            team_datas=[dict(base_home), dict(base_away)],
+            games_per_card=games_per_card,
+            cards_per_opponent=1,
+            role_assignment={"home": 0, "away": 1},
+        )
 
 
 def _iter_unique_teams(results: Mapping[str, object]) -> Iterable[object]:
@@ -336,42 +193,32 @@ def simulate_games(
     現在はファイルへの書き出しは行わない。
     """
 
+    simulator = LeagueSimulator(
+        progress_callback=progress_callback, message_callback=message_callback
+    )
+
     # リーグ構成を決定
     if league_options is not None:
         team_datas = list(league_options.get("teams", []))
         games_per_card = int(league_options.get("games_per_card", 0) or 0)
         cards_per_opponent = int(league_options.get("cards_per_opponent", 0) or 0)
         role_assignment = league_options.get("role_assignment")
+
+        if games_per_card <= 0 or cards_per_opponent <= 0:
+            raise ValueError("リーグシミュレーションには1試合以上の設定が必要です。")
+
+        results = simulator.run_league(
+            team_datas=team_datas,
+            games_per_card=games_per_card,
+            cards_per_opponent=cards_per_opponent,
+            role_assignment=role_assignment,
+        )
     else:
-        # 従来仕様: 指定の2チームでシリーズを構成
-        from baseball_sim.data.loader import DataLoader
-
-        team_data_path = PATHS.get_teams_data_path()
-        raw_team_data = DataLoader.load_json_data(team_data_path)
-        if not isinstance(raw_team_data, Mapping):
-            raise ValueError("Team data file is invalid or missing required structure.")
-
-        base_home = home_team_data or raw_team_data.get("home_team")
-        base_away = away_team_data or raw_team_data.get("away_team")
-        if not isinstance(base_home, Mapping) or not isinstance(base_away, Mapping):
-            raise ValueError("Home/Away team data could not be loaded.")
-
-        team_datas = [dict(base_home), dict(base_away)]
-        games_per_card = int(num_games) if num_games else 0
-        cards_per_opponent = 1
-        role_assignment = {"home": 0, "away": 1}
-
-    if games_per_card <= 0 or cards_per_opponent <= 0:
-        raise ValueError("リーグシミュレーションには1試合以上の設定が必要です。")
-
-    results = _simulate_league(
-        team_datas=team_datas,
-        games_per_card=games_per_card,
-        cards_per_opponent=cards_per_opponent,
-        progress_callback=progress_callback,
-        message_callback=message_callback,
-        role_assignment=role_assignment,
-    )
+        results = simulator.run_series(
+            num_games=int(num_games) if num_games is not None else 0,
+            home_team_data=home_team_data,
+            away_team_data=away_team_data,
+        )
 
     completion_message = "Simulation complete."
 
@@ -381,96 +228,6 @@ def simulate_games(
         print(completion_message)
 
     return results
-
-def reset_team_and_players(
-    home_team,
-    away_team,
-    *,
-    home_pitcher_pool=None,
-    away_pitcher_pool=None,
-    home_starting_pitcher=None,
-    away_starting_pitcher=None,
-):
-    """チームと選手の状態をリセットする（投手のスタミナなど）"""
-    # 1試合ごとに退場(ejected)扱いとラインナップ/ベンチを初期状態に戻す
-    # これにより、前試合で交代・退いた野手が次試合で再出場不可になる問題を防ぐ
-    for team in (home_team, away_team):
-        # 退場リストのクリア
-        if hasattr(team, "ejected_players"):
-            team.ejected_players = []
-        # ラインナップ/ベンチを初期スナップショットに復元（存在する場合）
-        try:
-            init_lineup = list(getattr(team, "_initial_lineup", []) or [])
-            init_positions = list(getattr(team, "_initial_lineup_positions", []) or [])
-            init_bench = list(getattr(team, "_initial_bench", []) or [])
-
-            if init_lineup and init_positions and len(init_lineup) == len(init_positions):
-                # ラインナップ復元
-                team.lineup = list(init_lineup)
-                # 守備位置マップをリセット
-                if hasattr(team, "defensive_positions"):
-                    for key in list(team.defensive_positions.keys()):
-                        team.defensive_positions[key] = None
-                # 各選手のポジションを復元
-                for player, pos in zip(init_lineup, init_positions):
-                    if pos is not None:
-                        player.current_position = pos
-                        if hasattr(team, "defensive_positions"):
-                            team.defensive_positions[pos] = player
-                # ベンチ復元
-                team.bench = list(init_bench)
-        except Exception:
-            # 復元に失敗しても致命的ではないため続行
-            pass
-
-    if home_pitcher_pool is not None:
-        home_team.pitchers = list(home_pitcher_pool)
-    if away_pitcher_pool is not None:
-        away_team.pitchers = list(away_pitcher_pool)
-
-    if hasattr(home_team, "pitcher_rotation"):
-        home_team.pitcher_rotation = [
-            pitcher for pitcher in home_team.pitcher_rotation if pitcher in home_team.pitchers
-        ]
-    if hasattr(away_team, "pitcher_rotation"):
-        away_team.pitcher_rotation = [
-            pitcher for pitcher in away_team.pitcher_rotation if pitcher in away_team.pitchers
-        ]
-
-    # 各チームの投手のスタミナを調整
-    # - SP: 毎試合フルにリセット（従来通り）
-    # - RP: 試合間でスタミナを引き継ぎ、試合前に+10回復（上限は基礎スタミナ）
-    for pitcher in home_team.pitchers:
-        ptype = getattr(pitcher, "pitcher_type", "").upper()
-        if ptype == "RP":
-            current = getattr(pitcher, "current_stamina", pitcher.stamina)
-            pitcher.current_stamina = min(pitcher.stamina, current + 10)
-        else:
-            pitcher.current_stamina = pitcher.stamina
-
-    for pitcher in away_team.pitchers:
-        ptype = getattr(pitcher, "pitcher_type", "").upper()
-        if ptype == "RP":
-            current = getattr(pitcher, "current_stamina", pitcher.stamina)
-            pitcher.current_stamina = min(pitcher.stamina, current + 10)
-        else:
-            pitcher.current_stamina = pitcher.stamina
-
-    # 打順をリセット
-    home_team.current_batter_index = 0
-    away_team.current_batter_index = 0
-    
-    # 先発投手をリセット（必要に応じて）
-    home_team.current_pitcher = (
-        home_starting_pitcher
-        if home_starting_pitcher is not None
-        else (home_team.pitchers[0] if home_team.pitchers else None)
-    )
-    away_team.current_pitcher = (
-        away_starting_pitcher
-        if away_starting_pitcher is not None
-        else (away_team.pitchers[0] if away_team.pitchers else None)
-    )
 
 class CPUDecisionEngine:
     """CPU decisions around defensive/offensive adjustments for a single game."""
@@ -764,49 +521,5 @@ def simulate_single_game(game):
 
     return game_result
 
-def update_statistics(results, game, game_result):
-    """チームの勝敗統計を更新する"""
 
-    def ensure_entry(team_obj):
-        team_name = getattr(team_obj, "name", "Team")
-        stats = results.setdefault("team_stats", {}).setdefault(
-            team_name,
-            {
-                "wins": 0,
-                "losses": 0,
-                "draws": 0,
-                "runs_scored": 0,
-                "runs_allowed": 0,
-                "games": 0,
-            },
-        )
-        return team_name, stats
-
-    home_name, home_stats = ensure_entry(game.home_team)
-    away_name, away_stats = ensure_entry(game.away_team)
-
-    home_stats["games"] += 1
-    away_stats["games"] += 1
-
-    if game.home_score > game.away_score:
-        home_stats["wins"] += 1
-        away_stats["losses"] += 1
-    elif game.away_score > game.home_score:
-        home_stats["losses"] += 1
-        away_stats["wins"] += 1
-    else:
-        home_stats["draws"] += 1
-        away_stats["draws"] += 1
-
-    home_stats["runs_scored"] += game.home_score
-    home_stats["runs_allowed"] += game.away_score
-    away_stats["runs_scored"] += game.away_score
-    away_stats["runs_allowed"] += game.home_score
-
-    # home/awayなどのエイリアスにも同じ参照を割り当てる
-    aliases = results.get("team_aliases", {})
-    for alias, target in aliases.items():
-        if target == home_name:
-            results["team_stats"][alias] = home_stats
-        elif target == away_name:
-            results["team_stats"][alias] = away_stats
+__all__ = ["LeagueSimulator", "simulate_games", "simulate_single_game"]
