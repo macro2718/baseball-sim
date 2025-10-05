@@ -2499,8 +2499,16 @@ function updateAnalyticsPanel(gameState) {
   const clampedProgress = Math.min(Math.max(rawProgress, 0), 1);
   const leverage = Math.max(0.25, 1 - Math.abs(0.5 - clampedProgress) * 1.2);
 
+  // Prefer simulation-based win probability when available.
+  // Fallback to heuristic only if simulation result is unavailable.
   let winProbability;
-  if (gameState.game_over) {
+  const simWin = result && Number.isFinite(Number(result.home_win_probability))
+    ? Number(result.home_win_probability)
+    : null;
+
+  if (simWin !== null) {
+    winProbability = Math.min(Math.max(simWin, 0), 1);
+  } else if (gameState.game_over) {
     if (homeRuns > awayRuns) {
       winProbability = 1;
     } else if (homeRuns < awayRuns) {
@@ -2512,8 +2520,8 @@ function updateAnalyticsPanel(gameState) {
     const runDiffImpact = Math.max(-3, Math.min(3, runDiff)) * 0.09 * leverage;
     const offenseAdjustment = gameState.offense === 'home' ? 0.03 : -0.03;
     winProbability = 0.5 + runDiffImpact + offenseAdjustment;
+    winProbability = Math.min(Math.max(winProbability, 0), 1);
   }
-  winProbability = Math.min(Math.max(winProbability, 0), 1);
 
   if (elements.insightWinProbability) {
     const winPercent = Math.round(winProbability * 100);
