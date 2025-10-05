@@ -13,6 +13,7 @@ export const stateCache = {
   abilitiesView: { team: 'away', type: 'batting' },
   uiView: 'lobby',
   titlePitcherReview: { team: null, pitcher: null },
+  titlePitcherSelection: { home: null, away: null },
   analytics: { running: false, samples: 0, sequence: null, offense: null, result: null, timestamp: null },
   analyticsPending: false,
   // Probability view state
@@ -157,6 +158,53 @@ function ensureSimulationRankingsState() {
 export function setUIView(view) {
   if (!view) return;
   stateCache.uiView = view;
+}
+
+function normalizeTeamKey(teamKey) {
+  return teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+}
+
+function ensureTitlePitcherSelectionState() {
+  if (!stateCache.titlePitcherSelection || typeof stateCache.titlePitcherSelection !== 'object') {
+    stateCache.titlePitcherSelection = { home: null, away: null };
+  }
+  const selection = stateCache.titlePitcherSelection;
+  ['home', 'away'].forEach((team) => {
+    const value = selection[team];
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      selection[team] = trimmed || null;
+    } else if (value !== null) {
+      selection[team] = null;
+    }
+  });
+  return selection;
+}
+
+export function getTitlePitcherSelection(teamKey) {
+  const normalizedTeam = normalizeTeamKey(teamKey);
+  if (!normalizedTeam) return null;
+  const selection = ensureTitlePitcherSelectionState();
+  const value = selection[normalizedTeam];
+  return typeof value === 'string' && value ? value : null;
+}
+
+export function setTitlePitcherSelection(teamKey, pitcherName) {
+  const normalizedTeam = normalizeTeamKey(teamKey);
+  if (!normalizedTeam) return;
+  const selection = ensureTitlePitcherSelectionState();
+  const text = typeof pitcherName === 'string' ? pitcherName.trim() : '';
+  selection[normalizedTeam] = text || null;
+}
+
+export function clearTitlePitcherSelection(teamKey = null) {
+  const selection = ensureTitlePitcherSelectionState();
+  if (teamKey === 'home' || teamKey === 'away') {
+    selection[teamKey] = null;
+  } else {
+    selection.home = null;
+    selection.away = null;
+  }
 }
 
 export function setSimulationResultsView(view) {

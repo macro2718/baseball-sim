@@ -17,6 +17,8 @@ import {
   getSimulationLeagueTeams,
   updateSimulationScheduleField,
   getSimulationSchedule,
+  getTitlePitcherSelection,
+  setTitlePitcherSelection,
 } from '../state.js';
 import {
   hideDefenseMenu,
@@ -3394,22 +3396,15 @@ export function initEventListeners(actions) {
     return true;
   }
 
-  function submitTitlePitcher(teamKey) {
+  function submitTitlePitcher(teamKey, explicitPitcher = null) {
     const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
     if (!normalizedTeam) {
       showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
       return;
     }
 
-    const select =
-      elements.titleScreen?.querySelector(`.title-pitcher-select[data-team="${normalizedTeam}"]`) ||
-      elements.pitcherEditorScreen?.querySelector(`.title-pitcher-select[data-team="${normalizedTeam}"]`);
-    if (!select) {
-      showStatus('先発投手の選択欄が見つかりません。', 'danger');
-      return;
-    }
-
-    const pitcherName = String(select.value || '').trim();
+    const fallbackName = getTitlePitcherSelection(normalizedTeam) || '';
+    const pitcherName = String(explicitPitcher ?? fallbackName ?? '').trim();
     if (!pitcherName) {
       showStatus('先発投手を選択してください。', 'danger');
       return;
@@ -3882,30 +3877,26 @@ export function initEventListeners(actions) {
         return;
       }
 
+      const reviewButton = event.target.closest('[data-action="review-title-pitcher"]');
+      if (reviewButton) {
+        event.preventDefault();
+        const teamKey = reviewButton.dataset.team || '';
+        const pitcherName = reviewButton.dataset.pitcher || '';
+        submitTitlePitcher(teamKey, pitcherName);
+        return;
+      }
+
       const pitcherOption = event.target.closest('[data-title-pitcher-option]');
       if (pitcherOption) {
         event.preventDefault();
         const rawTeam = pitcherOption.dataset.team || '';
         const normalizedTeam = rawTeam === 'home' ? 'home' : rawTeam === 'away' ? 'away' : null;
         if (!normalizedTeam) return;
-        const select = elements.pitcherEditorScreen?.querySelector(
-          `.title-pitcher-select[data-team="${normalizedTeam}"]`,
-        );
-        if (select) {
-          select.value = pitcherOption.dataset.pitcher || '';
-        }
+        setTitlePitcherSelection(normalizedTeam, pitcherOption.dataset.pitcher || '');
         lockTitleEditorTeam(normalizedTeam);
         setTitleEditorTab(normalizedTeam, 'pitcher');
         setTitleEditorOpen(normalizedTeam, true);
         renderTitle(stateCache.data?.title || {});
-        return;
-      }
-
-      const pitcherButton = event.target.closest('[data-action="apply-pitcher"]');
-      if (pitcherButton) {
-        event.preventDefault();
-        const teamKey = pitcherButton.dataset.team || '';
-        submitTitlePitcher(teamKey);
         return;
       }
     });
