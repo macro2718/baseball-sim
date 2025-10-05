@@ -53,6 +53,8 @@ import {
   isTitleEditorOpen,
   getTitleEditorTab,
   getTitleEditorView,
+  lockTitleEditorTeam,
+  clearTitleEditorLock,
   resetTitleEditorState,
 } from '../ui/titleLineup.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
@@ -3729,6 +3731,7 @@ export function initEventListeners(actions) {
         const teamKey = openPitcherEditor.dataset.team || '';
         const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
         if (!normalizedTeam) return;
+        lockTitleEditorTeam(normalizedTeam);
         setTitleEditorTab(normalizedTeam, 'pitcher');
         setTitleEditorOpen(normalizedTeam, true);
         setUIView('title-pitcher-editor');
@@ -3872,6 +3875,7 @@ export function initEventListeners(actions) {
         } else {
           resetTitleEditorState();
         }
+        clearTitleEditorLock();
         setUIView('title');
         renderTitle(stateCache.data?.title || {});
         updateScreenVisibility();
@@ -3890,6 +3894,7 @@ export function initEventListeners(actions) {
         if (select) {
           select.value = pitcherOption.dataset.pitcher || '';
         }
+        lockTitleEditorTeam(normalizedTeam);
         setTitleEditorTab(normalizedTeam, 'pitcher');
         setTitleEditorOpen(normalizedTeam, true);
         renderTitle(stateCache.data?.title || {});
