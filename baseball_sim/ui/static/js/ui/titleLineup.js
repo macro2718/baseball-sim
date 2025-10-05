@@ -194,18 +194,17 @@ export function setTitleLineupSelection(teamKey, type, index, field = null) {
 
 function ensureTitleEditorState() {
   if (!stateCache.titleLineup.editor || typeof stateCache.titleLineup.editor !== 'object') {
-    stateCache.titleLineup.editor = {
-      open: { home: false, away: false },
-      tab: { home: 'lineup', away: 'lineup' },
-    };
-  }
-  if (!stateCache.titleLineup.editor.open) {
-    stateCache.titleLineup.editor.open = { home: false, away: false };
+    stateCache.titleLineup.editor = { team: null, view: null, tab: { home: 'lineup', away: 'lineup' } };
   }
   if (!stateCache.titleLineup.editor.tab) {
     stateCache.titleLineup.editor.tab = { home: 'lineup', away: 'lineup' };
   }
-  return stateCache.titleLineup.editor;
+  const editor = stateCache.titleLineup.editor;
+  const normalizedTeam = editor.team === 'home' || editor.team === 'away' ? editor.team : null;
+  editor.team = normalizedTeam;
+  const normalizedView = editor.view === 'pitcher' ? 'pitcher' : editor.view === 'lineup' ? 'lineup' : null;
+  editor.view = normalizedView;
+  return editor;
 }
 
 function normalizeTeamKeyForEditor(teamKey) {
@@ -214,22 +213,30 @@ function normalizeTeamKeyForEditor(teamKey) {
 
 export function setTitleEditorOpen(teamKey, open) {
   const normalizedKey = normalizeTeamKeyForEditor(teamKey);
-  if (!normalizedKey) {
+  const editor = ensureTitleEditorState();
+  if (!open) {
+    editor.team = null;
+    editor.view = null;
     return false;
   }
-  const editor = ensureTitleEditorState();
-  const next = Boolean(open);
-  editor.open[normalizedKey] = next;
-  return next;
+  if (!normalizedKey) {
+    editor.team = null;
+    editor.view = null;
+    return false;
+  }
+  editor.team = normalizedKey;
+  const nextView = editor.tab?.[normalizedKey] === 'pitcher' ? 'pitcher' : 'lineup';
+  editor.view = nextView;
+  return true;
 }
 
 export function isTitleEditorOpen(teamKey) {
   const normalizedKey = normalizeTeamKeyForEditor(teamKey);
-  if (!normalizedKey) {
-    return false;
-  }
   const editor = ensureTitleEditorState();
-  return Boolean(editor.open?.[normalizedKey]);
+  if (!normalizedKey) {
+    return Boolean(editor.team);
+  }
+  return editor.team === normalizedKey;
 }
 
 export function setTitleEditorTab(teamKey, tab) {
@@ -240,6 +247,9 @@ export function setTitleEditorTab(teamKey, tab) {
   const editor = ensureTitleEditorState();
   const normalizedTab = tab === 'pitcher' ? 'pitcher' : 'lineup';
   editor.tab[normalizedKey] = normalizedTab;
+  if (editor.team === normalizedKey) {
+    editor.view = normalizedTab;
+  }
   return normalizedTab;
 }
 
@@ -251,6 +261,19 @@ export function getTitleEditorTab(teamKey) {
   const editor = ensureTitleEditorState();
   const tab = editor.tab?.[normalizedKey];
   return tab === 'pitcher' ? 'pitcher' : 'lineup';
+}
+
+export function getTitleEditorView() {
+  const editor = ensureTitleEditorState();
+  const team = editor.team === 'home' || editor.team === 'away' ? editor.team : null;
+  const view = editor.view === 'pitcher' ? 'pitcher' : editor.view === 'lineup' ? 'lineup' : null;
+  return { team, view };
+}
+
+export function resetTitleEditorState() {
+  const editor = ensureTitleEditorState();
+  editor.team = null;
+  editor.view = null;
 }
 
 export function swapTitleLineupPlayers(teamKey, indexA, indexB) {

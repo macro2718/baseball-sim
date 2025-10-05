@@ -52,6 +52,8 @@ import {
   setTitleEditorTab,
   isTitleEditorOpen,
   getTitleEditorTab,
+  getTitleEditorView,
+  resetTitleEditorState,
 } from '../ui/titleLineup.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
 import { applyAbilityColor, resetAbilityColor, ABILITY_COLOR_PRESETS } from '../ui/renderers.js';
@@ -3111,7 +3113,9 @@ export function initEventListeners(actions) {
       return;
     }
 
-    const container = elements.titleScreen?.querySelector(`[data-title-lineup="${normalizedTeam}"]`);
+    const container =
+      elements.titleScreen?.querySelector(`[data-title-lineup="${normalizedTeam}"]`) ||
+      elements.lineupEditorScreen?.querySelector(`[data-title-lineup="${normalizedTeam}"]`);
     if (!container) {
       showStatus('スタメン編集エリアが見つかりません。', 'danger');
       return;
@@ -3395,7 +3399,9 @@ export function initEventListeners(actions) {
       return;
     }
 
-    const select = elements.titleScreen?.querySelector(`.title-pitcher-select[data-team="${normalizedTeam}"]`);
+    const select =
+      elements.titleScreen?.querySelector(`.title-pitcher-select[data-team="${normalizedTeam}"]`) ||
+      elements.pitcherEditorScreen?.querySelector(`.title-pitcher-select[data-team="${normalizedTeam}"]`);
     if (!select) {
       showStatus('先発投手の選択欄が見つかりません。', 'danger');
       return;
@@ -3709,9 +3715,11 @@ export function initEventListeners(actions) {
         const teamKey = openLineupEditor.dataset.team || '';
         const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
         if (!normalizedTeam) return;
-        setTitleEditorOpen(normalizedTeam, true);
         setTitleEditorTab(normalizedTeam, 'lineup');
+        setTitleEditorOpen(normalizedTeam, true);
+        setUIView('title-lineup-editor');
         renderTitle(stateCache.data?.title || {});
+        updateScreenVisibility();
         return;
       }
 
@@ -3721,52 +3729,31 @@ export function initEventListeners(actions) {
         const teamKey = openPitcherEditor.dataset.team || '';
         const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
         if (!normalizedTeam) return;
-        setTitleEditorOpen(normalizedTeam, true);
         setTitleEditorTab(normalizedTeam, 'pitcher');
-        renderTitle(stateCache.data?.title || {});
-        return;
-      }
-
-      const closeEditorButton = event.target.closest('[data-action="close-editor"]');
-      if (closeEditorButton) {
-        event.preventDefault();
-        const teamKey = closeEditorButton.dataset.team || '';
-        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
-        if (!normalizedTeam) return;
-        setTitleEditorOpen(normalizedTeam, false);
-        clearTitleLineupSelection();
-        renderTitle(stateCache.data?.title || {});
-        return;
-      }
-
-      const tabButton = event.target.closest('[data-title-editor-tab]');
-      if (tabButton) {
-        event.preventDefault();
-        const teamKey = tabButton.dataset.team || '';
-        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
-        if (!normalizedTeam) return;
-        const tab = tabButton.dataset.titleEditorTab === 'pitcher' ? 'pitcher' : 'lineup';
         setTitleEditorOpen(normalizedTeam, true);
-        setTitleEditorTab(normalizedTeam, tab);
+        setUIView('title-pitcher-editor');
         renderTitle(stateCache.data?.title || {});
+        updateScreenVisibility();
         return;
       }
+    });
+  }
 
-      const pitcherOption = event.target.closest('[data-title-pitcher-option]');
-      if (pitcherOption) {
+  if (elements.lineupEditorScreen) {
+    elements.lineupEditorScreen.addEventListener('click', (event) => {
+      const backButton = event.target.closest('[data-action="close-lineup-screen"]');
+      if (backButton) {
         event.preventDefault();
-        const rawTeam = pitcherOption.dataset.team || '';
-        const normalizedTeam = rawTeam === 'home' ? 'home' : rawTeam === 'away' ? 'away' : null;
-        if (!normalizedTeam) return;
-        const select = elements.titleScreen?.querySelector(
-          `.title-pitcher-select[data-team="${normalizedTeam}"]`,
-        );
-        if (select) {
-          select.value = pitcherOption.dataset.pitcher || '';
+        const { team } = getTitleEditorView();
+        if (team) {
+          setTitleEditorOpen(team, false);
+        } else {
+          resetTitleEditorState();
         }
-        setTitleEditorOpen(normalizedTeam, true);
-        setTitleEditorTab(normalizedTeam, 'pitcher');
+        clearTitleLineupSelection();
+        setUIView('title');
         renderTitle(stateCache.data?.title || {});
+        updateScreenVisibility();
         return;
       }
 
@@ -3775,14 +3762,6 @@ export function initEventListeners(actions) {
         event.preventDefault();
         const teamKey = lineupButton.dataset.team || '';
         submitTitleLineup(teamKey, lineupButton);
-        return;
-      }
-
-      const pitcherButton = event.target.closest('[data-action="apply-pitcher"]');
-      if (pitcherButton) {
-        event.preventDefault();
-        const teamKey = pitcherButton.dataset.team || '';
-        submitTitlePitcher(teamKey);
         return;
       }
 
@@ -3878,6 +3857,51 @@ export function initEventListeners(actions) {
         }
 
         renderTitle(stateCache.data?.title || {});
+      }
+    });
+  }
+
+  if (elements.pitcherEditorScreen) {
+    elements.pitcherEditorScreen.addEventListener('click', (event) => {
+      const backButton = event.target.closest('[data-action="close-pitcher-screen"]');
+      if (backButton) {
+        event.preventDefault();
+        const { team } = getTitleEditorView();
+        if (team) {
+          setTitleEditorOpen(team, false);
+        } else {
+          resetTitleEditorState();
+        }
+        setUIView('title');
+        renderTitle(stateCache.data?.title || {});
+        updateScreenVisibility();
+        return;
+      }
+
+      const pitcherOption = event.target.closest('[data-title-pitcher-option]');
+      if (pitcherOption) {
+        event.preventDefault();
+        const rawTeam = pitcherOption.dataset.team || '';
+        const normalizedTeam = rawTeam === 'home' ? 'home' : rawTeam === 'away' ? 'away' : null;
+        if (!normalizedTeam) return;
+        const select = elements.pitcherEditorScreen?.querySelector(
+          `.title-pitcher-select[data-team="${normalizedTeam}"]`,
+        );
+        if (select) {
+          select.value = pitcherOption.dataset.pitcher || '';
+        }
+        setTitleEditorTab(normalizedTeam, 'pitcher');
+        setTitleEditorOpen(normalizedTeam, true);
+        renderTitle(stateCache.data?.title || {});
+        return;
+      }
+
+      const pitcherButton = event.target.closest('[data-action="apply-pitcher"]');
+      if (pitcherButton) {
+        event.preventDefault();
+        const teamKey = pitcherButton.dataset.team || '';
+        submitTitlePitcher(teamKey);
+        return;
       }
     });
   }

@@ -59,7 +59,8 @@ export const stateCache = {
     plans: { home: null, away: null },
     selection: { team: null, type: null, index: null, field: null },
     editor: {
-      open: { home: false, away: false },
+      team: null,
+      view: null,
       tab: { home: 'lineup', away: 'lineup' },
     },
   },
