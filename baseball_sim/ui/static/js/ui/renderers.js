@@ -2571,12 +2571,18 @@ export function updateProbabilityPanel(state) {
     probCurrentScoreProb,
     probCurrentWin,
     probCurrentMeta,
-    probTimelineTable,
+    probCurrentSamples,
+    probCurrentOffense,
+    probCurrentTimestamp,
     probTimelineEmpty,
     probCurrentBody,
     probTimelineBody,
     probTabCurrent,
     probTabTimeline,
+    probTimelineChart,
+    probTimelineChartLine,
+    probTimelineChartArea,
+    probTimelineChartDots,
   } = elements;
 
   // Guard missing DOM (non-game view)
@@ -2596,34 +2602,88 @@ export function updateProbabilityPanel(state) {
   if (probCurrentExpected) probCurrentExpected.textContent = expectedRuns != null ? expectedRuns.toFixed(2) : '--';
   if (probCurrentScoreProb) probCurrentScoreProb.textContent = scoreProb != null ? formatPercent01(scoreProb) : '--';
   if (probCurrentWin) probCurrentWin.textContent = winProb != null ? formatPercent01(winProb) : '--';
+  if (probCurrentSamples) probCurrentSamples.textContent = samples ? `${samples}試合` : '--';
+  if (probCurrentOffense) probCurrentOffense.textContent = offenseLabel;
   if (probCurrentMeta) {
     const ts = analytics?.timestamp ? formatSimulationTimestamp(analytics.timestamp) : '';
+    if (probCurrentTimestamp) probCurrentTimestamp.textContent = ts || '--';
     probCurrentMeta.textContent = `サンプル: ${samples || '--'}試合 ・ 攻撃: ${offenseLabel}${ts ? ' ・ 計算時刻: ' + ts : ''}`;
   }
 
-  // Timeline table
+  // Timeline chart
   const history = Array.isArray(stateCache.wpHistory) ? stateCache.wpHistory : [];
-  if (probTimelineTable) {
-    probTimelineTable.innerHTML = '';
-    history.forEach((h) => {
-      const tr = document.createElement('tr');
-      const tdSeq = document.createElement('td');
-      tdSeq.textContent = String(h.sequence);
-      const tdTs = document.createElement('td');
-      tdTs.textContent = formatSimulationTimestamp(h.timestamp);
-      const tdVal = document.createElement('td');
-      tdVal.textContent = `${Math.round(h.winProb * 100)}`;
-      tr.appendChild(tdSeq);
-      tr.appendChild(tdTs);
-      tr.appendChild(tdVal);
-      probTimelineTable.appendChild(tr);
-    });
-  }
+  const sanitizedHistory = history
+    .map((entry) => ({
+      sequence: entry.sequence,
+      timestamp: entry.timestamp,
+      winProb: Number.isFinite(Number(entry.winProb)) ? Number(entry.winProb) : null,
+    }))
+    .filter((entry) => entry.winProb != null);
+
+  const hasHistory = sanitizedHistory.length > 0;
+
   if (probTimelineEmpty) {
-    if (history.length === 0) {
-      probTimelineEmpty.classList.remove('hidden');
+    probTimelineEmpty.classList.toggle('hidden', hasHistory);
+  }
+
+  if (probTimelineChartLine && probTimelineChartArea && probTimelineChartDots) {
+    if (!hasHistory) {
+      probTimelineChartLine.setAttribute('d', '');
+      probTimelineChartArea.setAttribute('d', '');
+      probTimelineChartDots.innerHTML = '';
+      if (probTimelineChart) {
+        probTimelineChart.setAttribute('aria-hidden', 'true');
+      }
     } else {
-      probTimelineEmpty.classList.add('hidden');
+      if (probTimelineChart) {
+        probTimelineChart.removeAttribute('aria-hidden');
+      }
+
+      const clamp01 = (value) => Math.min(1, Math.max(0, value));
+      const pointCount = sanitizedHistory.length;
+      const denominator = pointCount > 1 ? pointCount - 1 : 1;
+      const rawPoints = sanitizedHistory.map((entry, index) => {
+        const ratio = pointCount > 1 ? index / denominator : 0.5;
+        const x = ratio * 100;
+        const y = 100 - clamp01(entry.winProb) * 100;
+        return { x, y, entry };
+      });
+
+      const linePoints = pointCount > 1
+        ? rawPoints
+        : [
+            { x: 0, y: rawPoints[0].y, entry: rawPoints[0].entry },
+            { x: 100, y: rawPoints[0].y, entry: rawPoints[0].entry },
+          ];
+
+      const linePath = linePoints
+        .map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x.toFixed(3)} ${point.y.toFixed(3)}`)
+        .join(' ');
+
+      let areaPath = '';
+      if (linePoints.length > 0) {
+        const startX = linePoints[0].x.toFixed(3);
+        const endX = linePoints[linePoints.length - 1].x.toFixed(3);
+        const segments = linePoints
+          .map((point) => `L ${point.x.toFixed(3)} ${point.y.toFixed(3)}`)
+          .join(' ');
+        areaPath = `M ${startX} 100 ${segments} L ${endX} 100 Z`;
+      }
+
+      probTimelineChartLine.setAttribute('d', linePath);
+      probTimelineChartArea.setAttribute('d', areaPath);
+
+      const svgNS = 'http://www.w3.org/2000/svg';
+      probTimelineChartDots.innerHTML = '';
+      rawPoints.forEach((point, idx) => {
+        const circle = document.createElementNS(svgNS, 'circle');
+        circle.setAttribute('cx', point.x.toFixed(3));
+        circle.setAttribute('cy', point.y.toFixed(3));
+        circle.setAttribute('r', pointCount > 30 ? '0.8' : '1.4');
+        circle.dataset.sequence = String(sanitizedHistory[idx].sequence ?? '');
+        circle.dataset.winProb = String(Math.round(clamp01(sanitizedHistory[idx].winProb) * 100));
+        probTimelineChartDots.appendChild(circle);
+      });
     }
   }
 
