@@ -167,6 +167,16 @@ class TeamManagementMixin:
             reset_analytics()
         self._game_over_announced = False
         self._action_block_reason = None
+        # Reload teams from the library to discard any in-game substitutions
+        # and restore the pre-game (default) batting order and benches.
+        # This ensures the title screen shows a clean lineup.
+        try:
+            self.ensure_teams(force_reload=True)
+        except Exception:
+            # If reload fails for any reason, continue returning current state
+            # so the UI remains responsive; notifications will already carry
+            # any prior errors from ensure_teams.
+            pass
         self._notifications.publish("info", "Game closed. Return to title screen.")
         return self.build_state()
 
@@ -478,4 +488,3 @@ class TeamManagementMixin:
         self._home_team_source = None
         self._away_team_source = None
         self._clear_simulation_results()
-

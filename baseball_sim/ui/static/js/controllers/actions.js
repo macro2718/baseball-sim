@@ -146,6 +146,17 @@ export function createGameActions(render) {
     }
   }
 
+  async function handleReturnToLobby() {
+    try {
+      const payload = await apiRequest(CONFIG.api.endpoints.gameStop, { method: 'POST' });
+      setUIView('lobby');
+      render(payload);
+      setAnalyticsPendingUI(false);
+    } catch (error) {
+      handleApiError(error, render);
+    }
+  }
+
   async function handleClearLog() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.clearLog, { method: 'POST' });
@@ -796,6 +807,7 @@ export function createGameActions(render) {
     handleStart,
     handleReloadTeams,
     handleReturnToTitle,
+    handleReturnToLobby,
     handleClearLog,
     startSimulation: handleSimulationStart,
     handleSimulationMatchStart,

@@ -24,6 +24,7 @@ export const elements = {
   reloadTeams: document.getElementById('reload-teams'),
   restartButton: document.getElementById('restart-game'),
   returnTitle: document.getElementById('return-title'),
+  gameBackToLobby: document.getElementById('game-back-to-lobby'),
   backToTeamSelect: document.getElementById('back-to-team-select'),
   clearLog: document.getElementById('clear-log'),
   swingButton: document.getElementById('swing-button'),

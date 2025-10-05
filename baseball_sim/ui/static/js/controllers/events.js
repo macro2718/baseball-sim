@@ -3547,6 +3547,11 @@ export function initEventListeners(actions) {
     actions.handleStart({ ...setup, reload: true });
   });
   elements.returnTitle.addEventListener('click', actions.handleReturnToTitle);
+  if (elements.gameBackToLobby) {
+    elements.gameBackToLobby.addEventListener('click', () => {
+      actions.handleReturnToLobby();
+    });
+  }
   elements.clearLog.addEventListener('click', actions.handleClearLog);
   elements.swingButton.addEventListener('click', actions.handleSwing);
   elements.buntButton.addEventListener('click', actions.handleBunt);
@@ -3830,14 +3835,7 @@ export function initEventListeners(actions) {
       } else if (value !== 'cpu') {
         setup.userTeam = 'home';
       }
-      // Reset team selects to placeholder when switching modes (CPU/全自動CPU ↔ 全操作)
-      stateCache.resetTeamSelect = true;
-      // Clear any previous selection so it won't auto-fill on next render
-      try {
-        updateTeamLibrarySelection({ home: null, away: null });
-      } catch (_) {
-        // noop
-      }
+      // Keep current team selections when changing match mode
       refreshView();
       });
     });
