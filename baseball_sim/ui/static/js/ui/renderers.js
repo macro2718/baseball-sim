@@ -4018,51 +4018,60 @@ function updateTitleEditorUI(teamKey) {
 }
 
 export function renderTitle(titleState) {
-  const homeName = document.querySelector('.team-name[data-team="home"]');
-  const awayName = document.querySelector('.team-name[data-team="away"]');
-  const homeMessage = document.querySelector('.team-message[data-team="home"]');
-  const awayMessage = document.querySelector('.team-message[data-team="away"]');
-  const homeErrors = document.querySelector('.team-errors[data-team="home"]');
-  const awayErrors = document.querySelector('.team-errors[data-team="away"]');
-  const homeControl = elements.teamControlHome;
-  const awayControl = elements.teamControlAway;
+  const teamKeys = ['home', 'away'];
+  const statusNodes = {
+    home: {
+      name: document.querySelector('.team-name[data-team="home"]'),
+      message: document.querySelector('.team-message[data-team="home"]'),
+      errors: document.querySelector('.team-errors[data-team="home"]'),
+    },
+    away: {
+      name: document.querySelector('.team-name[data-team="away"]'),
+      message: document.querySelector('.team-message[data-team="away"]'),
+      errors: document.querySelector('.team-errors[data-team="away"]'),
+    },
+  };
 
-  if (titleState.home) {
-    homeName.textContent = titleState.home.name;
-    homeMessage.textContent = titleState.home.message;
-    homeErrors.innerHTML = '';
-    titleState.home.errors.forEach((err) => {
-      const li = document.createElement('li');
-      li.textContent = err;
-      homeErrors.appendChild(li);
-    });
-  }
+  teamKeys.forEach((teamKey) => {
+    const status = titleState?.[teamKey];
+    const nodes = statusNodes[teamKey];
+    if (!status || !nodes) return;
 
-  if (titleState.away) {
-    awayName.textContent = titleState.away.name;
-    awayMessage.textContent = titleState.away.message;
-    awayErrors.innerHTML = '';
-    titleState.away.errors.forEach((err) => {
-      const li = document.createElement('li');
-      li.textContent = err;
-      awayErrors.appendChild(li);
-    });
-  }
+    if (nodes.name) {
+      nodes.name.textContent = status.name;
+    }
+    if (nodes.message) {
+      nodes.message.textContent = status.message;
+    }
+    if (nodes.errors) {
+      nodes.errors.innerHTML = '';
+      (status.errors || []).forEach((err) => {
+        const li = document.createElement('li');
+        li.textContent = err;
+        nodes.errors.appendChild(li);
+      });
+    }
+  });
 
   const teamsData = stateCache.data?.teams || {};
-  renderTitleLineup('home', teamsData.home, Boolean(teamsData?.home));
-  renderTitleLineup('away', teamsData.away, Boolean(teamsData?.away));
-  renderTitleBench('home', teamsData.home, Boolean(teamsData?.home));
-  renderTitleBench('away', teamsData.away, Boolean(teamsData?.away));
-  renderTitlePitcher('home', teamsData.home, Boolean(teamsData?.home));
-  renderTitlePitcher('away', teamsData.away, Boolean(teamsData?.away));
-  updateTitleEditorUI('home');
-  updateTitleEditorUI('away');
+  teamKeys.forEach((teamKey) => {
+    const teamData = teamsData?.[teamKey];
+    const enabled = Boolean(teamData);
+    renderTitleLineup(teamKey, teamData, enabled);
+    renderTitleBench(teamKey, teamData, enabled);
+    renderTitlePitcher(teamKey, teamData, enabled);
+    updateTitleEditorUI(teamKey);
+  });
 
   const { team: editorTeam, view: editorView } = getTitleEditorView();
+  const titleNames = {
+    home: titleState?.home?.name || '',
+    away: titleState?.away?.name || '',
+  };
+
   if (elements.lineupEditorTeamLabel) {
     if (editorTeam && editorView === 'lineup') {
-      const name = editorTeam === 'home' ? titleState.home?.name : titleState.away?.name;
+      const name = titleNames[editorTeam] || '';
       elements.lineupEditorTeamLabel.textContent = name ? `編集中: ${name}` : '';
     } else {
       elements.lineupEditorTeamLabel.textContent = '';
@@ -4070,33 +4079,30 @@ export function renderTitle(titleState) {
   }
   if (elements.pitcherEditorTeamLabel) {
     if (editorTeam && editorView === 'pitcher') {
-      const name = editorTeam === 'home' ? titleState.home?.name : titleState.away?.name;
+      const name = titleNames[editorTeam] || '';
       elements.pitcherEditorTeamLabel.textContent = name ? `編集中: ${name}` : '';
     } else {
       elements.pitcherEditorTeamLabel.textContent = '';
     }
   }
 
-  if (homeControl) {
-    if (teamsData.home) {
-      const label = teamsData.home.control_label || 'あなた';
-      homeControl.textContent = `操作: ${label}`;
-      homeControl.classList.remove('hidden');
+  const controlNodes = {
+    home: elements.teamControlHome,
+    away: elements.teamControlAway,
+  };
+  teamKeys.forEach((teamKey) => {
+    const controlNode = controlNodes[teamKey];
+    if (!controlNode) return;
+    const teamData = teamsData?.[teamKey];
+    if (teamData) {
+      const label = teamData.control_label || 'あなた';
+      controlNode.textContent = `操作: ${label}`;
+      controlNode.classList.remove('hidden');
     } else {
-      homeControl.textContent = '';
-      homeControl.classList.add('hidden');
+      controlNode.textContent = '';
+      controlNode.classList.add('hidden');
     }
-  }
-  if (awayControl) {
-    if (teamsData.away) {
-      const label = teamsData.away.control_label || 'あなた';
-      awayControl.textContent = `操作: ${label}`;
-      awayControl.classList.remove('hidden');
-    } else {
-      awayControl.textContent = '';
-      awayControl.classList.add('hidden');
-    }
-  }
+  });
 
   elements.titleHint.textContent = titleState.hint || '';
   elements.startButton.disabled = !titleState.ready;
@@ -4146,8 +4152,8 @@ export function renderTitle(titleState) {
         elements.titleControlHint.textContent = `${userLabel} を操作します。${cpuLabel} はCPUが操作します。`;
       }
     } else if (hintMode === 'auto') {
-      const homeName = hintHomeName || teamsData.home?.name || 'ホームチーム';
-      const awayName = hintAwayName || teamsData.away?.name || 'アウェイチーム';
+      const homeName = hintHomeName || teamsData?.home?.name || 'ホームチーム';
+      const awayName = hintAwayName || teamsData?.away?.name || 'アウェイチーム';
       elements.titleControlHint.textContent = `${awayName} と ${homeName} の試合は全自動CPUモードです。進行ボタンで試合を進めてください。`;
     } else {
       elements.titleControlHint.textContent = '全操作対戦: 両チームを自分で操作します。';

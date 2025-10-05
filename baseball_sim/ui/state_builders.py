@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Protocol, Tuple, TYPE_CHECKING
 
 from baseball_sim.gameplay.statistics import StatsCalculator
@@ -21,6 +22,47 @@ class SessionProtocol(Protocol):
     home_team: Optional[object]
     away_team: Optional[object]
     game_state: Optional["GameState"]
+
+
+@dataclass(frozen=True)
+class TeamStatus:
+    """Small value object describing lineup readiness for a team."""
+
+    name: str
+    valid: bool
+    message: str
+    errors: Tuple[str, ...]
+    loaded: bool = True
+
+    @property
+    def issues(self) -> int:
+        return len(self.errors)
+
+    @classmethod
+    def missing(cls) -> "TeamStatus":
+        return cls("-", False, "Team not loaded", tuple(), False)
+
+    @classmethod
+    def from_team(cls, team: Optional[object]) -> "TeamStatus":
+        if not team:
+            return cls.missing()
+        try:
+            errors_raw = getattr(team, "validate_lineup", lambda: [])()
+        except Exception:
+            errors_raw = []
+        errors_iterable = errors_raw or []
+        errors = tuple(str(error) for error in errors_iterable)
+        valid = len(errors) == 0
+        message = "✓ Ready" if valid else f"⚠ {len(errors)} issue(s)"
+        return cls(getattr(team, "name", "-"), valid, message, errors, True)
+
+    def to_dict(self) -> Dict[str, object]:
+        return {
+            "name": self.name,
+            "valid": self.valid,
+            "message": self.message,
+            "errors": list(self.errors),
+        }
 
 
 class SessionStateBuilder:
@@ -84,49 +126,29 @@ class SessionStateBuilder:
 
         home_status = self._team_status(self._session.home_team)
         away_status = self._team_status(self._session.away_team)
-        ready = bool(home_status["valid"] and away_status["valid"])
+        ready = home_status.valid and away_status.valid
 
-        if not self._session.home_team or not self._session.away_team:
+        if not home_status.loaded or not away_status.loaded:
             hint = "Teams could not be loaded. Check data files."
         elif ready:
             hint = "Lineups ready. Press Start Game to begin."
         else:
             issues = []
-            if not home_status["valid"]:
-                issues.append(
-                    f"{home_status['name']}: {len(home_status['errors'])} issue(s)"
-                )
-            if not away_status["valid"]:
-                issues.append(
-                    f"{away_status['name']}: {len(away_status['errors'])} issue(s)"
-                )
+            if not home_status.valid:
+                issues.append(f"{home_status.name}: {home_status.issues} issue(s)")
+            if not away_status.valid:
+                issues.append(f"{away_status.name}: {away_status.issues} issue(s)")
             hint = "Lineup validation failed: " + ", ".join(issues)
 
         return {
-            "home": home_status,
-            "away": away_status,
+            "home": home_status.to_dict(),
+            "away": away_status.to_dict(),
             "ready": ready,
             "hint": hint,
         }
 
-    def _team_status(self, team) -> Dict[str, object]:
-        if not team:
-            return {
-                "name": "-",
-                "valid": False,
-                "message": "Team not loaded",
-                "errors": [],
-            }
-
-        errors = team.validate_lineup()
-        valid = len(errors) == 0
-        message = "✓ Ready" if valid else f"⚠ {len(errors)} issue(s)"
-        return {
-            "name": team.name,
-            "valid": valid,
-            "message": message,
-            "errors": errors,
-        }
+    def _team_status(self, team) -> TeamStatus:
+        return TeamStatus.from_team(team)
 
     def _build_team_library_state(self) -> Dict[str, object]:
         if hasattr(self._session, "get_team_library_state"):
