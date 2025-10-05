@@ -15,6 +15,9 @@ import {
   getLineupPositionKey,
   canBenchPlayerCoverPosition,
   normalizePositionKey,
+  getTitlePitcherSelection,
+  setTitlePitcherSelection,
+  clearTitlePitcherSelection,
   setPinchRunContext,
   setPinchRunSelectedBase,
   getPinchRunSelectedBase,
@@ -3681,8 +3684,6 @@ function renderTitleBench(teamKey, teamData, enabled) {
 }
 
 function renderTitlePitcher(teamKey, teamData, enabled) {
-  const select = document.querySelector(`.title-pitcher-select[data-team="${teamKey}"]`);
-  const button = document.querySelector(`[data-action="apply-pitcher"][data-team="${teamKey}"]`);
   const list = document.querySelector(`[data-title-pitcher-list="${teamKey}"]`);
   const summary = document.querySelector(`[data-title-starter="${teamKey}"]`);
 
@@ -3691,9 +3692,6 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
   }
   if (list) {
     list.innerHTML = '';
-  }
-  if (select) {
-    select.innerHTML = '';
   }
 
   const appendMessage = (container, className, text) => {
@@ -3705,21 +3703,12 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
   };
 
   if (!enabled) {
+    clearTitlePitcherSelection(teamKey);
     if (summary) {
       appendMessage(summary, 'title-starter-empty', 'チームが読み込まれていません。');
     }
     if (list) {
       appendMessage(list, 'title-pitcher-empty', '投手データがありません。');
-    }
-    if (select) {
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.textContent = '投手を選択';
-      select.appendChild(placeholder);
-      select.disabled = true;
-    }
-    if (button) {
-      button.disabled = true;
     }
     return;
   }
@@ -3730,51 +3719,20 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
     traitRows.map((row) => [String(row?.name || '').trim(), row]),
   );
 
-  if (select) {
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = '投手を選択';
-    select.appendChild(placeholder);
-
-    pitchers.forEach((pitcher) => {
-      if (!pitcher || !pitcher.name) return;
-      const option = document.createElement('option');
-      option.value = pitcher.name;
-      const infoParts = [];
-      if (pitcher.pitcher_type) {
-        infoParts.push(pitcher.pitcher_type);
-      }
-      if (pitcher.throws) {
-        infoParts.push(pitcher.throws);
-      }
-      if (typeof pitcher.stamina === 'number' && Number.isFinite(pitcher.stamina)) {
-        infoParts.push(`St ${pitcher.stamina}`);
-      }
-      option.textContent = infoParts.length ? `${pitcher.name} (${infoParts.join(' / ')})` : pitcher.name;
-      if (pitcher.is_current) {
-        option.selected = true;
-      }
-      select.appendChild(option);
-    });
-  }
-
   const hasPitchers = pitchers.length > 0;
-
-  if (select) {
-    if (!select.value) {
-      const current = pitchers.find((pitcher) => pitcher?.is_current);
-      if (current) {
-        select.value = current.name;
-      }
-    }
-    select.disabled = !hasPitchers;
-  }
-  if (button) {
-    button.disabled = !hasPitchers;
-  }
-
-  const selectedName = select ? String(select.value || '').trim() : '';
   const currentPitcher = pitchers.find((pitcher) => pitcher?.is_current) || null;
+
+  let selectedName = getTitlePitcherSelection(teamKey) || '';
+  if (selectedName) {
+    const exists = pitchers.some((pitcher) => String(pitcher?.name || '').trim() === selectedName);
+    if (!exists) {
+      selectedName = '';
+    }
+  }
+  if (!selectedName && currentPitcher?.name) {
+    selectedName = String(currentPitcher.name || '').trim();
+  }
+  setTitlePitcherSelection(teamKey, selectedName);
 
   const formatAbilityValue = (value) => {
     if (value === null || value === undefined) return null;
@@ -3882,6 +3840,8 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
         if (!pitcher || !pitcher.name) return;
         const normalizedName = String(pitcher.name).trim();
         const traits = traitMap.get(normalizedName);
+        const isCurrent = Boolean(pitcher.is_current);
+        const isSelected = selectedName === normalizedName;
 
         const option = document.createElement('button');
         option.type = 'button';
@@ -3889,12 +3849,12 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
         option.dataset.titlePitcherOption = 'true';
         option.dataset.team = teamKey;
         option.dataset.pitcher = normalizedName;
-        option.setAttribute('aria-pressed', selectedName === normalizedName ? 'true' : 'false');
+        option.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
 
-        if (selectedName === normalizedName) {
+        if (isSelected) {
           option.classList.add('selected');
         }
-        if (pitcher.is_current) {
+        if (isCurrent) {
           option.classList.add('current');
         }
 
@@ -3920,12 +3880,12 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
           header.appendChild(meta);
         }
 
-        if (pitcher.is_current) {
+        if (isCurrent) {
           const badge = document.createElement('span');
           badge.className = 'title-pitcher-option-badge';
           badge.textContent = '現在の先発';
           header.appendChild(badge);
-        } else if (selectedName === normalizedName) {
+        } else if (isSelected) {
           const badge = document.createElement('span');
           badge.className = 'title-pitcher-option-badge';
           badge.textContent = '選択中';
@@ -3974,6 +3934,27 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
         }
 
         option.appendChild(abilityRow);
+
+        const actionsRow = document.createElement('div');
+        actionsRow.className = 'title-pitcher-option-actions';
+
+        const actionButton = document.createElement('button');
+        actionButton.type = 'button';
+        actionButton.className = 'title-pitcher-option-button primary';
+        actionButton.dataset.action = 'review-title-pitcher';
+        actionButton.dataset.team = teamKey;
+        actionButton.dataset.pitcher = normalizedName;
+        if (isCurrent) {
+          actionButton.textContent = '先発に設定済み';
+          actionButton.disabled = true;
+        } else if (isSelected) {
+          actionButton.textContent = '設定を確認';
+        } else {
+          actionButton.textContent = '先発に設定';
+        }
+
+        actionsRow.appendChild(actionButton);
+        option.appendChild(actionsRow);
 
         list.appendChild(option);
       });
