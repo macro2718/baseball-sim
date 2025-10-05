@@ -1497,6 +1497,7 @@
                   <p class="strategy-menu-title">試合データ</p>
                   <div class="strategy-menu-actions">
                     <button type="button" id="open-game-log">試合ログ</button>
+                    <button type="button" id="open-probability-data">確率データ</button>
                   </div>
                 </div>
                 <div
@@ -1919,6 +1920,47 @@
         <div class="modal-body stats-modal-body">
           <div class="log-entries" id="game-log-body"></div>
         </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="probability-modal" aria-hidden="true">
+      <div class="modal-card stats-modal" role="dialog" aria-modal="true" aria-labelledby="probability-modal-title">
+        <header class="modal-header">
+          <h3 id="probability-modal-title">確率データ</h3>
+          <button type="button" class="modal-close" data-close="probability-modal" aria-label="閉じる">&times;</button>
+        </header>
+        <section class="modal-body">
+          <div class="tabs-row" id="probability-tabs">
+            <button type="button" id="prob-tab-current" class="tab-button active" data-tab="current">現在の確率</button>
+            <button type="button" id="prob-tab-timeline" class="tab-button" data-tab="timeline">勝利確率の推移</button>
+          </div>
+          <div id="prob-current-body" class="prob-section" data-section="current">
+            <dl class="prob-current-list">
+              <div class="prob-item">
+                <dt>攻撃中得点期待値</dt>
+                <dd id="prob-current-expected">--</dd>
+              </div>
+              <div class="prob-item">
+                <dt>攻撃中1点以上確率</dt>
+                <dd id="prob-current-score-prob">--</dd>
+              </div>
+              <div class="prob-item">
+                <dt>勝利確率（ホーム）</dt>
+                <dd id="prob-current-win">--</dd>
+              </div>
+            </dl>
+            <p class="prob-meta" id="prob-current-meta"></p>
+          </div>
+          <div id="prob-timeline-body" class="prob-section hidden" data-section="timeline">
+            <div id="prob-timeline-empty" class="empty">データがありません。</div>
+            <table class="table compact" id="prob-timeline-table">
+              <thead>
+                <tr><th>シーケンス</th><th>時刻</th><th>勝利確率（%）</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
 

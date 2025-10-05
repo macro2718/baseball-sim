@@ -32,6 +32,7 @@ import {
   updateStatsPanel,
   updateAbilitiesPanel,
   updateGameLogPanel,
+  updateProbabilityPanel,
   render,
   renderTitle,
   updateScreenVisibility,
@@ -3618,8 +3619,28 @@ export function initEventListeners(actions) {
       openModal('game-log');
     });
   }
+  if (elements.openProbabilityButton) {
+    elements.openProbabilityButton.addEventListener('click', () => {
+      hideGameDataMenu();
+      updateProbabilityPanel(stateCache.data);
+      openModal('probability');
+    });
+  }
   if (elements.defenseResetButton) {
     elements.defenseResetButton.addEventListener('click', actions.handleDefenseReset);
+  }
+
+  // Probability modal tab switching
+  const setProbabilityTab = (tab) => {
+    const normalized = tab === 'timeline' ? 'timeline' : 'current';
+    stateCache.probTab = normalized;
+    updateProbabilityPanel(stateCache.data);
+  };
+  if (elements.probTabCurrent) {
+    elements.probTabCurrent.addEventListener('click', () => setProbabilityTab('current'));
+  }
+  if (elements.probTabTimeline) {
+    elements.probTabTimeline.addEventListener('click', () => setProbabilityTab('timeline'));
   }
   if (elements.defenseApplyButton) {
     elements.defenseApplyButton.addEventListener('click', actions.handleDefenseSubstitution);
@@ -5264,7 +5285,7 @@ export function initEventListeners(actions) {
     });
   });
 
-  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities', 'title-pitcher', 'game-log'].forEach((name) => {
+  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities', 'title-pitcher', 'game-log', 'probability'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
@@ -5391,7 +5412,7 @@ export function initEventListeners(actions) {
       hideOffenseMenu();
       hideDefenseMenu();
       hideGameDataMenu();
-      ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'game-log'].forEach((name) => {
+      ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'game-log', 'probability'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);

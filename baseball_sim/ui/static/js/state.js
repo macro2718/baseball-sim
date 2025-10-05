@@ -15,6 +15,10 @@ export const stateCache = {
   titlePitcherReview: { team: null, pitcher: null },
   analytics: { running: false, samples: 0, sequence: null, offense: null, result: null, timestamp: null },
   analyticsPending: false,
+  // Probability view state
+  wpHistory: [],
+  wpLastSeq: null,
+  probTab: 'current',
   // Navigation-reset flags
   resetTeamSelect: false,
   resetSimulationSelect: false,

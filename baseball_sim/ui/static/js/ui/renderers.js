@@ -141,6 +141,12 @@ function formatSimulationTimestamp(timestamp) {
   }
 }
 
+function formatPercent01(value) {
+  const v = Number(value);
+  if (!Number.isFinite(v)) return '--';
+  return `${Math.round(Math.max(0, Math.min(1, v)) * 100)}%`;
+}
+
 function hasAbilityData(team) {
   if (!team || !team.traits) return false;
   const { batting, pitching } = team.traits;
@@ -2557,6 +2563,76 @@ function updateAnalyticsPanel(gameState) {
       `勝利確率 ${winPercentLabel}%`,
     );
   }
+}
+
+export function updateProbabilityPanel(state) {
+  const {
+    probCurrentExpected,
+    probCurrentScoreProb,
+    probCurrentWin,
+    probCurrentMeta,
+    probTimelineTable,
+    probTimelineEmpty,
+    probCurrentBody,
+    probTimelineBody,
+    probTabCurrent,
+    probTabTimeline,
+  } = elements;
+
+  // Guard missing DOM (non-game view)
+  if (!probCurrentBody || !probTimelineBody) return;
+
+  const analytics = stateCache.analytics || {};
+  const result = analytics?.result || null;
+  const samples = Number.isFinite(Number(analytics?.samples)) ? Number(analytics.samples) : 0;
+  const offenseKey = analytics?.offense || null;
+  const offenseLabel = offenseKey === 'home' ? 'ホーム' : offenseKey === 'away' ? 'アウェイ' : '--';
+
+  // Current metrics
+  const expectedRuns = Number.isFinite(Number(result?.expected_runs)) ? Number(result.expected_runs) : null;
+  const scoreProb = Number.isFinite(Number(result?.score_probability)) ? Number(result.score_probability) : null;
+  const winProb = Number.isFinite(Number(result?.home_win_probability)) ? Number(result.home_win_probability) : null;
+
+  if (probCurrentExpected) probCurrentExpected.textContent = expectedRuns != null ? expectedRuns.toFixed(2) : '--';
+  if (probCurrentScoreProb) probCurrentScoreProb.textContent = scoreProb != null ? formatPercent01(scoreProb) : '--';
+  if (probCurrentWin) probCurrentWin.textContent = winProb != null ? formatPercent01(winProb) : '--';
+  if (probCurrentMeta) {
+    const ts = analytics?.timestamp ? formatSimulationTimestamp(analytics.timestamp) : '';
+    probCurrentMeta.textContent = `サンプル: ${samples || '--'}試合 ・ 攻撃: ${offenseLabel}${ts ? ' ・ 計算時刻: ' + ts : ''}`;
+  }
+
+  // Timeline table
+  const history = Array.isArray(stateCache.wpHistory) ? stateCache.wpHistory : [];
+  if (probTimelineTable) {
+    probTimelineTable.innerHTML = '';
+    history.forEach((h) => {
+      const tr = document.createElement('tr');
+      const tdSeq = document.createElement('td');
+      tdSeq.textContent = String(h.sequence);
+      const tdTs = document.createElement('td');
+      tdTs.textContent = formatSimulationTimestamp(h.timestamp);
+      const tdVal = document.createElement('td');
+      tdVal.textContent = `${Math.round(h.winProb * 100)}`;
+      tr.appendChild(tdSeq);
+      tr.appendChild(tdTs);
+      tr.appendChild(tdVal);
+      probTimelineTable.appendChild(tr);
+    });
+  }
+  if (probTimelineEmpty) {
+    if (history.length === 0) {
+      probTimelineEmpty.classList.remove('hidden');
+    } else {
+      probTimelineEmpty.classList.add('hidden');
+    }
+  }
+
+  // Ensure tab classes reflect state
+  const active = stateCache.probTab === 'timeline' ? 'timeline' : 'current';
+  if (probTabCurrent) probTabCurrent.classList.toggle('active', active === 'current');
+  if (probTabTimeline) probTabTimeline.classList.toggle('active', active === 'timeline');
+  probCurrentBody.classList.toggle('hidden', active !== 'current');
+  probTimelineBody.classList.toggle('hidden', active !== 'timeline');
 }
 
 function updateStrategyControls(gameState, teams) {
@@ -6037,6 +6113,27 @@ export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;
   stateCache.analytics = normalizeAnalyticsState(data?.game?.analytics);
+
+  // Track win probability history per play sequence using simulation output when available
+  try {
+    const seq = Number(stateCache.analytics?.sequence);
+    const simWin = Number(stateCache.analytics?.result?.home_win_probability);
+    const isWinFinite = Number.isFinite(simWin);
+    if (Number.isFinite(seq) && seq >= 0 && isWinFinite) {
+      const last = Number.isFinite(Number(stateCache.wpLastSeq)) ? Number(stateCache.wpLastSeq) : null;
+      if (last === null || seq > last) {
+        if (!Array.isArray(stateCache.wpHistory)) stateCache.wpHistory = [];
+        stateCache.wpHistory.push({ sequence: seq, timestamp: stateCache.analytics?.timestamp || Date.now(), winProb: Math.max(0, Math.min(1, simWin)) });
+        stateCache.wpLastSeq = seq;
+      } else if (seq < last) {
+        // New game or reset detected
+        stateCache.wpHistory = [{ sequence: seq, timestamp: stateCache.analytics?.timestamp || Date.now(), winProb: Math.max(0, Math.min(1, simWin)) }];
+        stateCache.wpLastSeq = seq;
+      }
+    }
+  } catch (e) {
+    // Non-fatal: history tracking optional
+  }
   const previousSimulation = stateCache.simulation || {};
 
   const controlState = normalizeControlState(data?.game?.control);
