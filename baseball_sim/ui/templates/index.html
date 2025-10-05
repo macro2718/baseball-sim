@@ -1929,36 +1929,95 @@
           <h3 id="probability-modal-title">確率データ</h3>
           <button type="button" class="modal-close" data-close="probability-modal" aria-label="閉じる">&times;</button>
         </header>
-        <section class="modal-body">
-          <div class="tabs-row" id="probability-tabs">
-            <button type="button" id="prob-tab-current" class="tab-button active" data-tab="current">現在の確率</button>
-            <button type="button" id="prob-tab-timeline" class="tab-button" data-tab="timeline">勝利確率の推移</button>
+        <section class="modal-body probability-modal-body">
+          <div class="stats-controls probability-controls" id="probability-tabs">
+            <div class="toggle-group" role="radiogroup" aria-label="表示切替">
+              <button
+                type="button"
+                id="prob-tab-current"
+                class="toggle active"
+                data-tab="current"
+              >現在の確率</button>
+              <button
+                type="button"
+                id="prob-tab-timeline"
+                class="toggle"
+                data-tab="timeline"
+              >勝利確率の推移</button>
+            </div>
           </div>
           <div id="prob-current-body" class="prob-section" data-section="current">
-            <dl class="prob-current-list">
-              <div class="prob-item">
-                <dt>攻撃中得点期待値</dt>
-                <dd id="prob-current-expected">--</dd>
+            <div class="prob-metric-grid">
+              <article class="prob-metric-card" data-metric="expected-runs">
+                <header class="prob-metric-header">
+                  <span class="prob-metric-icon" aria-hidden="true">📊</span>
+                  <span class="prob-metric-label">攻撃中得点期待値</span>
+                </header>
+                <p class="prob-metric-value" id="prob-current-expected">--</p>
+                <p class="prob-metric-caption">この攻撃で見込める平均追加得点</p>
+              </article>
+              <article class="prob-metric-card" data-metric="score-chance">
+                <header class="prob-metric-header">
+                  <span class="prob-metric-icon" aria-hidden="true">🎯</span>
+                  <span class="prob-metric-label">攻撃中1点以上確率</span>
+                </header>
+                <p class="prob-metric-value" id="prob-current-score-prob">--</p>
+                <p class="prob-metric-caption">この攻撃で1点以上奪う確率</p>
+              </article>
+              <article class="prob-metric-card" data-metric="win-probability">
+                <header class="prob-metric-header">
+                  <span class="prob-metric-icon" aria-hidden="true">🏆</span>
+                  <span class="prob-metric-label">勝利確率（ホーム）</span>
+                </header>
+                <p class="prob-metric-value" id="prob-current-win">--</p>
+                <p class="prob-metric-caption">現在時点のホーム勝利見込み</p>
+              </article>
+            </div>
+            <div class="prob-context">
+              <div class="prob-context-item">
+                <span class="prob-context-label">サンプル</span>
+                <span class="prob-context-value" id="prob-current-samples">--</span>
               </div>
-              <div class="prob-item">
-                <dt>攻撃中1点以上確率</dt>
-                <dd id="prob-current-score-prob">--</dd>
+              <div class="prob-context-item">
+                <span class="prob-context-label">攻撃側</span>
+                <span class="prob-context-value" id="prob-current-offense">--</span>
               </div>
-              <div class="prob-item">
-                <dt>勝利確率（ホーム）</dt>
-                <dd id="prob-current-win">--</dd>
+              <div class="prob-context-item">
+                <span class="prob-context-label">計算時刻</span>
+                <span class="prob-context-value" id="prob-current-timestamp">--</span>
               </div>
-            </dl>
-            <p class="prob-meta" id="prob-current-meta"></p>
+            </div>
+            <p class="prob-meta" id="prob-current-meta" aria-live="polite"></p>
           </div>
           <div id="prob-timeline-body" class="prob-section hidden" data-section="timeline">
-            <div id="prob-timeline-empty" class="empty">データがありません。</div>
-            <table class="table compact" id="prob-timeline-table">
-              <thead>
-                <tr><th>シーケンス</th><th>時刻</th><th>勝利確率（%）</th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
+            <div class="prob-chart-wrapper">
+              <div id="prob-timeline-empty" class="empty">データがありません。</div>
+              <svg
+                id="probability-chart"
+                class="prob-chart"
+                viewBox="0 0 100 100"
+                role="img"
+                aria-label="勝利確率の推移"
+                preserveAspectRatio="none"
+              >
+                <g class="prob-chart-grid" aria-hidden="true">
+                  <line x1="0" y1="0" x2="100" y2="0"></line>
+                  <line x1="0" y1="50" x2="100" y2="50"></line>
+                  <line x1="0" y1="100" x2="100" y2="100"></line>
+                </g>
+                <path id="probability-chart-area" class="prob-chart-area" d=""></path>
+                <path id="probability-chart-line" class="prob-chart-line" d=""></path>
+                <g id="probability-chart-dots" class="prob-chart-dots" aria-hidden="true"></g>
+              </svg>
+            </div>
+            <div class="prob-chart-legend" aria-hidden="true">
+              <span class="prob-legend-item"><span class="prob-legend-dot"></span>ホーム勝利確率</span>
+              <div class="prob-legend-scale">
+                <span>100%</span>
+                <span>50%</span>
+                <span>0%</span>
+              </div>
+            </div>
           </div>
         </section>
       </div>
