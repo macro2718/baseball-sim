@@ -24,6 +24,8 @@ import {
   toggleDefenseMenu,
   toggleLogPanel,
   toggleOffenseMenu,
+  toggleGameDataMenu,
+  hideGameDataMenu,
 } from '../ui/menus.js';
 import { closeModal, openModal, resolveModal } from '../ui/modals.js';
 import {
@@ -3604,6 +3606,15 @@ export function initEventListeners(actions) {
       openModal('abilities');
     });
   }
+  // 試合データ メニューの表示切替（攻撃/守備戦略と同仕様）
+  if (elements.openGameDataButton) {
+    elements.openGameDataButton.addEventListener('click', toggleGameDataMenu);
+  }
+  if (elements.openGameLogButton) {
+    elements.openGameLogButton.addEventListener('click', () => {
+      toggleLogPanel();
+    });
+  }
   if (elements.defenseResetButton) {
     elements.defenseResetButton.addEventListener('click', actions.handleDefenseReset);
   }
@@ -5376,16 +5387,13 @@ export function initEventListeners(actions) {
     if (event.key === 'Escape') {
       hideOffenseMenu();
       hideDefenseMenu();
+      hideGameDataMenu();
       ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);
         }
       });
-    }
-    if (event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
-      event.preventDefault();
-      toggleLogPanel();
     }
   });
 
