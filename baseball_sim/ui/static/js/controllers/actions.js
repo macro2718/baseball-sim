@@ -12,6 +12,7 @@ import {
 import { apiRequest } from '../services/apiClient.js';
 import { renderDefensePanel, updateDefenseSelectionInfo } from '../ui/defensePanel.js';
 import { showStatus } from '../ui/status.js';
+import { resetTitleEditorState, clearTitleLineupSelection } from '../ui/titleLineup.js';
 
 function handleApiError(error, render) {
   if (error?.payload?.state) {
@@ -138,6 +139,8 @@ export function createGameActions(render) {
   async function handleReturnToTitle() {
     try {
       const payload = await apiRequest(CONFIG.api.endpoints.gameStop, { method: 'POST' });
+      resetTitleEditorState();
+      clearTitleLineupSelection();
       setUIView('title');
       render(payload);
       setAnalyticsPendingUI(false);
@@ -592,6 +595,8 @@ export function createGameActions(render) {
         method: 'POST',
         body: JSON.stringify({ home: homeId, away: awayId }),
       });
+      resetTitleEditorState();
+      clearTitleLineupSelection();
       setUIView('title');
       render(payload);
     } catch (error) {

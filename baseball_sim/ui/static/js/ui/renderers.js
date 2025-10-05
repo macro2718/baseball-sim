@@ -52,6 +52,7 @@ import {
   getLineupEligibilityForBenchPlayer,
   isTitleEditorOpen,
   getTitleEditorTab,
+  getTitleEditorView,
 } from './titleLineup.js';
 import { setStatusMessage } from './status.js';
 import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
@@ -3981,13 +3982,14 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
 }
 
 function updateTitleEditorUI(teamKey) {
-  const panel = document.querySelector(`[data-title-editor="${teamKey}"]`);
+  const { team: activeTeam, view } = getTitleEditorView();
   const card = document.querySelector(`[data-team-card="${teamKey}"]`);
   const openButtons = document.querySelectorAll(
     `[data-action="open-lineup"][data-team="${teamKey}"], [data-action="open-pitcher"][data-team="${teamKey}"]`,
   );
   const isOpen = isTitleEditorOpen(teamKey);
-  const activeTab = getTitleEditorTab(teamKey);
+  const isLineupActive = isOpen && activeTeam === teamKey && view === 'lineup';
+  const isPitcherActive = isOpen && activeTeam === teamKey && view === 'pitcher';
 
   if (card) {
     card.classList.toggle('editor-open', isOpen);
@@ -3996,11 +3998,11 @@ function updateTitleEditorUI(teamKey) {
   openButtons.forEach((button) => {
     const action = button.dataset.action;
     if (action === 'open-lineup') {
-      const expanded = isOpen && activeTab === 'lineup';
+      const expanded = isLineupActive;
       button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       button.classList.toggle('active', expanded);
     } else if (action === 'open-pitcher') {
-      const expanded = isOpen && activeTab === 'pitcher';
+      const expanded = isPitcherActive;
       button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
       button.classList.toggle('active', expanded);
     } else {
@@ -4009,39 +4011,29 @@ function updateTitleEditorUI(teamKey) {
     }
   });
 
-  if (!panel) return;
-
-  if (isOpen) {
-    panel.classList.add('is-open');
-    panel.removeAttribute('hidden');
-    panel.setAttribute('aria-hidden', 'false');
-  } else {
-    panel.classList.remove('is-open');
-    panel.setAttribute('aria-hidden', 'true');
-    panel.setAttribute('hidden', '');
+  const lineupPanel = document.querySelector(`#lineup-editor-screen [data-title-editor="${teamKey}"]`);
+  if (lineupPanel) {
+    const visible = isLineupActive;
+    lineupPanel.classList.toggle('is-open', visible);
+    lineupPanel.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    if (visible) {
+      lineupPanel.removeAttribute('hidden');
+    } else {
+      lineupPanel.setAttribute('hidden', '');
+    }
   }
 
-  const tabButtons = panel.querySelectorAll('[data-title-editor-tab]');
-  tabButtons.forEach((tabButton) => {
-    const tab = tabButton.dataset.titleEditorTab === 'pitcher' ? 'pitcher' : 'lineup';
-    const selected = isOpen && tab === activeTab;
-    tabButton.setAttribute('aria-selected', selected ? 'true' : 'false');
-    tabButton.classList.toggle('is-active', selected);
-    tabButton.setAttribute('tabindex', selected ? '0' : '-1');
-  });
-
-  const tabPanels = panel.querySelectorAll('[data-title-editor-panel]');
-  tabPanels.forEach((panelEl) => {
-    const tab = panelEl.dataset.titleEditorPanel === 'pitcher' ? 'pitcher' : 'lineup';
-    const visible = isOpen && tab === activeTab;
-    panelEl.classList.toggle('is-active', visible);
-    panelEl.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  const pitcherPanel = document.querySelector(`#pitcher-editor-screen [data-title-editor="${teamKey}"]`);
+  if (pitcherPanel) {
+    const visible = isPitcherActive;
+    pitcherPanel.classList.toggle('is-open', visible);
+    pitcherPanel.setAttribute('aria-hidden', visible ? 'false' : 'true');
     if (visible) {
-      panelEl.removeAttribute('hidden');
+      pitcherPanel.removeAttribute('hidden');
     } else {
-      panelEl.setAttribute('hidden', '');
+      pitcherPanel.setAttribute('hidden', '');
     }
-  });
+  }
 }
 
 export function renderTitle(titleState) {
@@ -4085,6 +4077,24 @@ export function renderTitle(titleState) {
   renderTitlePitcher('away', teamsData.away, Boolean(teamsData?.away));
   updateTitleEditorUI('home');
   updateTitleEditorUI('away');
+
+  const { team: editorTeam, view: editorView } = getTitleEditorView();
+  if (elements.lineupEditorTeamLabel) {
+    if (editorTeam && editorView === 'lineup') {
+      const name = editorTeam === 'home' ? titleState.home?.name : titleState.away?.name;
+      elements.lineupEditorTeamLabel.textContent = name ? `編集中: ${name}` : '';
+    } else {
+      elements.lineupEditorTeamLabel.textContent = '';
+    }
+  }
+  if (elements.pitcherEditorTeamLabel) {
+    if (editorTeam && editorView === 'pitcher') {
+      const name = editorTeam === 'home' ? titleState.home?.name : titleState.away?.name;
+      elements.pitcherEditorTeamLabel.textContent = name ? `編集中: ${name}` : '';
+    } else {
+      elements.pitcherEditorTeamLabel.textContent = '';
+    }
+  }
 
   if (homeControl) {
     if (teamsData.home) {
@@ -4344,6 +4354,8 @@ export function updateScreenVisibility() {
   const showBuilder = view === 'team-builder';
   const showPlayerBuilder = view === 'player-builder';
   const showTitle = view === 'title';
+  const showLineupEditor = view === 'title-lineup-editor';
+  const showPitcherEditor = view === 'title-pitcher-editor';
   const showGame = view === 'game';
   const showSimulationSetup = view === 'simulation';
   const showSimulationResults = view === 'simulation-results';
@@ -4363,6 +4375,12 @@ export function updateScreenVisibility() {
   }
   if (elements.titleScreen) {
     elements.titleScreen.classList.toggle('hidden', !showTitle);
+  }
+  if (elements.lineupEditorScreen) {
+    elements.lineupEditorScreen.classList.toggle('hidden', !showLineupEditor);
+  }
+  if (elements.pitcherEditorScreen) {
+    elements.pitcherEditorScreen.classList.toggle('hidden', !showPitcherEditor);
   }
   if (elements.gameScreen) {
     elements.gameScreen.classList.toggle('hidden', !showGame);
