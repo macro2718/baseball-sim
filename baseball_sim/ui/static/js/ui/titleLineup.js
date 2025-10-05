@@ -192,6 +192,67 @@ export function setTitleLineupSelection(teamKey, type, index, field = null) {
   stateCache.titleLineup.selection = { team: normalizedKey, type, index, field: normalizedField };
 }
 
+function ensureTitleEditorState() {
+  if (!stateCache.titleLineup.editor || typeof stateCache.titleLineup.editor !== 'object') {
+    stateCache.titleLineup.editor = {
+      open: { home: false, away: false },
+      tab: { home: 'lineup', away: 'lineup' },
+    };
+  }
+  if (!stateCache.titleLineup.editor.open) {
+    stateCache.titleLineup.editor.open = { home: false, away: false };
+  }
+  if (!stateCache.titleLineup.editor.tab) {
+    stateCache.titleLineup.editor.tab = { home: 'lineup', away: 'lineup' };
+  }
+  return stateCache.titleLineup.editor;
+}
+
+function normalizeTeamKeyForEditor(teamKey) {
+  return teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+}
+
+export function setTitleEditorOpen(teamKey, open) {
+  const normalizedKey = normalizeTeamKeyForEditor(teamKey);
+  if (!normalizedKey) {
+    return false;
+  }
+  const editor = ensureTitleEditorState();
+  const next = Boolean(open);
+  editor.open[normalizedKey] = next;
+  return next;
+}
+
+export function isTitleEditorOpen(teamKey) {
+  const normalizedKey = normalizeTeamKeyForEditor(teamKey);
+  if (!normalizedKey) {
+    return false;
+  }
+  const editor = ensureTitleEditorState();
+  return Boolean(editor.open?.[normalizedKey]);
+}
+
+export function setTitleEditorTab(teamKey, tab) {
+  const normalizedKey = normalizeTeamKeyForEditor(teamKey);
+  if (!normalizedKey) {
+    return 'lineup';
+  }
+  const editor = ensureTitleEditorState();
+  const normalizedTab = tab === 'pitcher' ? 'pitcher' : 'lineup';
+  editor.tab[normalizedKey] = normalizedTab;
+  return normalizedTab;
+}
+
+export function getTitleEditorTab(teamKey) {
+  const normalizedKey = normalizeTeamKeyForEditor(teamKey);
+  if (!normalizedKey) {
+    return 'lineup';
+  }
+  const editor = ensureTitleEditorState();
+  const tab = editor.tab?.[normalizedKey];
+  return tab === 'pitcher' ? 'pitcher' : 'lineup';
+}
+
 export function swapTitleLineupPlayers(teamKey, indexA, indexB) {
   const plan = getTitleLineupPlan(teamKey);
   if (!plan) return false;

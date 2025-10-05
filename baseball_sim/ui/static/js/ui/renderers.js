@@ -50,6 +50,8 @@ import {
   getTitleLineupInvalidAssignments,
   getBenchEligibilityForPosition,
   getLineupEligibilityForBenchPlayer,
+  isTitleEditorOpen,
+  getTitleEditorTab,
 } from './titleLineup.js';
 import { setStatusMessage } from './status.js';
 import { triggerPlayAnimation, resetPlayAnimation } from './fieldAnimation.js';
@@ -3304,56 +3306,98 @@ export function renderGame(gameState, teams, log, previousGameState = null) {
 }
 
 function renderTitleLineup(teamKey, teamData, enabled) {
-  const container = document.querySelector(`[data-title-lineup="${teamKey}"]`);
+  const editorContainer = document.querySelector(`[data-title-lineup="${teamKey}"]`);
+  const summaryContainer = document.querySelector(`[data-title-lineup-summary="${teamKey}"]`);
   const note = document.querySelector(`[data-title-lineup-note="${teamKey}"]`);
   const applyButton = document.querySelector(`[data-action="apply-lineup"][data-team="${teamKey}"]`);
-  if (!container) return;
 
-  container.innerHTML = '';
+  if (summaryContainer) {
+    summaryContainer.innerHTML = '';
+  }
+  if (editorContainer) {
+    editorContainer.innerHTML = '';
+  }
+  if (note) {
+    note.textContent = '';
+  }
+  if (applyButton) {
+    applyButton.disabled = true;
+  }
 
   if (!enabled) {
-    if (note) {
-      note.textContent = 'チームデータが読み込まれていません。';
+    if (summaryContainer) {
+      const message = document.createElement('p');
+      message.className = 'title-summary-empty';
+      message.textContent = 'チームが読み込まれていません。';
+      summaryContainer.appendChild(message);
     }
-    const message = document.createElement('p');
-    message.className = 'title-bench-empty';
-    message.textContent = 'チームが読み込まれていません。';
-    container.appendChild(message);
-    if (applyButton) {
-      applyButton.disabled = true;
+    if (editorContainer) {
+      const message = document.createElement('p');
+      message.className = 'title-bench-empty';
+      message.textContent = 'チームが読み込まれていません。';
+      editorContainer.appendChild(message);
     }
     return;
   }
 
   const plan = ensureTitleLineupPlan(teamKey, teamData, enabled);
   if (!plan || !plan.lineup.length) {
+    if (summaryContainer) {
+      const message = document.createElement('p');
+      message.className = 'title-summary-empty';
+      message.textContent = 'スタメン情報がありません。';
+      summaryContainer.appendChild(message);
+    }
     if (note) {
       note.textContent = 'スタメン情報が不足しています。チーム編成を確認してください。';
     }
-    const message = document.createElement('p');
-    message.className = 'title-bench-empty';
-    message.textContent = 'スタメン情報がありません。';
-    container.appendChild(message);
+    if (editorContainer) {
+      const message = document.createElement('p');
+      message.className = 'title-bench-empty';
+      message.textContent = 'スタメン情報がありません。';
+      editorContainer.appendChild(message);
+    }
     if (applyButton) {
       applyButton.disabled = true;
     }
     return;
   }
 
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      return String(value);
+    }
+    const text = String(value).trim();
+    if (!text || text === '-' || text === '--') return null;
+    return text;
+  };
+
+  const createAbilityChip = (label, value) => {
+    const formatted = formatValue(value);
+    if (!formatted) return null;
+    const chip = document.createElement('span');
+    chip.className = 'title-lineup-chip';
+    chip.textContent = `${label} ${formatted}`;
+    return chip;
+  };
+
   const selection = getTitleLineupSelection();
   const selectionMatchesTeam = selection.team === plan.teamKey;
   const invalidAssignments = getTitleLineupInvalidAssignments(plan);
   const invalidIndexes = new Set(invalidAssignments.map((entry) => entry.index));
+  const editorOpen = isTitleEditorOpen(teamKey);
+  const activeTab = getTitleEditorTab(teamKey);
+  const editingLineup = editorOpen && activeTab === 'lineup';
   let helperMessage = '';
 
-  let benchEligibility = { eligible: new Set(), ineligible: new Set() };
   let lineupEligibility = { eligible: new Set(), ineligible: new Set() };
 
   if (selectionMatchesTeam && selection.type === 'lineup') {
     const slot = plan.lineup[selection.index];
     if (slot) {
-      benchEligibility = getBenchEligibilityForPosition(plan, slot.slotPositionKey);
-      helperMessage = `${slot.order}番 ${slot.slotPositionLabel} の交代先をベンチから選択してください。`;
+      helperMessage = `${slot.order}番 ${slot.slotPositionLabel || slot.slotPositionKey} の交代先をベンチから選択してください。`;
     }
   } else if (selectionMatchesTeam && selection.type === 'bench') {
     lineupEligibility = getLineupEligibilityForBenchPlayer(plan, selection.index);
@@ -3363,101 +3407,185 @@ function renderTitleLineup(teamKey, teamData, enabled) {
     }
   }
 
-  plan.lineup.forEach((slot) => {
-    if (!slot) return;
-    const row = document.createElement('div');
-    row.className = 'title-lineup-row';
-    row.dataset.team = plan.teamKey;
-    row.dataset.titleRole = 'lineup';
-    row.dataset.index = String(slot.index);
-
-    if (selectionMatchesTeam && selection.type === 'lineup' && selection.index === slot.index) {
-      row.classList.add('selected');
-    }
-    if (invalidIndexes.has(slot.index)) {
-      row.classList.add('invalid');
-    }
-    if (selectionMatchesTeam && selection.type === 'bench') {
-      if (lineupEligibility.eligible.has(slot.index)) {
-        row.classList.add('eligible');
-      } else if (lineupEligibility.ineligible.has(slot.index)) {
-        row.classList.add('ineligible');
+  if (summaryContainer) {
+    plan.lineup.forEach((slot) => {
+      if (!slot) return;
+      const row = document.createElement('div');
+      row.className = 'title-lineup-summary-row';
+      if (invalidIndexes.has(slot.index)) {
+        row.classList.add('invalid');
       }
-    }
-
-    const order = document.createElement('div');
-    order.className = 'title-lineup-order';
-    order.textContent = `${slot.order}`;
-
-    const positionLabel = slot.slotPositionLabel || slot.slotPositionKey || '-';
-
-    const positionButton = document.createElement('button');
-    positionButton.type = 'button';
-    positionButton.className = 'title-lineup-position';
-    positionButton.textContent = positionLabel;
-    positionButton.dataset.team = plan.teamKey;
-    positionButton.dataset.titleRole = 'lineup';
-    positionButton.dataset.index = String(slot.index);
-    positionButton.dataset.lineupField = 'position';
-    positionButton.setAttribute('aria-label', `${slot.order}番 ${positionLabel} の守備位置を選択`);
-    positionButton.setAttribute(
-      'aria-pressed',
-      selectionMatchesTeam &&
+      if (
+        editingLineup &&
+        selectionMatchesTeam &&
         selection.type === 'lineup' &&
-        selection.index === slot.index &&
-        (!selection.field || selection.field === 'position')
-        ? 'true'
-        : 'false',
-    );
+        selection.index === slot.index
+      ) {
+        row.classList.add('selected');
+      }
 
-    const playerButton = document.createElement('button');
-    playerButton.type = 'button';
-    playerButton.className = 'title-lineup-player';
-    playerButton.dataset.team = plan.teamKey;
-    playerButton.dataset.titleRole = 'lineup';
-    playerButton.dataset.index = String(slot.index);
-    playerButton.dataset.lineupField = 'player';
-    playerButton.setAttribute(
-      'aria-pressed',
-      selectionMatchesTeam &&
-        selection.type === 'lineup' &&
-        selection.index === slot.index &&
-        (!selection.field || selection.field === 'player')
-        ? 'true'
-        : 'false',
-    );
+      const order = document.createElement('span');
+      order.className = 'title-lineup-summary-order';
+      order.textContent = String(slot.order);
+      row.appendChild(order);
 
-    const name = document.createElement('span');
-    name.className = 'title-lineup-player-name';
-    name.textContent = slot.player?.name || '選手を選択';
-    playerButton.appendChild(name);
+      const main = document.createElement('div');
+      main.className = 'title-lineup-summary-main';
 
-    if (!slot.player) {
-      playerButton.classList.add('empty');
-    } else {
-      const metaParts = [];
-      if (slot.player.bats) {
-        metaParts.push(`Bats ${slot.player.bats}`);
+      const header = document.createElement('div');
+      header.className = 'title-lineup-summary-header';
+
+      const position = document.createElement('span');
+      position.className = 'title-lineup-summary-position';
+      position.textContent = slot.slotPositionLabel || slot.slotPositionKey || '-';
+      header.appendChild(position);
+
+      const name = document.createElement('span');
+      name.className = 'title-lineup-summary-name';
+      name.textContent = slot.player?.name || '選手未設定';
+      header.appendChild(name);
+
+      if (slot.player?.bats) {
+        const bats = document.createElement('span');
+        bats.className = 'title-lineup-summary-bats';
+        bats.textContent = slot.player.bats;
+        header.appendChild(bats);
       }
-      if (slot.player.fielding_rating) {
-        metaParts.push(`守備 ${slot.player.fielding_rating}`);
+
+      main.appendChild(header);
+
+      const abilities = document.createElement('div');
+      abilities.className = 'title-lineup-summary-abilities';
+
+      if (slot.player) {
+        const chips = [
+          createAbilityChip('AVG', slot.player.avg),
+          createAbilityChip('HR', slot.player.hr),
+          createAbilityChip('BB%', slot.player.bb_pct),
+          createAbilityChip('K%', slot.player.k_pct),
+          createAbilityChip('走力', slot.player.speed),
+          createAbilityChip('守備', slot.player.fielding_rating),
+        ].filter(Boolean);
+
+        if (chips.length) {
+          chips.forEach((chip) => abilities.appendChild(chip));
+        } else {
+          abilities.classList.add('empty');
+          abilities.textContent = '能力データがありません。';
+        }
+      } else {
+        abilities.classList.add('empty');
+        abilities.textContent = '選手を割り当ててください。';
       }
-      if (slot.player.avg) {
-        metaParts.push(`AVG ${slot.player.avg}`);
+
+      main.appendChild(abilities);
+      row.appendChild(main);
+      summaryContainer.appendChild(row);
+    });
+  }
+
+  if (editorContainer) {
+    plan.lineup.forEach((slot) => {
+      if (!slot) return;
+      const row = document.createElement('div');
+      row.className = 'title-lineup-row';
+      row.dataset.team = plan.teamKey;
+      row.dataset.titleRole = 'lineup';
+      row.dataset.index = String(slot.index);
+
+      if (selectionMatchesTeam && selection.type === 'lineup' && selection.index === slot.index) {
+        row.classList.add('selected');
       }
-      if (metaParts.length) {
-        const meta = document.createElement('span');
-        meta.className = 'title-lineup-player-meta';
-        meta.textContent = metaParts.join(' · ');
-        playerButton.appendChild(meta);
+      if (invalidIndexes.has(slot.index)) {
+        row.classList.add('invalid');
       }
+      if (selectionMatchesTeam && selection.type === 'bench') {
+        if (lineupEligibility.eligible.has(slot.index)) {
+          row.classList.add('eligible');
+        } else if (lineupEligibility.ineligible.has(slot.index)) {
+          row.classList.add('ineligible');
+        }
+      }
+
+      const order = document.createElement('div');
+      order.className = 'title-lineup-order';
+      order.textContent = `${slot.order}`;
+
+      const positionLabel = slot.slotPositionLabel || slot.slotPositionKey || '-';
+
+      const positionButton = document.createElement('button');
+      positionButton.type = 'button';
+      positionButton.className = 'title-lineup-position';
+      positionButton.textContent = positionLabel;
+      positionButton.dataset.team = plan.teamKey;
+      positionButton.dataset.titleRole = 'lineup';
+      positionButton.dataset.index = String(slot.index);
+      positionButton.dataset.lineupField = 'position';
+      positionButton.setAttribute('aria-label', `${slot.order}番 ${positionLabel} の守備位置を選択`);
+      positionButton.setAttribute(
+        'aria-pressed',
+        selectionMatchesTeam &&
+          selection.type === 'lineup' &&
+          selection.index === slot.index &&
+          (!selection.field || selection.field === 'position')
+          ? 'true'
+          : 'false',
+      );
+
+      const playerButton = document.createElement('button');
+      playerButton.type = 'button';
+      playerButton.className = 'title-lineup-player';
+      playerButton.dataset.team = plan.teamKey;
+      playerButton.dataset.titleRole = 'lineup';
+      playerButton.dataset.index = String(slot.index);
+      playerButton.dataset.lineupField = 'player';
+      playerButton.setAttribute(
+        'aria-pressed',
+        selectionMatchesTeam &&
+          selection.type === 'lineup' &&
+          selection.index === slot.index &&
+          (!selection.field || selection.field === 'player')
+          ? 'true'
+          : 'false',
+      );
+
+      const name = document.createElement('span');
+      name.className = 'title-lineup-player-name';
+      name.textContent = slot.player?.name || '選手を選択';
+      playerButton.appendChild(name);
+
+      if (!slot.player) {
+        playerButton.classList.add('empty');
+      } else {
+        const metaParts = [];
+        if (slot.player.bats) {
+          metaParts.push(`Bats ${slot.player.bats}`);
+        }
+        if (slot.player.fielding_rating) {
+          metaParts.push(`守備 ${slot.player.fielding_rating}`);
+        }
+        if (slot.player.avg) {
+          metaParts.push(`AVG ${slot.player.avg}`);
+        }
+        if (metaParts.length) {
+          const meta = document.createElement('span');
+          meta.className = 'title-lineup-player-meta';
+          meta.textContent = metaParts.join(' · ');
+          playerButton.appendChild(meta);
+        }
+      }
+
+      row.appendChild(order);
+      row.appendChild(positionButton);
+      row.appendChild(playerButton);
+      editorContainer.appendChild(row);
+    });
+
+    if (applyButton) {
+      const hasEmptySlot = plan.lineup.some((slot) => !slot.player || !slot.player.name);
+      applyButton.disabled = hasEmptySlot;
     }
-
-    row.appendChild(order);
-    row.appendChild(positionButton);
-    row.appendChild(playerButton);
-    container.appendChild(row);
-  });
+  }
 
   if (note) {
     if (helperMessage) {
@@ -3468,13 +3596,8 @@ function renderTitleLineup(teamKey, teamData, enabled) {
         .join('、');
       note.textContent = `${labels} を守れる選手が見つかりません。`;
     } else {
-      note.textContent = '守備位置をクリックして、ベンチから交代させる選手を選択できます。';
+      note.textContent = '守備位置または選手名をクリックして、ベンチから交代させる選手を選択できます。';
     }
-  }
-
-  if (applyButton) {
-    const hasEmptySlot = plan.lineup.some((slot) => !slot.player || !slot.player.name);
-    applyButton.disabled = hasEmptySlot;
   }
 }
 
@@ -3559,12 +3682,41 @@ function renderTitleBench(teamKey, teamData, enabled) {
 function renderTitlePitcher(teamKey, teamData, enabled) {
   const select = document.querySelector(`.title-pitcher-select[data-team="${teamKey}"]`);
   const button = document.querySelector(`[data-action="apply-pitcher"][data-team="${teamKey}"]`);
-  if (!select) return;
+  const list = document.querySelector(`[data-title-pitcher-list="${teamKey}"]`);
+  const summary = document.querySelector(`[data-title-starter="${teamKey}"]`);
 
-  select.innerHTML = '';
+  if (summary) {
+    summary.innerHTML = '';
+  }
+  if (list) {
+    list.innerHTML = '';
+  }
+  if (select) {
+    select.innerHTML = '';
+  }
+
+  const appendMessage = (container, className, text) => {
+    if (!container) return;
+    const message = document.createElement('p');
+    message.className = className;
+    message.textContent = text;
+    container.appendChild(message);
+  };
 
   if (!enabled) {
-    select.disabled = true;
+    if (summary) {
+      appendMessage(summary, 'title-starter-empty', 'チームが読み込まれていません。');
+    }
+    if (list) {
+      appendMessage(list, 'title-pitcher-empty', '投手データがありません。');
+    }
+    if (select) {
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = '投手を選択';
+      select.appendChild(placeholder);
+      select.disabled = true;
+    }
     if (button) {
       button.disabled = true;
     }
@@ -3572,44 +3724,324 @@ function renderTitlePitcher(teamKey, teamData, enabled) {
   }
 
   const pitchers = Array.isArray(teamData?.pitchers) ? teamData.pitchers : [];
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = '投手を選択';
-  select.appendChild(placeholder);
+  const traitRows = Array.isArray(teamData?.traits?.pitching) ? teamData.traits.pitching : [];
+  const traitMap = new Map(
+    traitRows.map((row) => [String(row?.name || '').trim(), row]),
+  );
 
-  pitchers.forEach((pitcher) => {
-    if (!pitcher || !pitcher.name) return;
-    const option = document.createElement('option');
-    option.value = pitcher.name;
-    const infoParts = [];
-    if (pitcher.pitcher_type) {
-      infoParts.push(pitcher.pitcher_type);
-    }
-    if (pitcher.throws) {
-      infoParts.push(pitcher.throws);
-    }
-    if (typeof pitcher.stamina === 'number' && Number.isFinite(pitcher.stamina)) {
-      infoParts.push(`St ${pitcher.stamina}`);
-    }
-    option.textContent = infoParts.length ? `${pitcher.name} (${infoParts.join(' / ')})` : pitcher.name;
-    if (pitcher.is_current) {
-      option.selected = true;
-    }
-    select.appendChild(option);
-  });
+  if (select) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '投手を選択';
+    select.appendChild(placeholder);
 
-  if (!select.value) {
-    const current = pitchers.find((pitcher) => pitcher?.is_current);
-    if (current) {
-      select.value = current.name;
-    }
+    pitchers.forEach((pitcher) => {
+      if (!pitcher || !pitcher.name) return;
+      const option = document.createElement('option');
+      option.value = pitcher.name;
+      const infoParts = [];
+      if (pitcher.pitcher_type) {
+        infoParts.push(pitcher.pitcher_type);
+      }
+      if (pitcher.throws) {
+        infoParts.push(pitcher.throws);
+      }
+      if (typeof pitcher.stamina === 'number' && Number.isFinite(pitcher.stamina)) {
+        infoParts.push(`St ${pitcher.stamina}`);
+      }
+      option.textContent = infoParts.length ? `${pitcher.name} (${infoParts.join(' / ')})` : pitcher.name;
+      if (pitcher.is_current) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
   }
 
   const hasPitchers = pitchers.length > 0;
-  select.disabled = !hasPitchers;
+
+  if (select) {
+    if (!select.value) {
+      const current = pitchers.find((pitcher) => pitcher?.is_current);
+      if (current) {
+        select.value = current.name;
+      }
+    }
+    select.disabled = !hasPitchers;
+  }
   if (button) {
     button.disabled = !hasPitchers;
   }
+
+  const selectedName = select ? String(select.value || '').trim() : '';
+  const currentPitcher = pitchers.find((pitcher) => pitcher?.is_current) || null;
+
+  const formatAbilityValue = (value) => {
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+    if (!text || text === '-' || text === '--') return null;
+    return text;
+  };
+
+  const formatStatValue = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    return String(value);
+  };
+
+  const createChip = (label, value, className = 'title-pitcher-chip') => {
+    const formatted = typeof value === 'function' ? value() : value;
+    if (!formatted) return null;
+    const chip = document.createElement('span');
+    chip.className = className;
+    chip.textContent = `${label} ${formatted}`;
+    return chip;
+  };
+
+  if (summary) {
+    if (!currentPitcher) {
+      appendMessage(summary, 'title-starter-empty', '先発が設定されていません。');
+    } else {
+      const normalizedName = String(currentPitcher.name || '').trim();
+      const traits = traitMap.get(normalizedName);
+
+      const header = document.createElement('div');
+      header.className = 'title-starter-header';
+
+      const name = document.createElement('div');
+      name.className = 'title-starter-name';
+      name.textContent = normalizedName || '先発投手未設定';
+      header.appendChild(name);
+
+      const metaParts = [];
+      if (currentPitcher.pitcher_type) {
+        metaParts.push(currentPitcher.pitcher_type);
+      }
+      if (currentPitcher.throws) {
+        metaParts.push(currentPitcher.throws);
+      }
+      if (currentPitcher.stamina != null && currentPitcher.stamina !== '') {
+        metaParts.push(`St ${currentPitcher.stamina}`);
+      }
+      if (metaParts.length) {
+        const meta = document.createElement('div');
+        meta.className = 'title-starter-meta';
+        meta.textContent = metaParts.join(' / ');
+        header.appendChild(meta);
+      }
+
+      summary.appendChild(header);
+
+      const statsRow = document.createElement('div');
+      statsRow.className = 'title-starter-stats';
+
+      const eraChip = createChip('ERA', () => formatStatValue(currentPitcher.era));
+      const ipChip = createChip('IP', () => formatStatValue(currentPitcher.ip));
+      const soChip = createChip('SO', () => formatStatValue(currentPitcher.so));
+      [eraChip, ipChip, soChip].forEach((chip) => {
+        if (chip) statsRow.appendChild(chip);
+      });
+
+      if (!statsRow.children.length) {
+        const fallback = document.createElement('span');
+        fallback.className = 'title-pitcher-chip empty';
+        fallback.textContent = '投球成績データなし';
+        statsRow.appendChild(fallback);
+      }
+
+      summary.appendChild(statsRow);
+
+      const abilityRow = document.createElement('div');
+      abilityRow.className = 'title-starter-abilities';
+
+      const abilityChips = [
+        createChip('K%', () => formatAbilityValue(traits?.k_pct)),
+        createChip('BB%', () => formatAbilityValue(traits?.bb_pct)),
+        createChip('強打%', () => formatAbilityValue(traits?.hard_pct)),
+        createChip('ゴロ%', () => formatAbilityValue(traits?.gb_pct)),
+        createChip('スタミナ', () => formatAbilityValue(traits?.stamina ?? currentPitcher.stamina)),
+      ].filter(Boolean);
+
+      if (abilityChips.length) {
+        abilityChips.forEach((chip) => abilityRow.appendChild(chip));
+      } else {
+        const fallback = document.createElement('span');
+        fallback.className = 'title-pitcher-chip empty';
+        fallback.textContent = '能力データがありません。';
+        abilityRow.appendChild(fallback);
+      }
+
+      summary.appendChild(abilityRow);
+    }
+  }
+
+  if (list) {
+    if (!hasPitchers) {
+      appendMessage(list, 'title-pitcher-empty', '先発候補が登録されていません。');
+    } else {
+      pitchers.forEach((pitcher) => {
+        if (!pitcher || !pitcher.name) return;
+        const normalizedName = String(pitcher.name).trim();
+        const traits = traitMap.get(normalizedName);
+
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'title-pitcher-option';
+        option.dataset.titlePitcherOption = 'true';
+        option.dataset.team = teamKey;
+        option.dataset.pitcher = normalizedName;
+        option.setAttribute('aria-pressed', selectedName === normalizedName ? 'true' : 'false');
+
+        if (selectedName === normalizedName) {
+          option.classList.add('selected');
+        }
+        if (pitcher.is_current) {
+          option.classList.add('current');
+        }
+
+        const header = document.createElement('div');
+        header.className = 'title-pitcher-option-header';
+
+        const name = document.createElement('div');
+        name.className = 'title-pitcher-option-name';
+        name.textContent = normalizedName || '投手';
+        header.appendChild(name);
+
+        const metaParts = [];
+        if (pitcher.pitcher_type) {
+          metaParts.push(pitcher.pitcher_type);
+        }
+        if (pitcher.throws) {
+          metaParts.push(pitcher.throws);
+        }
+        if (metaParts.length) {
+          const meta = document.createElement('div');
+          meta.className = 'title-pitcher-option-meta';
+          meta.textContent = metaParts.join(' / ');
+          header.appendChild(meta);
+        }
+
+        if (pitcher.is_current) {
+          const badge = document.createElement('span');
+          badge.className = 'title-pitcher-option-badge';
+          badge.textContent = '現在の先発';
+          header.appendChild(badge);
+        } else if (selectedName === normalizedName) {
+          const badge = document.createElement('span');
+          badge.className = 'title-pitcher-option-badge';
+          badge.textContent = '選択中';
+          header.appendChild(badge);
+        }
+
+        option.appendChild(header);
+
+        const statsRow = document.createElement('div');
+        statsRow.className = 'title-pitcher-option-stats';
+
+        const eraChip = createChip('ERA', () => formatStatValue(pitcher.era));
+        const ipChip = createChip('IP', () => formatStatValue(pitcher.ip));
+        const soChip = createChip('SO', () => formatStatValue(pitcher.so));
+        [eraChip, ipChip, soChip].forEach((chip) => {
+          if (chip) statsRow.appendChild(chip);
+        });
+
+        if (!statsRow.children.length) {
+          const fallback = document.createElement('span');
+          fallback.className = 'title-pitcher-chip empty';
+          fallback.textContent = '成績データなし';
+          statsRow.appendChild(fallback);
+        }
+
+        option.appendChild(statsRow);
+
+        const abilityRow = document.createElement('div');
+        abilityRow.className = 'title-pitcher-option-abilities';
+
+        const abilityChips = [
+          createChip('K%', () => formatAbilityValue(traits?.k_pct)),
+          createChip('BB%', () => formatAbilityValue(traits?.bb_pct)),
+          createChip('強打%', () => formatAbilityValue(traits?.hard_pct)),
+          createChip('ゴロ%', () => formatAbilityValue(traits?.gb_pct)),
+          createChip('スタミナ', () => formatAbilityValue(traits?.stamina ?? pitcher.stamina)),
+        ].filter(Boolean);
+
+        if (abilityChips.length) {
+          abilityChips.forEach((chip) => abilityRow.appendChild(chip));
+        } else {
+          const fallback = document.createElement('span');
+          fallback.className = 'title-pitcher-chip empty';
+          fallback.textContent = '能力データなし';
+          abilityRow.appendChild(fallback);
+        }
+
+        option.appendChild(abilityRow);
+
+        list.appendChild(option);
+      });
+    }
+  }
+}
+
+function updateTitleEditorUI(teamKey) {
+  const panel = document.querySelector(`[data-title-editor="${teamKey}"]`);
+  const card = document.querySelector(`[data-team-card="${teamKey}"]`);
+  const openButtons = document.querySelectorAll(
+    `[data-action="open-lineup"][data-team="${teamKey}"], [data-action="open-pitcher"][data-team="${teamKey}"]`,
+  );
+  const isOpen = isTitleEditorOpen(teamKey);
+  const activeTab = getTitleEditorTab(teamKey);
+
+  if (card) {
+    card.classList.toggle('editor-open', isOpen);
+  }
+
+  openButtons.forEach((button) => {
+    const action = button.dataset.action;
+    if (action === 'open-lineup') {
+      const expanded = isOpen && activeTab === 'lineup';
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      button.classList.toggle('active', expanded);
+    } else if (action === 'open-pitcher') {
+      const expanded = isOpen && activeTab === 'pitcher';
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      button.classList.toggle('active', expanded);
+    } else {
+      button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      button.classList.toggle('active', isOpen);
+    }
+  });
+
+  if (!panel) return;
+
+  if (isOpen) {
+    panel.classList.add('is-open');
+    panel.removeAttribute('hidden');
+    panel.setAttribute('aria-hidden', 'false');
+  } else {
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.setAttribute('hidden', '');
+  }
+
+  const tabButtons = panel.querySelectorAll('[data-title-editor-tab]');
+  tabButtons.forEach((tabButton) => {
+    const tab = tabButton.dataset.titleEditorTab === 'pitcher' ? 'pitcher' : 'lineup';
+    const selected = isOpen && tab === activeTab;
+    tabButton.setAttribute('aria-selected', selected ? 'true' : 'false');
+    tabButton.classList.toggle('is-active', selected);
+    tabButton.setAttribute('tabindex', selected ? '0' : '-1');
+  });
+
+  const tabPanels = panel.querySelectorAll('[data-title-editor-panel]');
+  tabPanels.forEach((panelEl) => {
+    const tab = panelEl.dataset.titleEditorPanel === 'pitcher' ? 'pitcher' : 'lineup';
+    const visible = isOpen && tab === activeTab;
+    panelEl.classList.toggle('is-active', visible);
+    panelEl.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    if (visible) {
+      panelEl.removeAttribute('hidden');
+    } else {
+      panelEl.setAttribute('hidden', '');
+    }
+  });
 }
 
 export function renderTitle(titleState) {
@@ -3651,6 +4083,8 @@ export function renderTitle(titleState) {
   renderTitleBench('away', teamsData.away, Boolean(teamsData?.away));
   renderTitlePitcher('home', teamsData.home, Boolean(teamsData?.home));
   renderTitlePitcher('away', teamsData.away, Boolean(teamsData?.away));
+  updateTitleEditorUI('home');
+  updateTitleEditorUI('away');
 
   if (homeControl) {
     if (teamsData.home) {

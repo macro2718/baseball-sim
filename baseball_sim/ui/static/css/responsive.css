@@ -216,18 +216,41 @@
     grid-template-columns: 1fr;
   }
 
+  .title-lineup-summary-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .title-lineup-summary-abilities {
+    flex-wrap: wrap;
+  }
+
+  .title-summary-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .title-summary-actions .title-open-editor {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .title-editor-panel {
+    padding: 16px;
+  }
+
   .title-lineup-row {
-    grid-template-columns: 34px 56px minmax(0, 1fr);
+    grid-template-columns: 32px 56px minmax(0, 1fr);
     gap: 8px;
   }
 
-  .title-pitcher-controls {
+  .title-pitcher-actions {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
   }
 
-  .title-pitcher-apply {
+  .title-pitcher-actions .title-pitcher-apply {
     width: 100%;
   }
 }
