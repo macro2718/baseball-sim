@@ -48,6 +48,10 @@ import {
   swapTitleLineupPlayers,
   swapTitleLineupPositions,
   moveBenchPlayerToLineup,
+  setTitleEditorOpen,
+  setTitleEditorTab,
+  isTitleEditorOpen,
+  getTitleEditorTab,
 } from '../ui/titleLineup.js';
 import { escapeHtml, renderPositionList, renderPositionToken } from '../utils.js';
 import { applyAbilityColor, resetAbilityColor, ABILITY_COLOR_PRESETS } from '../ui/renderers.js';
@@ -3699,6 +3703,73 @@ export function initEventListeners(actions) {
 
   if (elements.titleScreen) {
     elements.titleScreen.addEventListener('click', (event) => {
+      const openLineupEditor = event.target.closest('[data-action="open-lineup"]');
+      if (openLineupEditor) {
+        event.preventDefault();
+        const teamKey = openLineupEditor.dataset.team || '';
+        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+        if (!normalizedTeam) return;
+        setTitleEditorOpen(normalizedTeam, true);
+        setTitleEditorTab(normalizedTeam, 'lineup');
+        renderTitle(stateCache.data?.title || {});
+        return;
+      }
+
+      const openPitcherEditor = event.target.closest('[data-action="open-pitcher"]');
+      if (openPitcherEditor) {
+        event.preventDefault();
+        const teamKey = openPitcherEditor.dataset.team || '';
+        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+        if (!normalizedTeam) return;
+        setTitleEditorOpen(normalizedTeam, true);
+        setTitleEditorTab(normalizedTeam, 'pitcher');
+        renderTitle(stateCache.data?.title || {});
+        return;
+      }
+
+      const closeEditorButton = event.target.closest('[data-action="close-editor"]');
+      if (closeEditorButton) {
+        event.preventDefault();
+        const teamKey = closeEditorButton.dataset.team || '';
+        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+        if (!normalizedTeam) return;
+        setTitleEditorOpen(normalizedTeam, false);
+        clearTitleLineupSelection();
+        renderTitle(stateCache.data?.title || {});
+        return;
+      }
+
+      const tabButton = event.target.closest('[data-title-editor-tab]');
+      if (tabButton) {
+        event.preventDefault();
+        const teamKey = tabButton.dataset.team || '';
+        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+        if (!normalizedTeam) return;
+        const tab = tabButton.dataset.titleEditorTab === 'pitcher' ? 'pitcher' : 'lineup';
+        setTitleEditorOpen(normalizedTeam, true);
+        setTitleEditorTab(normalizedTeam, tab);
+        renderTitle(stateCache.data?.title || {});
+        return;
+      }
+
+      const pitcherOption = event.target.closest('[data-title-pitcher-option]');
+      if (pitcherOption) {
+        event.preventDefault();
+        const rawTeam = pitcherOption.dataset.team || '';
+        const normalizedTeam = rawTeam === 'home' ? 'home' : rawTeam === 'away' ? 'away' : null;
+        if (!normalizedTeam) return;
+        const select = elements.titleScreen?.querySelector(
+          `.title-pitcher-select[data-team="${normalizedTeam}"]`,
+        );
+        if (select) {
+          select.value = pitcherOption.dataset.pitcher || '';
+        }
+        setTitleEditorOpen(normalizedTeam, true);
+        setTitleEditorTab(normalizedTeam, 'pitcher');
+        renderTitle(stateCache.data?.title || {});
+        return;
+      }
+
       const lineupButton = event.target.closest('[data-action="apply-lineup"]');
       if (lineupButton) {
         event.preventDefault();
@@ -3727,6 +3798,15 @@ export function initEventListeners(actions) {
           return;
         }
 
+        const selection = getTitleLineupSelection();
+        if (!isTitleEditorOpen(normalizedTeam) || getTitleEditorTab(normalizedTeam) !== 'lineup') {
+          if (selection.team === normalizedTeam) {
+            clearTitleLineupSelection();
+          }
+          renderTitle(stateCache.data?.title || {});
+          return;
+        }
+
         const teamsData = stateCache.data?.teams || {};
         const teamData = teamsData[normalizedTeam];
         ensureTitleLineupPlan(normalizedTeam, teamData, Boolean(teamData));
@@ -3736,8 +3816,6 @@ export function initEventListeners(actions) {
           renderTitle(stateCache.data?.title || {});
           return;
         }
-
-        const selection = getTitleLineupSelection();
 
         if (role === 'lineup') {
           const index = Number.parseInt(interactiveTarget.dataset.index || '', 10);

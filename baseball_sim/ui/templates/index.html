@@ -1210,68 +1210,218 @@
           <div class="title-card">
             <h2>チーム状況</h2>
             <div class="team-status-grid">
-              <div class="team-card" id="away-team-card">
+              <div class="team-card" id="away-team-card" data-team-card="away">
                 <h3 class="team-name" data-team="away">Away</h3>
                 <p class="team-message" data-team="away"></p>
                 <p class="team-control" data-team-control="away"></p>
                 <ul class="team-errors" data-team="away"></ul>
                 <div class="title-roster-section">
-                  <div class="title-lineup-section">
+                  <section class="title-lineup-summary-section">
                     <div class="title-section-header">
                       <h4>スターティングラインナップ</h4>
-                      <span class="title-section-note" data-title-lineup-note="away"></span>
                     </div>
-                    <div class="title-lineup-grid" data-title-lineup="away"></div>
-                    <div class="title-lineup-actions">
-                      <button type="button" class="title-lineup-apply" data-action="apply-lineup" data-team="away">
-                        スタメンを更新
+                    <div class="title-lineup-summary" data-title-lineup-summary="away"></div>
+                    <div class="title-summary-actions">
+                      <button
+                        type="button"
+                        class="title-open-editor"
+                        data-action="open-lineup"
+                        data-team="away"
+                        aria-controls="away-title-editor"
+                      >
+                        野手スタメンを変更
                       </button>
                     </div>
-                  </div>
-                  <div class="title-bench-section">
-                    <h5>ベンチ</h5>
-                    <div class="title-bench-list" data-title-bench="away"></div>
-                  </div>
-                  <div class="title-pitcher-section">
-                    <h4>先発投手</h4>
-                    <div class="title-pitcher-controls">
-                      <select class="title-pitcher-select" data-team="away"></select>
-                      <button type="button" class="title-pitcher-apply" data-action="apply-pitcher" data-team="away">
-                        先発を設定
+                  </section>
+                  <section class="title-starter-summary-section">
+                    <div class="title-section-header">
+                      <h4>先発投手</h4>
+                    </div>
+                    <div class="title-starter-card" data-title-starter="away"></div>
+                    <div class="title-summary-actions">
+                      <button
+                        type="button"
+                        class="title-open-editor"
+                        data-action="open-pitcher"
+                        data-team="away"
+                        aria-controls="away-title-editor"
+                      >
+                        先発投手を変更
                       </button>
+                    </div>
+                  </section>
+                  <div class="title-editor-panel" id="away-title-editor" data-title-editor="away" aria-hidden="true" hidden>
+                    <div class="title-editor-header">
+                      <div class="title-editor-tabs" role="tablist">
+                        <button
+                          type="button"
+                          role="tab"
+                          data-title-editor-tab="lineup"
+                          data-team="away"
+                          aria-selected="true"
+                        >
+                          野手スタメン
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          data-title-editor-tab="pitcher"
+                          data-team="away"
+                          aria-selected="false"
+                        >
+                          投手
+                        </button>
+                      </div>
+                      <button type="button" class="title-editor-close" data-action="close-editor" data-team="away">
+                        閉じる
+                      </button>
+                    </div>
+                    <div class="title-editor-body">
+                      <section
+                        class="title-editor-tab is-active"
+                        data-title-editor-panel="lineup"
+                        data-team="away"
+                        role="tabpanel"
+                        aria-hidden="false"
+                      >
+                        <p class="title-section-note" data-title-lineup-note="away"></p>
+                        <div class="title-lineup-grid" data-title-lineup="away"></div>
+                        <div class="title-lineup-actions">
+                          <button type="button" class="title-lineup-apply" data-action="apply-lineup" data-team="away">
+                            スタメンを更新
+                          </button>
+                        </div>
+                        <div class="title-bench-section">
+                          <h5>ベンチ</h5>
+                          <div class="title-bench-list" data-title-bench="away"></div>
+                        </div>
+                      </section>
+                      <section
+                        class="title-editor-tab"
+                        data-title-editor-panel="pitcher"
+                        data-team="away"
+                        role="tabpanel"
+                        aria-hidden="true"
+                        hidden
+                      >
+                        <div class="title-pitcher-panel">
+                          <div class="title-pitcher-list" data-title-pitcher-list="away"></div>
+                          <div class="title-pitcher-actions">
+                            <select class="title-pitcher-select" data-team="away"></select>
+                            <button type="button" class="title-pitcher-apply" data-action="apply-pitcher" data-team="away">
+                              先発を設定
+                            </button>
+                          </div>
+                        </div>
+                      </section>
                     </div>
                   </div>
                 </div>
               </div>
-              <div class="team-card" id="home-team-card">
+              <div class="team-card" id="home-team-card" data-team-card="home">
                 <h3 class="team-name" data-team="home">Home</h3>
                 <p class="team-message" data-team="home"></p>
                 <p class="team-control" data-team-control="home"></p>
                 <ul class="team-errors" data-team="home"></ul>
                 <div class="title-roster-section">
-                  <div class="title-lineup-section">
+                  <section class="title-lineup-summary-section">
                     <div class="title-section-header">
                       <h4>スターティングラインナップ</h4>
-                      <span class="title-section-note" data-title-lineup-note="home"></span>
                     </div>
-                    <div class="title-lineup-grid" data-title-lineup="home"></div>
-                    <div class="title-lineup-actions">
-                      <button type="button" class="title-lineup-apply" data-action="apply-lineup" data-team="home">
-                        スタメンを更新
+                    <div class="title-lineup-summary" data-title-lineup-summary="home"></div>
+                    <div class="title-summary-actions">
+                      <button
+                        type="button"
+                        class="title-open-editor"
+                        data-action="open-lineup"
+                        data-team="home"
+                        aria-controls="home-title-editor"
+                      >
+                        野手スタメンを変更
                       </button>
                     </div>
-                  </div>
-                  <div class="title-bench-section">
-                    <h5>ベンチ</h5>
-                    <div class="title-bench-list" data-title-bench="home"></div>
-                  </div>
-                  <div class="title-pitcher-section">
-                    <h4>先発投手</h4>
-                    <div class="title-pitcher-controls">
-                      <select class="title-pitcher-select" data-team="home"></select>
-                      <button type="button" class="title-pitcher-apply" data-action="apply-pitcher" data-team="home">
-                        先発を設定
+                  </section>
+                  <section class="title-starter-summary-section">
+                    <div class="title-section-header">
+                      <h4>先発投手</h4>
+                    </div>
+                    <div class="title-starter-card" data-title-starter="home"></div>
+                    <div class="title-summary-actions">
+                      <button
+                        type="button"
+                        class="title-open-editor"
+                        data-action="open-pitcher"
+                        data-team="home"
+                        aria-controls="home-title-editor"
+                      >
+                        先発投手を変更
                       </button>
+                    </div>
+                  </section>
+                  <div class="title-editor-panel" id="home-title-editor" data-title-editor="home" aria-hidden="true" hidden>
+                    <div class="title-editor-header">
+                      <div class="title-editor-tabs" role="tablist">
+                        <button
+                          type="button"
+                          role="tab"
+                          data-title-editor-tab="lineup"
+                          data-team="home"
+                          aria-selected="true"
+                        >
+                          野手スタメン
+                        </button>
+                        <button
+                          type="button"
+                          role="tab"
+                          data-title-editor-tab="pitcher"
+                          data-team="home"
+                          aria-selected="false"
+                        >
+                          投手
+                        </button>
+                      </div>
+                      <button type="button" class="title-editor-close" data-action="close-editor" data-team="home">
+                        閉じる
+                      </button>
+                    </div>
+                    <div class="title-editor-body">
+                      <section
+                        class="title-editor-tab is-active"
+                        data-title-editor-panel="lineup"
+                        data-team="home"
+                        role="tabpanel"
+                        aria-hidden="false"
+                      >
+                        <p class="title-section-note" data-title-lineup-note="home"></p>
+                        <div class="title-lineup-grid" data-title-lineup="home"></div>
+                        <div class="title-lineup-actions">
+                          <button type="button" class="title-lineup-apply" data-action="apply-lineup" data-team="home">
+                            スタメンを更新
+                          </button>
+                        </div>
+                        <div class="title-bench-section">
+                          <h5>ベンチ</h5>
+                          <div class="title-bench-list" data-title-bench="home"></div>
+                        </div>
+                      </section>
+                      <section
+                        class="title-editor-tab"
+                        data-title-editor-panel="pitcher"
+                        data-team="home"
+                        role="tabpanel"
+                        aria-hidden="true"
+                        hidden
+                      >
+                        <div class="title-pitcher-panel">
+                          <div class="title-pitcher-list" data-title-pitcher-list="home"></div>
+                          <div class="title-pitcher-actions">
+                            <select class="title-pitcher-select" data-team="home"></select>
+                            <button type="button" class="title-pitcher-apply" data-action="apply-pitcher" data-team="home">
+                              先発を設定
+                            </button>
+                          </div>
+                        </div>
+                      </section>
                     </div>
                   </div>
                 </div>
