@@ -194,10 +194,18 @@ export function setTitleLineupSelection(teamKey, type, index, field = null) {
 
 function ensureTitleEditorState() {
   if (!stateCache.titleLineup.editor || typeof stateCache.titleLineup.editor !== 'object') {
-    stateCache.titleLineup.editor = { team: null, view: null, tab: { home: 'lineup', away: 'lineup' } };
+    stateCache.titleLineup.editor = {
+      team: null,
+      view: null,
+      tab: { home: 'lineup', away: 'lineup' },
+      lockedTeam: null,
+    };
   }
   if (!stateCache.titleLineup.editor.tab) {
     stateCache.titleLineup.editor.tab = { home: 'lineup', away: 'lineup' };
+  }
+  if (stateCache.titleLineup.editor.lockedTeam !== 'home' && stateCache.titleLineup.editor.lockedTeam !== 'away') {
+    stateCache.titleLineup.editor.lockedTeam = null;
   }
   const editor = stateCache.titleLineup.editor;
   const normalizedTeam = editor.team === 'home' || editor.team === 'away' ? editor.team : null;
@@ -214,16 +222,29 @@ function normalizeTeamKeyForEditor(teamKey) {
 export function setTitleEditorOpen(teamKey, open) {
   const normalizedKey = normalizeTeamKeyForEditor(teamKey);
   const editor = ensureTitleEditorState();
+  const lockedTeam = editor.lockedTeam === 'home' || editor.lockedTeam === 'away' ? editor.lockedTeam : null;
+
   if (!open) {
-    editor.team = null;
-    editor.view = null;
+    if (!normalizedKey || editor.team === normalizedKey) {
+      editor.team = null;
+      editor.view = null;
+    }
+    if (!normalizedKey || lockedTeam === normalizedKey) {
+      editor.lockedTeam = null;
+    }
     return false;
   }
+
+  if (lockedTeam && normalizedKey && lockedTeam !== normalizedKey) {
+    return false;
+  }
+
   if (!normalizedKey) {
     editor.team = null;
     editor.view = null;
     return false;
   }
+
   editor.team = normalizedKey;
   const nextView = editor.tab?.[normalizedKey] === 'pitcher' ? 'pitcher' : 'lineup';
   editor.view = nextView;
@@ -270,10 +291,23 @@ export function getTitleEditorView() {
   return { team, view };
 }
 
+export function lockTitleEditorTeam(teamKey) {
+  const editor = ensureTitleEditorState();
+  const normalizedKey = normalizeTeamKeyForEditor(teamKey);
+  editor.lockedTeam = normalizedKey;
+  return editor.lockedTeam;
+}
+
+export function clearTitleEditorLock() {
+  const editor = ensureTitleEditorState();
+  editor.lockedTeam = null;
+}
+
 export function resetTitleEditorState() {
   const editor = ensureTitleEditorState();
   editor.team = null;
   editor.view = null;
+  editor.lockedTeam = null;
 }
 
 export function swapTitleLineupPlayers(teamKey, indexA, indexB) {
