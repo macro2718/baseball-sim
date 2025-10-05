@@ -3291,6 +3291,13 @@ export function initEventListeners(actions) {
       return false;
     }
 
+    const { team: activeTeam, view: activeView } = getTitleEditorView();
+    const lockedTeam = activeView === 'pitcher' ? activeTeam : null;
+    if (lockedTeam && lockedTeam !== normalizedTeam) {
+      showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
+      return false;
+    }
+
     const normalizedName = String(pitcherName || '').trim();
     if (!normalizedName) {
       showStatus('先発投手を選択してください。', 'danger');
@@ -3399,6 +3406,13 @@ export function initEventListeners(actions) {
   function submitTitlePitcher(teamKey, explicitPitcher = null) {
     const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
     if (!normalizedTeam) {
+      showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
+      return;
+    }
+
+    const { team: activeTeam, view: activeView } = getTitleEditorView();
+    const lockedTeam = activeView === 'pitcher' ? activeTeam : null;
+    if (lockedTeam && lockedTeam !== normalizedTeam) {
       showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
       return;
     }
@@ -3861,6 +3875,9 @@ export function initEventListeners(actions) {
 
   if (elements.pitcherEditorScreen) {
     elements.pitcherEditorScreen.addEventListener('click', (event) => {
+      const { team: activeTeam, view: activeView } = getTitleEditorView();
+      const lockedTeam = activeView === 'pitcher' ? activeTeam : null;
+
       const backButton = event.target.closest('[data-action="close-pitcher-screen"]');
       if (backButton) {
         event.preventDefault();
@@ -3882,6 +3899,11 @@ export function initEventListeners(actions) {
         event.preventDefault();
         const teamKey = reviewButton.dataset.team || '';
         const pitcherName = reviewButton.dataset.pitcher || '';
+        const normalizedTeam = teamKey === 'home' ? 'home' : teamKey === 'away' ? 'away' : null;
+        if (lockedTeam && normalizedTeam && lockedTeam !== normalizedTeam) {
+          showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
+          return;
+        }
         submitTitlePitcher(teamKey, pitcherName);
         return;
       }
@@ -3892,6 +3914,10 @@ export function initEventListeners(actions) {
         const rawTeam = pitcherOption.dataset.team || '';
         const normalizedTeam = rawTeam === 'home' ? 'home' : rawTeam === 'away' ? 'away' : null;
         if (!normalizedTeam) return;
+        if (lockedTeam && lockedTeam !== normalizedTeam) {
+          showStatus('先発投手を設定するチームを正しく指定してください。', 'danger');
+          return;
+        }
         setTitlePitcherSelection(normalizedTeam, pitcherOption.dataset.pitcher || '');
         lockTitleEditorTeam(normalizedTeam);
         setTitleEditorTab(normalizedTeam, 'pitcher');
