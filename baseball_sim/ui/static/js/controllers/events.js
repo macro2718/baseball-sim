@@ -31,6 +31,7 @@ import { closeModal, openModal, resolveModal } from '../ui/modals.js';
 import {
   updateStatsPanel,
   updateAbilitiesPanel,
+  updateGameLogPanel,
   render,
   renderTitle,
   updateScreenVisibility,
@@ -3612,7 +3613,9 @@ export function initEventListeners(actions) {
   }
   if (elements.openGameLogButton) {
     elements.openGameLogButton.addEventListener('click', () => {
-      toggleLogPanel();
+      hideGameDataMenu();
+      updateGameLogPanel(stateCache.data);
+      openModal('game-log');
     });
   }
   if (elements.defenseResetButton) {
@@ -5261,7 +5264,7 @@ export function initEventListeners(actions) {
     });
   });
 
-  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities', 'title-pitcher'].forEach((name) => {
+  ['offense', 'pinch-run', 'defense', 'pitcher', 'stats', 'abilities', 'title-pitcher', 'game-log'].forEach((name) => {
     const modal = resolveModal(name);
     if (modal) {
       modal.addEventListener('click', (event) => {
@@ -5388,7 +5391,7 @@ export function initEventListeners(actions) {
       hideOffenseMenu();
       hideDefenseMenu();
       hideGameDataMenu();
-      ['offense', 'defense', 'pitcher', 'stats', 'abilities'].forEach((name) => {
+      ['offense', 'defense', 'pitcher', 'stats', 'abilities', 'game-log'].forEach((name) => {
         const modal = resolveModal(name);
         if (modal && !modal.classList.contains('hidden')) {
           closeModal(modal);

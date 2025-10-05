@@ -6003,6 +6003,28 @@ export function updateAbilitiesPanel(state) {
   }
 }
 
+export function updateGameLogPanel(state) {
+  const container = elements.gameLogBody;
+  if (!container) return;
+  const log = (state && Array.isArray(state.log)) ? state.log : [];
+  container.innerHTML = '';
+  if (!log.length) {
+    const p = document.createElement('p');
+    p.classList.add('empty');
+    p.textContent = 'ログはまだありません。';
+    container.appendChild(p);
+    return;
+  }
+  log.forEach((entry) => {
+    const div = document.createElement('div');
+    div.classList.add('log-entry');
+    div.classList.add(entry?.variant || 'info');
+    div.textContent = entry?.text || '';
+    container.appendChild(div);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
 export function render(data) {
   const previousData = stateCache.data;
   stateCache.data = data;

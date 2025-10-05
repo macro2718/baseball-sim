@@ -120,7 +120,7 @@
           </div>
 
           <div class="developer-hint">
-            <small>💡 開発者向け: <kbd>Tab</kbd>キーでログパネルを表示/非表示</small>
+            
           </div>
         </div>
       </header>
@@ -1296,7 +1296,7 @@
               <button id="clear-log">ログをクリア</button>
             </div>
             <div class="toolbar-right">
-              <span class="log-hint"><kbd>Tab</kbd>でログ表示</span>
+              <span class="log-hint">「試合データ → 試合ログ」でログ表示</span>
               <span id="action-warning" class="action-warning"></span>
             </div>
           </div>
@@ -1487,6 +1487,17 @@
                   <button id="open-defense-strategy">守備側采配</button>
                   <button id="open-stats">成績</button>
                   <button id="open-abilities">能力</button>
+                  <button id="open-game-data">試合データ</button>
+                </div>
+                <div
+                  class="strategy-menu hidden"
+                  id="game-data-menu"
+                  aria-hidden="true"
+                >
+                  <p class="strategy-menu-title">試合データ</p>
+                  <div class="strategy-menu-actions">
+                    <button type="button" id="open-game-log">試合ログ</button>
+                  </div>
                 </div>
                 <div
                   class="strategy-menu hidden"
@@ -1515,7 +1526,7 @@
               <div class="defense-alert hidden" id="defense-errors"></div>
 
               <div class="log-panel hidden" id="log-panel">
-                <h3>試合ログ <small>(開発者用)</small></h3>
+                <h3>試合ログ</h3>
                 <div class="log-entries" id="log-entries"></div>
               </div>
             </div>
@@ -1895,6 +1906,18 @@
               <tbody></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="game-log-modal" aria-hidden="true">
+      <div class="modal-card stats-modal" role="dialog" aria-modal="true" aria-labelledby="game-log-modal-title">
+        <div class="modal-header">
+          <h3 id="game-log-modal-title">試合ログ</h3>
+          <button type="button" class="modal-close" data-close="game-log-modal" aria-label="閉じる">&times;</button>
+        </div>
+        <div class="modal-body stats-modal-body">
+          <div class="log-entries" id="game-log-body"></div>
         </div>
       </div>
     </div>

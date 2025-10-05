@@ -54,6 +54,7 @@ export function toggleDefenseMenu() {
   }
   if (defenseMenu.classList.contains('hidden')) {
     hideOffenseMenu();
+    hideGameDataMenu();
     showDefenseMenu();
   } else {
     hideDefenseMenu();
@@ -66,9 +67,41 @@ export function toggleLogPanel() {
 
   if (logPanel.classList.contains('hidden')) {
     logPanel.classList.remove('hidden');
-    console.log('📝 開発者ログパネルが表示されました (Tabキーで非表示にできます)');
+    console.log('📝 試合ログパネルが表示されました (試合データ→試合ログで開閉できます)');
   } else {
     logPanel.classList.add('hidden');
-    console.log('📝 開発者ログパネルが非表示になりました');
+    console.log('📝 試合ログパネルが非表示になりました');
+  }
+}
+
+// --- Game Data menu (same UX as strategy menus)
+export function hideGameDataMenu() {
+  const { gameDataMenu } = elements;
+  if (!gameDataMenu) return;
+  if (!gameDataMenu.classList.contains('hidden')) {
+    gameDataMenu.classList.add('hidden');
+  }
+  gameDataMenu.setAttribute('aria-hidden', 'true');
+}
+
+export function showGameDataMenu() {
+  const { gameDataMenu } = elements;
+  if (!gameDataMenu) return;
+  gameDataMenu.classList.remove('hidden');
+  gameDataMenu.setAttribute('aria-hidden', 'false');
+}
+
+export function toggleGameDataMenu() {
+  const { gameDataMenu, openGameDataButton } = elements;
+  if (!gameDataMenu) return;
+  if (openGameDataButton && openGameDataButton.disabled) {
+    return;
+  }
+  if (gameDataMenu.classList.contains('hidden')) {
+    hideOffenseMenu();
+    hideDefenseMenu();
+    showGameDataMenu();
+  } else {
+    hideGameDataMenu();
   }
 }

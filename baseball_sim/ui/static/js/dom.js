@@ -36,6 +36,11 @@ export const elements = {
   openDefenseButton: document.getElementById('open-defense-strategy'),
   openStatsButton: document.getElementById('open-stats'),
   openAbilitiesButton: document.getElementById('open-abilities'),
+  openGameDataButton: document.getElementById('open-game-data'),
+  openGameLogButton: document.getElementById('open-game-log'),
+  gameDataMenu: document.getElementById('game-data-menu'),
+  gameLogModal: document.getElementById('game-log-modal'),
+  gameLogBody: document.getElementById('game-log-body'),
   // Roster headings team labels
   offenseTeamName: document.getElementById('offense-team-name'),
   defenseTeamName: document.getElementById('defense-team-name'),

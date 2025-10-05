@@ -11,8 +11,8 @@ async function bootstrap() {
   const actions = createGameActions(render);
   initEventListeners(actions);
 
-  console.log('%c🏟️ Baseball Simulation - Developer Mode', 'color: #f97316; font-size: 16px; font-weight: bold;');
-  console.log('%cTabキーを押すと開発者用ログパネルを表示/表示できます', 'color: #60a5fa; font-size: 14px;');
+  console.log('%c🏟️ Baseball Simulation', 'color: #f97316; font-size: 16px; font-weight: bold;');
+  console.log('%c試合データ→試合ログで試合ログパネルを開閉できます', 'color: #60a5fa; font-size: 14px;');
 
   try {
     const payload = await apiRequest(CONFIG.api.endpoints.leagueAverages);
