@@ -2000,10 +2000,38 @@
                 aria-label="勝利確率の推移"
                 preserveAspectRatio="none"
               >
+                <!-- Grid: horizontal and vertical at 0/25/50/75/100 -->
                 <g class="prob-chart-grid" aria-hidden="true">
+                  <!-- horizontal -->
                   <line x1="0" y1="0" x2="100" y2="0"></line>
+                  <line x1="0" y1="25" x2="100" y2="25"></line>
                   <line x1="0" y1="50" x2="100" y2="50"></line>
+                  <line x1="0" y1="75" x2="100" y2="75"></line>
                   <line x1="0" y1="100" x2="100" y2="100"></line>
+                  <!-- vertical -->
+                  <line x1="0" y1="0" x2="0" y2="100"></line>
+                  <line x1="25" y1="0" x2="25" y2="100"></line>
+                  <line x1="50" y1="0" x2="50" y2="100"></line>
+                  <line x1="75" y1="0" x2="75" y2="100"></line>
+                  <line x1="100" y1="0" x2="100" y2="100"></line>
+                </g>
+                <!-- Axis labels -->
+                <text class="prob-chart-axis-label prob-chart-axis-x" x="50" y="92" text-anchor="middle">プレー進行</text>
+                <text class="prob-chart-axis-label prob-chart-axis-y" x="2" y="50" text-anchor="middle" transform="rotate(-90 2 50)">ホーム勝利確率(%)</text>
+                <!-- Ticks: numeric labels for both axes -->
+                <g class="prob-chart-ticks y" aria-hidden="true">
+                  <text x="4" y="100" dominant-baseline="middle" text-anchor="start">0%</text>
+                  <text x="4" y="75" dominant-baseline="middle" text-anchor="start">25%</text>
+                  <text x="4" y="50" dominant-baseline="middle" text-anchor="start">50%</text>
+                  <text x="4" y="25" dominant-baseline="middle" text-anchor="start">75%</text>
+                  <text x="4" y="0" dominant-baseline="middle" text-anchor="start">100%</text>
+                </g>
+                <g class="prob-chart-ticks x" aria-hidden="true">
+                  <text x="0" y="96" dominant-baseline="hanging" text-anchor="start">0%</text>
+                  <text x="25" y="96" dominant-baseline="hanging" text-anchor="middle">25%</text>
+                  <text x="50" y="96" dominant-baseline="hanging" text-anchor="middle">50%</text>
+                  <text x="75" y="96" dominant-baseline="hanging" text-anchor="middle">75%</text>
+                  <text x="100" y="96" dominant-baseline="hanging" text-anchor="end">100%</text>
                 </g>
                 <path id="probability-chart-area" class="prob-chart-area" d=""></path>
                 <path id="probability-chart-line" class="prob-chart-line" d=""></path>

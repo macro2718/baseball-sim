@@ -177,6 +177,19 @@
   height: 260px;
 }
 
+/* Axis labels for probability timeline chart */
+.prob-chart-axis-label {
+  fill: rgba(148, 163, 184, 0.85);
+  font-size: 4px; /* ~10px relative to 100-unit SVG viewBox */
+  letter-spacing: 0.06em;
+}
+.prob-chart-axis-x {
+  /* bottom axis: keep inside chart area */
+}
+.prob-chart-axis-y {
+  /* left axis rotated via inline transform */
+}
+
 .prob-chart-grid line {
   stroke: rgba(148, 163, 184, 0.14);
   stroke-dasharray: 4 4;
@@ -200,6 +213,19 @@
   fill: rgba(96, 165, 250, 0.9);
   stroke: rgba(15, 23, 42, 0.9);
   stroke-width: 0.5;
+}
+
+/* Tick label styles */
+.prob-chart-ticks text {
+  fill: rgba(148, 163, 184, 0.85);
+  font-size: 3px; /* ~7.5px in 100x100 viewBox */
+  letter-spacing: 0.04em;
+}
+.prob-chart-ticks.y text {
+  /* left-side ticks, already inside padding */
+}
+.prob-chart-ticks.x text {
+  /* bottom ticks placed above bottom padding */
 }
 
 .prob-chart-legend {
